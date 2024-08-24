@@ -12,19 +12,19 @@ import scala.util.Try
  */
 final case class FlysightPoint(
   time: OffsetDateTime,
-  lat: Double,
-  lon: Double,
-  hMSL: Double,
-  velN: Double,
-  velE: Double,
-  velD: Double,
-  hAcc: Double,
-  vAcc: Double,
-  sAcc: Double,
-  heading: Double,
-  cAcc: Double,
-  gpsFix: Int,
-  numSV: Int,
+  lat: Double = 0.0,
+  lon: Double = 0.0,
+  hMSL: Double = 0.0,
+  velN: Double = 0.0,
+  velE: Double = 0.0,
+  velD: Double = 0.0,
+  hAcc: Double = 0.0,
+  vAcc: Double = 0.0,
+  sAcc: Double = 0.0,
+  heading: Double = 0.0,
+  cAcc: Double = 0.0,
+  gpsFix: Int = 0,
+  numSV: Int = 0,
 )
 
 object FlysightPoint:
@@ -55,26 +55,27 @@ object FlysightPoint:
         .toEither
         .leftMap(t => new DecoderError(t.getMessage()))
 
-    given csvRowEncoder: CsvRowEncoder[FlysightPoint, String] with
-      def apply(row: FlysightPoint): CsvRow[String] =
-        CsvRow.fromNelHeaders(
-          NonEmptyList.of(
-            (row.time.toString(), "time"),
-            (formatDouble(row.lat, 7), "lat"),
-            (formatDouble(row.lon, 7), "lon"),
-            (formatDouble(row.hMSL, 3), "hMSL"),
-            (formatDouble(row.velN, 2), "velN"),
-            (formatDouble(row.velE, 2), "velE"),
-            (formatDouble(row.velD, 2), "velD"),
-            (formatDouble(row.hAcc, 3), "hAcc"),
-            (formatDouble(row.vAcc, 3), "vAcc"),
-            (formatDouble(row.sAcc, 2), "sAcc"),
-            (formatDouble(row.heading, 5), "heading"),
-            (formatDouble(row.cAcc, 5), "cAcc"),
-            (row.gpsFix.toString, "gpsFix"),
-            (row.numSV.toString, "numSV"),
-          ),
-        )
+  given csvRowEncoder: CsvRowEncoder[FlysightPoint, String] with
+
+    def apply(row: FlysightPoint): CsvRow[String] =
+      CsvRow.fromNelHeaders(
+        NonEmptyList.of(
+          ("time", row.time.toString()),
+          ("lat", formatDouble(row.lat, 7)),
+          ("lon", formatDouble(row.lon, 7)),
+          ("hMSL", formatDouble(row.hMSL, 3)),
+          ("velN", formatDouble(row.velN, 2)),
+          ("velE", formatDouble(row.velE, 2)),
+          ("velD", formatDouble(row.velD, 2)),
+          ("hAcc", formatDouble(row.hAcc, 3)),
+          ("vAcc", formatDouble(row.vAcc, 3)),
+          ("sAcc", formatDouble(row.sAcc, 2)),
+          ("heading", formatDouble(row.heading, 5)),
+          ("cAcc", formatDouble(row.cAcc, 5)),
+          ("gpsFix", row.gpsFix.toString),
+          ("numSV", row.numSV.toString),
+        ),
+      )
 
     private def formatDouble(value: Double, precision: Int): String =
       BigDecimal(value)

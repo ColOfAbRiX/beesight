@@ -1,17 +1,20 @@
 package com.colofabrix.scala.beesight
 
-import fs2.*
-import munit.FunSuite
+import cats.effect.IO
 import com.colofabrix.scala.beesight.PeakDetection.Peak
+import fs2.*
+import munit.CatsEffectSuite
 
-class PeakDetectionSpec extends FunSuite {
+class PeakDetectionSpec extends CatsEffectSuite {
 
-  test("Example test that succeeds") {
+  test("PeakDetection should return the peaks") {
     val data =
       List(
-        1, 1, 1.1, 1, 0.9, 1, 1, 1.1, 1, 0.9, 1, 1.1, 1, 1, 0.9, 1, 1, 1.1, 1, 1, 1, 1, 1.1, 0.9, 1, 1.1, 1, 1, 0.9, 1,
-        1.1, 1, 1, 1.1, 1, 0.8, 0.9, 1, 1.2, 0.9, 1, 1, 1.1, 1.2, 1, 1.5, 1, 3, 2, 5, 3, 2, 1, 1, 1, 0.9, 1, 1, 3, 2.6,
-        4, 3, 3.2, 0.001, 0.001, 0.005, 0.8, 4, 4, 2, 2.5, 1, 1, 1)
+        1.0, 1.0, 1.1, 1.0, 0.9, 1.0, 1.0, 1.1, 1.0, 0.9, 1.0, 1.1, 1.0, 1.0, 0.9, 1.0, 1.0, 1.1, 1.0, 1.0, 1.0, 1.0,
+        1.1, 0.9, 1.0, 1.1, 1.0, 1.0, 0.9, 1.0, 1.1, 1.0, 1.0, 1.1, 1.0, 0.8, 0.9, 1.0, 1.2, 0.9, 1.0, 1.0, 1.1, 1.2,
+        1.0, 1.5, 1.0, 3.0, 2.0, 5.0, 3.0, 2.0, 1.0, 1.0, 1.0, 0.9, 1.0, 1.0, 3.0, 2.6, 4.0, 3.0, 3.2, 2.0, 1.0, 1.0,
+        0.8, 4.0, 4.0, 2.0, 2.5, 1.0, 1.0, 1.0, -4.0, -4.0,
+      )
 
     val expected =
       List(
@@ -59,6 +62,8 @@ class PeakDetectionSpec extends FunSuite {
         (1.0, Peak.Stable),
         (1.0, Peak.Stable),
         (1.0, Peak.Stable),
+        (-4.0, Peak.NegativePeak),
+        (-4.0, Peak.Stable),
       )
 
     val detector = PeakDetection(30, 5.0, 0.5)
@@ -66,11 +71,11 @@ class PeakDetectionSpec extends FunSuite {
     val actual =
       Stream
         .emits(data)
-        .through(detector.detect)
+        .through(detector.detect[Double](identity))
         .compile
         .toList
 
-    assertEquals(actual, expected)
+    assertIO(actual, expected)
   }
 
 }

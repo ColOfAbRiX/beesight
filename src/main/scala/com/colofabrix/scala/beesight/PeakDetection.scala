@@ -27,17 +27,24 @@ class PeakDetection(lag: Int, threshold: Double, influence: Double):
   private val safeInfluence: Double =
     Math.min(Math.max(influence, 0.0), 1.0)
 
-  def detect: Pipe[Pure, Double, (Double, Peak)] =
+  def detect[A](f: A => Double): Pipe[IO, A, (A, Peak)] =
+    internalDetect(f)
+
+  def internalDetect[A](f: A => Double): Pipe[IO, A, (A, Peak)] =
     data =>
       data
-        .scan(ScanState()) {
-          case (state @ ScanState(queue, false, _, _), value) =>
+        .scan(ScanState[A]()) {
+          case (state @ ScanState(queue, false, _, _), a) =>
+            val value = f(a)
+
             state.copy(
               window = queue.enqueue(value),
               ready = queue.length + 1 >= safeLag,
             )
 
-          case (ScanState(queue, true, _, _), value) =>
+          case (ScanState(queue, true, _, _), a) =>
+            val value = f(a)
+
             val window  = DenseVector[Double](queue.toArray)
             val pAvg    = mean(window)
             val pStdDev = Math.sqrt(variance.population(window))
@@ -45,13 +52,13 @@ class PeakDetection(lag: Int, threshold: Double, influence: Double):
             if Math.abs(value - pAvg) > safeThreshold * pStdDev then
               val filtered = safeInfluence * value + (1.0 - safeInfluence) * queue.last
               if value > pAvg then
-                ScanState(queue.push(filtered), true, Peak.PositivePeak, Some(value))
+                ScanState(queue.push(filtered), true, Peak.PositivePeak, Some(a))
               else
-                ScanState(queue.push(filtered), true, Peak.NegativePeak, Some(value))
+                ScanState(queue.push(filtered), true, Peak.NegativePeak, Some(a))
             else
-              ScanState(queue.push(value), true, Peak.Stable, Some(value))
+              ScanState(queue.push(value), true, Peak.Stable, Some(a))
         }
-        .collect { case ScanState(_, true, peak, Some(value)) => (value, peak) }
+        .collect { case ScanState(_, true, peak, Some(a)) => (a, peak) }
 
 object PeakDetection:
 
@@ -60,11 +67,18 @@ object PeakDetection:
     case Stable
     case NegativePeak
 
-  final private case class ScanState(
+  final private case class ScanState[A](
     window: Queue[Double] = Queue.empty,
     ready: Boolean = false,
     peak: Peak = Peak.Stable,
-    value: Option[Double] = None,
+    value: Option[A] = None,
+  )
+
+  case class Stats(
+    value: Double,
+    peak: Peak,
+    average: Double,
+    stdDev: Double
   )
 
   extension [A](self: Queue[A])
