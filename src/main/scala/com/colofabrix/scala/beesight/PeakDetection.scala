@@ -4,6 +4,7 @@ import breeze.linalg.*
 import breeze.stats.*
 import cats.effect.IO
 import fs2.*
+import java.lang.Math.*
 import scala.collection.immutable.Queue
 
 /**
@@ -28,39 +29,47 @@ class PeakDetection(lag: Int, threshold: Double, influence: Double):
     Math.min(Math.max(influence, 0.0), 1.0)
 
   def detect[A](f: A => Double): Pipe[IO, A, (A, Peak)] =
-    internalDetect(f)
+    detectStats(f).andThen(_.map(x => (x._1, x._2)))
 
-  def internalDetect[A](f: A => Double): Pipe[IO, A, (A, Peak)] =
+  def detectStats[A](f: A => Double): Pipe[IO, A, (A, Peak, Stats)] =
     data =>
       data
         .scan(ScanState[A]()) {
-          case (state @ ScanState(queue, false, _, _), a) =>
+          case (state @ ScanState(queue, _, _), a) if queue.length + 1 < safeLag =>
+            state.copy(window = queue.enqueue(f(a)))
+
+          case (ScanState(queue, _, _), a) =>
             val value = f(a)
 
-            state.copy(
-              window = queue.enqueue(value),
-              ready = queue.length + 1 >= safeLag,
+            val window   = DenseVector[Double](queue.toArray)
+            val pAvg     = mean(window)
+            val pStdDev  = sqrt(variance.population(window))
+            val isPeak   = abs(value - pAvg) > safeThreshold * pStdDev
+            val filtered = safeInfluence * value + (1.0 - safeInfluence) * queue.last
+
+            val (pushValue, peak) =
+              if isPeak && value > pAvg then (filtered, Peak.PositivePeak)
+              else if isPeak && value <= pAvg then (filtered, Peak.NegativePeak)
+              else (value, Peak.Stable)
+
+            ScanState(
+              window = queue.dequeue._2.enqueue(pushValue),
+              value = Some(a),
+              stats = Stats(value, peak, pAvg, pStdDev),
             )
-
-          case (ScanState(queue, true, _, _), a) =>
-            val value = f(a)
-
-            val window  = DenseVector[Double](queue.toArray)
-            val pAvg    = mean(window)
-            val pStdDev = Math.sqrt(variance.population(window))
-
-            if Math.abs(value - pAvg) > safeThreshold * pStdDev then
-              val filtered = safeInfluence * value + (1.0 - safeInfluence) * queue.last
-              if value > pAvg then
-                ScanState(queue.push(filtered), true, Peak.PositivePeak, Some(a))
-              else
-                ScanState(queue.push(filtered), true, Peak.NegativePeak, Some(a))
-            else
-              ScanState(queue.push(value), true, Peak.Stable, Some(a))
         }
-        .collect { case ScanState(_, true, peak, Some(a)) => (a, peak) }
+        .collect {
+          case ScanState(_, stats, Some(a)) => (a, stats.peak, stats)
+        }
 
 object PeakDetection:
+
+  final case class Stats(
+    value: Double = 0.0,
+    peak: Peak = Peak.Stable,
+    average: Double = 0.0,
+    stdDev: Double = 0.0,
+  )
 
   enum Peak:
     case PositivePeak
@@ -69,18 +78,6 @@ object PeakDetection:
 
   final private case class ScanState[A](
     window: Queue[Double] = Queue.empty,
-    ready: Boolean = false,
-    peak: Peak = Peak.Stable,
+    stats: Stats = Stats(),
     value: Option[A] = None,
   )
-
-  case class Stats(
-    value: Double,
-    peak: Peak,
-    average: Double,
-    stdDev: Double
-  )
-
-  extension [A](self: Queue[A])
-    def push(a: A): Queue[A] =
-      self.dequeue._2.enqueue(a)

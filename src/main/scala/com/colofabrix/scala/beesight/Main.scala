@@ -2,12 +2,17 @@ package com.colofabrix.scala.beesight
 
 import cats.effect.*
 import cats.implicits.*
-import com.colofabrix.scala.beesight.PeakDetection.Peak
+import cats.Show
+import com.colofabrix.scala.beesight.PeakDetection.*
 import fs2.*
-import fs2.data.csv.*
-import fs2.io.file.{ Files, Flags, Path }
 
 object Main extends IOApp:
+
+  val WindowTime: Int            = 30 * 5
+  val TakeoffThreshold: Double   = 4.0
+  val LandingThreshold: Double   = 0.5
+  val IgnoreLandingAbove: Double = 600.0
+  val BufferPoints: Int          = 500
 
   def run(args: List[String]): IO[ExitCode] =
     analyzeFile("resources/sample.csv", "resources/output.csv")
@@ -16,55 +21,79 @@ object Main extends IOApp:
       .handleError(_ => ExitCode.Error)
       .as(ExitCode.Success)
 
-  enum ScanState:
-    case Init
-    case Skip(previous: Stream[IO, FlysightPoint])
-    case Detection(previous: Stream[IO, FlysightPoint], value: FlysightPoint)
-    case Output(value: FlysightPoint)
-
   def analyzeFile(inputPath: String, outputPath: String): Stream[IO, ?] =
-    readCsv(inputPath)
-      .through(PeakDetection(300, 4.0, 0.0).internalDetect(_.hMSL))
-      .scan(ScanState.Init) {
-        case (ScanState.Init, (value, Peak.Stable)) =>
-          println(s"INIT->SKIP: ${value.hMSL}")
-          ScanState.Skip(Stream.emit(value))
-        case (ScanState.Init, (value, Peak.PositivePeak | Peak.NegativePeak)) =>
-          println(s"INIT->DETECTION: ${value.hMSL}")
-          ScanState.Detection(Stream.empty, value)
+    FileOps.readCsv[FlysightPoint](inputPath)
+      .through(cutoffData)
+      .through(FileOps.writeCsv(outputPath))
 
-        case (ScanState.Skip(previous), (value, Peak.Stable)) =>
-          println(s"SKIP->SKIP: ${value.hMSL}")
-          val output = value.copy(hMSL = 0.0)
-          ScanState.Skip(previous.append(Stream.emit(output)))
-        case (ScanState.Skip(previous), (value, Peak.PositivePeak | Peak.NegativePeak)) =>
-          println(s"SKIP->DETECTION: ${value.hMSL}")
-          ScanState.Detection(previous, value)
+  final case class Cutoffs(
+    takeoff: Option[Long] = None,
+    takeoffGround: Option[Double] = None,
+    landing: Option[Long] = None,
+    landingGround: Option[Double] = None,
+  )
 
-        case (ScanState.Detection(previous, _), (value, _)) =>
-          println(s"DETECTION->OUTPUT: ${value.hMSL}")
-          ScanState.Output(value)
-        case (ScanState.Output(_), (value, _)) =>
-          // println(s"OUTPUT: ${value.hMSL}")
-          ScanState.Output(value)
-      }
-      .collect {
-        case ScanState.Detection(previous, value) => previous append Stream.emit(value)
-        case ScanState.Output(value)              => Stream.emit(value)
-      }
-      .flatten
-      .through(encodeUsingFirstHeaders(fullRows = true))
-      .through(writeCsv(outputPath))
+  // def listFile =
+  //   os.list()
 
-  def readCsv(filePath: String): Stream[IO, FlysightPoint] =
-    Files[IO]
-      .readAll(Path(filePath), 1024, Flags.Read)
-      .through(fs2.text.utf8.decode)
-      .through(lenient.attemptDecodeUsingHeaders[FlysightPoint]())
-      .collect { case Right(decoded) => decoded }
-
-  def writeCsv(filePath: String): Pipe[IO, String, Nothing] =
+  val cutoffData: Pipe[IO, FlysightPoint, FlysightPoint] =
     data =>
       data
-        .through(text.utf8.encode)
-        .through(Files[IO].writeAll(Path(filePath)))
+        .through(PeakDetection(WindowTime, TakeoffThreshold, 0.9).detectStats(_.hMSL))
+        .zipWithIndex
+        .fold(Cutoffs()) {
+          case (Cutoffs(None, None, _, _), ((_, Peak.Stable, stats), i)) =>
+            // Initial state, assuming ground
+            Cutoffs(None)
+
+          case (cutoffs @ Cutoffs(None, None, _, _), ((value, _, stats), i)) =>
+            // Peak found, takeoff detected
+            Cutoffs(
+              takeoff = Some(i),
+              takeoffGround = Some(stats.average),
+            )
+
+          case (cutoffs @ Cutoffs(Some(_), _, None, _), ((value, _, stats), i)) =>
+            val isAboveIgnoreLine = stats.average < IgnoreLandingAbove
+            val isAfterBuffering  = i > cutoffs.takeoff.get + WindowTime
+            val isDataStable      = stats.stdDev < LandingThreshold
+
+            if isAboveIgnoreLine && isAfterBuffering && isDataStable then
+              // Stable altitude, landing detected
+              cutoffs.copy(
+                landing = Some(i),
+                landingGround = Some(stats.average),
+              )
+            else
+              // In flight
+              cutoffs
+
+          case (cutoffs, _) =>
+            // Landed
+            cutoffs
+        }
+        .evalTap(printCutoffStats)
+        .collect {
+          case Cutoffs(None, None, _, _) =>
+            data
+          case Cutoffs(Some(takeoff), None, _, _) =>
+            data.drop(takeoff - BufferPoints)
+          case Cutoffs(None, _, Some(landing), _) =>
+            data.take(landing + BufferPoints)
+          case Cutoffs(Some(takeoff), _, Some(landing), _) =>
+            data.drop(takeoff - BufferPoints).take(landing + BufferPoints)
+        }
+        .flatten
+
+  def printCutoffStats(cutoffs: Cutoffs): IO[Unit] =
+    IO.println(s"Cutoff points:") *>
+    IO.println(s"    Takeoff: ${cutoffs.takeoff.show}") *>
+    IO.println(s"    Takeoff ground level: ${cutoffs.takeoffGround.show}") *>
+    IO.println(s"    Landing: ${cutoffs.landing.show}") *>
+    IO.println(s"    Landing ground level: ${cutoffs.landingGround.show}")
+
+  given niceOptionShow[A: Show]: Show[Option[A]] =
+    _.fold("N/A")(Show[A].show(_))
+
+  given niceDouble: Show[Double] =
+    value => f"${value}%.2f"

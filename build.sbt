@@ -25,6 +25,7 @@ lazy val root =
       libraryDependencies ++= List(
         "co.fs2"           %% "fs2-core"             % "3.10.2",
         "co.fs2"           %% "fs2-io"               % "3.10.2",
+        "com.lihaoyi"      %% "os-lib"               % "0.10.5",
         "io.github.pityka" %% "nspl-awt"             % "0.10.0",
         "org.gnieh"        %% "fs2-data-csv-generic" % "1.11.1",
         "org.gnieh"        %% "fs2-data-csv"         % "1.11.1",
