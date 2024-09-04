@@ -1,6 +1,6 @@
 import org.typelevel.scalacoptions.ScalacOptions
 
-val scala3Version = "3.4.2"
+val scala3Version = "3.5.0"
 
 Global / run / fork           := true
 Global / onChangedBuildSource := ReloadOnSourceChanges
@@ -9,6 +9,7 @@ Global / tpolecatExcludeOptions ++=
     ScalacOptions.warnUnusedImports,
     ScalacOptions.warnUnusedPrivates,
     ScalacOptions.warnUnusedLocals,
+    ScalacOptions.privateKindProjector
   )
 
 lazy val root =

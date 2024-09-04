@@ -1,6 +1,8 @@
 package com.colofabrix.scala.beesight
 
+import cats.effect.implicits.*
 import cats.effect.IO
+import cats.implicits.*
 import fs2.*
 import fs2.data.csv.*
 import fs2.io.file.{ Files, Flags, Path }
@@ -21,3 +23,16 @@ object FileOps:
         .through(text.utf8.encode)
         .through(Files[IO].writeAll(Path(filePath)))
 
+  def findCsvFilesRecursively(wd: Option[os.Path]): Stream[IO, os.Path] =
+    Stream
+      .eval {
+        IO(os.list(wd.getOrElse(os.pwd)).iterator)
+      }
+      .flatMap {
+        Stream.fromIterator[IO](_, chunkSize = 1)
+      }
+      .flatMap {
+        case path if os.isDir(path)                   => findCsvFilesRecursively(Some(path))
+        case path if path.ext.toLowerCase() === "csv" => Stream.emit(path)
+        case _                                        => Stream.empty
+      }
