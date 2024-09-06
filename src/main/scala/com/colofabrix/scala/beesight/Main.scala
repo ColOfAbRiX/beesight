@@ -9,27 +9,30 @@ import os.*
 
 object Main extends IOApp:
 
+  private val ProcessedPostfix =
+    "_processed"
+
   def run(args: List[String]): IO[ExitCode] =
     FileOps
       .findCsvFilesRecursively(Some(os.pwd / "resources"))
-      .take(1)
-      .filterNot(_.toString.contains("_original"))
-      .ioTapPrintln(inputPath => s"Working on file '$inputPath'")
-      .flatMap { csvFilePath =>
-        analyzeFile(csvFilePath, "resources/output.csv")
-      }
+      .filterNot(_.toString.contains(ProcessedPostfix))
+      .ioTapPrintln(inputPath => s"\nWorking on file '$inputPath'")
+      .flatMap(analyzeFile)
       .compile
       .drain
       .as(ExitCode.Success)
 
-  def analyzeFile(inputPath: Path, outputPath: String): Stream[IO, ?] =
+  def analyzeFile(inputPath: Path): Stream[IO, ?] =
     val dirname / strBasename = inputPath: @unchecked
     val basename              = RelPath(strBasename)
-    val backupFile            = dirname / (basename.baseName + "_original" + "." + basename.ext)
+    val backupFile            = dirname / (basename.baseName + ProcessedPostfix + "." + basename.ext)
 
-    Stream.io(os.copy(inputPath, backupFile, replaceExisting = false)) *>
-    FileOps
+    // Stream.io(os.copy(inputPath, backupFile, replaceExisting = false)) *>
+      FileOps
       .readCsv[FlysightPoint](inputPath.toString)
-      .through(FlightStagesDetection.cutoffData)
-      .through(FileOps.writeCsv(outputPath))
-
+      .through { data =>
+        FlightStagesDetection
+          .flightPoints(data)
+          .through(FlightStagesDetection.cutData(data))
+      }
+      .through(FileOps.writeCsv(backupFile.toString))
