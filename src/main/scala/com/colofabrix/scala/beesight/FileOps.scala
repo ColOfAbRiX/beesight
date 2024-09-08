@@ -13,6 +13,7 @@ object FileOps:
     Files[IO]
       .readAll(Path(filePath), 1024, Flags.Read)
       .through(fs2.text.utf8.decode)
+      .through(unixEol)
       .through(lenient.attemptDecodeUsingHeaders[A]())
       .collect { case Right(decoded) => decoded }
 
@@ -36,3 +37,6 @@ object FileOps:
         case path if path.ext.toLowerCase() === "csv" => Stream.emit(path)
         case _                                        => Stream.empty
       }
+
+  val unixEol: Pipe[IO, String, String] =
+    _.map(_.replace("\r\n", "\n"))

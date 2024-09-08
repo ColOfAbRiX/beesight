@@ -82,12 +82,12 @@ object FlightStagesDetection:
         data
 
       case flightPoints @ FlightPoints(Some(Point(_, None)), _, _, None, _) =>
-        println("No proper takeoff or landing point detected. Collecting all data.")
+        println("No takeoff or landing points detected. Collecting all data.")
         println(flightPoints.show)
         data
 
       case flightPoints @ FlightPoints(Some(Point(takeoff, Some(_))), _, _, None, _) =>
-        println(s"Collecting data from line ${keepFrom(takeoff)} until the end")
+        println(s"No landing detected. Collecting data from line ${keepFrom(takeoff)} until the end")
         println(flightPoints.show)
         data.drop(keepFrom(takeoff))
 
@@ -97,7 +97,7 @@ object FlightStagesDetection:
         data.drop(keepFrom(takeoff)).take(keepUntil(landing, totalPoints))
 
       case flightPoints @ FlightPoints(None, _, _, Some(Point(landing, Some(_))), totalPoints) =>
-        println(s"Collecting data from line 0 to line ${keepUntil(landing, totalPoints)}")
+        println(s"No takeoff detected. Collecting data from line 0 to line ${keepUntil(landing, totalPoints)}")
         println(flightPoints.show)
         data.take(keepUntil(landing, totalPoints))
 
