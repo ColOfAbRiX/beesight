@@ -9,8 +9,19 @@ Global / tpolecatExcludeOptions ++=
     ScalacOptions.warnUnusedImports,
     ScalacOptions.warnUnusedPrivates,
     ScalacOptions.warnUnusedLocals,
-    ScalacOptions.privateKindProjector
+    ScalacOptions.privateKindProjector,
   )
+
+// // Scala Native
+// enablePlugins(ScalaNativePlugin)
+// logLevel := Level.Info
+// import scala.scalanative.build._
+// nativeConfig ~= { config =>
+//   config
+//     .withLTO(LTO.thin)
+//     .withMode(Mode.releaseFast)
+//     .withGC(GC.commix)
+// }
 
 lazy val root =
   project
@@ -24,17 +35,18 @@ lazy val root =
       semanticdbEnabled := true,
       semanticdbVersion := scalafixSemanticdb.revision,
       libraryDependencies ++= List(
-        "co.fs2"           %% "fs2-core"             % "3.10.2",
-        "co.fs2"           %% "fs2-io"               % "3.10.2",
-        "com.lihaoyi"      %% "os-lib"               % "0.10.5",
-        "io.github.pityka" %% "nspl-awt"             % "0.10.0",
-        "org.gnieh"        %% "fs2-data-csv-generic" % "1.11.1",
-        "org.gnieh"        %% "fs2-data-csv"         % "1.11.1",
-        "org.scalameta"    %% "munit"                % "1.0.0" % Test,
-        "org.scalanlp"     %% "breeze-viz"           % "2.1.0",
-        "org.scalanlp"     %% "breeze"               % "2.1.0",
-        "org.typelevel"    %% "cats-core"            % "2.12.0",
-        "org.typelevel"    %% "cats-effect"          % "3.5.4",
-        "org.typelevel"    %% "munit-cats-effect"    % "2.0.0" % Test,
+        "co.fs2"               %% "fs2-core"             % "3.10.2",
+        "co.fs2"               %% "fs2-io"               % "3.10.2", // IO with FS2
+        "com.github.pathikrit" %% "better-files"         % "3.9.2",  // Better handling of file system files
+        "com.monovore"         %% "decline"              % "2.4.1",  // Command line arguments parser
+        "io.github.pityka"     %% "nspl-awt"             % "0.10.0", // Graphs
+        "org.gnieh"            %% "fs2-data-csv-generic" % "1.11.1", // CSV manipulation with FS2
+        "org.gnieh"            %% "fs2-data-csv"         % "1.11.1", // CSV manipulation with FS2
+        "org.scalanlp"         %% "breeze"               % "2.1.0",  // Statistics
+        "org.typelevel"        %% "cats-core"            % "2.12.0",
+        "org.typelevel"        %% "cats-effect"          % "3.5.4",
+        // Testing
+        "org.scalameta" %% "munit"             % "1.0.0" % Test,
+        "org.typelevel" %% "munit-cats-effect" % "2.0.0" % Test,
       ),
     )

@@ -1,42 +1,48 @@
 package com.colofabrix.scala.beesight
 
+import better.files.File
+import better.files.Dsl.*
 import cats.effect.*
 import cats.implicits.*
-import cats.Show
-import com.colofabrix.scala.beesight.Utils.*
+import com.colofabrix.scala.beesight.StreamUtils.*
 import fs2.*
-import os.*
+import com.monovore.decline.CommandApp
+import com.monovore.decline.Opts
 
-object Main extends IOApp:
+object Main extends IODeclineApp[Config]:
 
-  private val ProcessedDirname =
-    "processed"
+  val name: String =
+    "beesight"
 
-  def run(args: List[String]): IO[ExitCode] =
+  val options: Opts[Config] =
+    Config.allOptions
+
+  val header: String =
+    "Beesight - A clean Flysight data tool"
+
+  override def runWithConfig(config: Config): IO[ExitCode] =
     FileOps
-      .findCsvFilesRecursively(Some(os.pwd / "resources"))
+      .findCsvFilesRecursively(config.input)
       .filterNot {
-        _.toString.contains(ProcessedDirname)
+        _.toString.startsWith(config.output.toString)
       }
-      .ioTapPrintln { inputPath =>
-        s"\nProcessing file '$inputPath'"
-      }
-      .flatMap(analyzeFile)
+      .take(2)
+      .flatMap(processCsvFile(config))
       .compile
       .drain
       .as(ExitCode.Success)
 
-  def analyzeFile(inputPath: Path): Stream[IO, ?] =
-    val dirname / strBasename = inputPath: @unchecked
-    val basename              = RelPath(strBasename)
-    val outputFile            = dirname / ProcessedDirname / (basename.baseName + "." + basename.ext)
+  def processCsvFile(config: Config)(inputPath: File): Stream[IO, Nothing] =
+    val inputRelativePath = inputPath.toString.replace(config.input.toString, "").drop(1)
+    val outputFile        = config.output / inputRelativePath
 
-    Stream.io(os.makeDir.all(dirname / ProcessedDirname)) *>
+    Stream.io(mkdirs(outputFile.parent)) *>
+    Stream.ioPrintln(s"Processing file $inputRelativePath") *>
     FileOps
-      .readCsv[FlysightPoint](inputPath.toString)
+      .readCsv[FlysightPoint](inputPath)
       .through { data =>
         FlightStagesDetection
           .flightPoints(data)
           .through(FlightStagesDetection.cutData(data))
       }
-      .through(FileOps.writeCsv(outputFile.toString))
+      .through(FileOps.writeCsv(outputFile))
