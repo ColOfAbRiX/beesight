@@ -1,7 +1,7 @@
-package com.colofabrix.scala.beesight
+package com.colofabrix.scala.stats
 
 import cats.effect.IO
-import com.colofabrix.scala.beesight.PeakDetection.Peak
+import com.colofabrix.scala.stats.PeakDetection.Peak
 import fs2.*
 import munit.CatsEffectSuite
 

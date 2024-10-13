@@ -1,4 +1,4 @@
-package com.colofabrix.scala.beesight
+package com.colofabrix.scala.stats
 
 import breeze.linalg.*
 import breeze.stats.*

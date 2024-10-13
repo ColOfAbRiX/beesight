@@ -12,17 +12,6 @@ Global / tpolecatExcludeOptions ++=
     ScalacOptions.privateKindProjector,
   )
 
-// // Scala Native
-// enablePlugins(ScalaNativePlugin)
-// logLevel := Level.Info
-// import scala.scalanative.build._
-// nativeConfig ~= { config =>
-//   config
-//     .withLTO(LTO.thin)
-//     .withMode(Mode.releaseFast)
-//     .withGC(GC.commix)
-// }
-
 lazy val root =
   project
     .in(file("."))

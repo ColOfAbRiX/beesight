@@ -3,8 +3,9 @@ package com.colofabrix.scala.beesight
 import cats.Show
 import cats.implicits.*
 import cats.effect.IO
-import com.colofabrix.scala.beesight.PeakDetection.*
+import com.colofabrix.scala.stats.PeakDetection.*
 import fs2.*
+import com.colofabrix.scala.stats.PeakDetection
 
 object FlightStagesDetection:
 
@@ -26,7 +27,6 @@ object FlightStagesDetection:
     lineIndex: Long,
     altitude: Option[Double] = None,
   )
-
 
   val flightPoints: Pipe[IO, FlysightPoint, FlightPoints] =
     _.through(PeakDetection(WindowTime, TakeoffThreshold, 0.9).detectStats(_.hMSL))
