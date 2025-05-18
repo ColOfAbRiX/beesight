@@ -1,24 +1,52 @@
 package com.colofabrix.scala.decline
 
-import cats.effect.{ ExitCode, IO, IOApp, Sync }
+import cats.effect.*
 import cats.effect.std.Console
-import cats.syntax.all._
-import com.monovore.decline._
+import cats.syntax.all.*
+import com.monovore.decline.*
 
+/**
+ * Decline-ready application that uses Cats' IO
+ */
 trait IODeclineApp[A] extends IOApp with DeclineApp[IO, A]:
 
   final override def run(args: List[String]): IO[ExitCode] =
     runDeclineApp(args)
 
-trait DeclineApp[F[_]: Sync: Console, A]:
+/**
+ * Decline application for any effect F[_] that supports Sync and Console
+ */
+transparent trait DeclineApp[F[_]: Sync: Console, A]:
 
+  /**
+   * Name of the application
+   */
   def name: String
-  def options: Opts[A]
-  def header: String
-  def runWithConfig(config: A): F[ExitCode]
 
-  def helpFlag: Boolean = true
+  /**
+   * Short description of the application
+   */
+  def header: String
+
+  /**
+   * Version of the application
+   */
   def version: String   = ""
+
+  /**
+   * Decline command line options
+   */
+  def options: Opts[A]
+
+  /**
+   * If set to true, displays a help message when the user inputs wrong arguments
+   */
+  def helpFlag: Boolean = true
+
+  /**
+   * Application main method that received the compiled configuration
+   */
+  def runWithConfig(config: A): F[ExitCode]
 
   def runDeclineApp(args: List[String]): F[ExitCode] =
     val mainOpts    = addVersionFlag(options.map(runWithConfig))

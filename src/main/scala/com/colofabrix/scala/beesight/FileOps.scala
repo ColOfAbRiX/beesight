@@ -20,12 +20,13 @@ object FileOps:
       .through(lenient.attemptDecodeUsingHeaders[A]())
       .collect { case Right(decoded) => decoded }
 
-  def writeCsv[A](filePath: File)(using CsvRowEncoder[A, String]): Pipe[IO, A, Nothing] =
+  def writeCsv[A](filePath: File)(using CsvRowEncoder[A, String]): Pipe[IO, A, Unit] =
     data =>
       data
         .through(encodeUsingFirstHeaders(fullRows = true))
         .through(text.utf8.encode)
         .through(Files[IO].writeAll(filePath))
+        .as(())
 
   def findCsvFilesRecursively(directory: File): Stream[IO, File] =
     Files[IO]

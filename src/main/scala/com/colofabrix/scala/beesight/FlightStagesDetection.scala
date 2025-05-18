@@ -1,19 +1,16 @@
 package com.colofabrix.scala.beesight
 
-import cats.Show
-import cats.implicits.*
 import cats.effect.IO
+import cats.implicits.*
+import cats.Show
+import com.colofabrix.scala.beesight.StreamUtils.*
+import com.colofabrix.scala.stats.PeakDetection
 import com.colofabrix.scala.stats.PeakDetection.*
 import fs2.*
-import com.colofabrix.scala.stats.PeakDetection
+import scala.io.AnsiColor._
 
-object FlightStagesDetection:
-
-  val WindowTime: Int            = 30 * 5
-  val TakeoffThreshold: Double   = 3.5
-  val LandingThreshold: Double   = 1.0
-  val IgnoreLandingAbove: Double = 600.0
-  val BufferPoints: Int          = 500
+final class FlightStagesDetection(config: Config):
+  import config.detectionConfig.*
 
   final case class FlightPoints(
     takeoff: Option[Point] = None,
@@ -29,11 +26,11 @@ object FlightStagesDetection:
   )
 
   val flightPoints: Pipe[IO, FlysightPoint, FlightPoints] =
-    _.through(PeakDetection(WindowTime, TakeoffThreshold, 0.9).detectStats(_.hMSL))
+    _.through(PeakDetection(WindowTime, TakeoffThreshold, Influence).detectStats(_.hMSL))
       .zipWithIndex
       .fold(FlightPoints()) {
         case (flightPoints @ FlightPoints(None, _, _, _, _), ((_, Peak.Stable, stats), i)) =>
-          // Unkown state
+          // Unknown state
           val isAboveIgnoreLine = stats.average > IgnoreLandingAbove
           val isAfterBuffering  = i > WindowTime
           val isDataStable      = stats.stdDev < LandingThreshold
@@ -77,35 +74,69 @@ object FlightStagesDetection:
   def cutData(data: Stream[IO, FlysightPoint]): Pipe[IO, FlightPoints, FlysightPoint] =
     _.flatMap {
       case flightPoints @ FlightPoints(None, None, None, None, _) =>
-        println("WARNING! Stable data might not contain a flight recording")
-        println(flightPoints.show)
+        Stream.ioPrintln(flightPoints.show) >>
+        Stream.ioPrintln(s"${YELLOW}WARNING!${RESET} Stable data might not contain a flight recording.") >>
         data
 
       case flightPoints @ FlightPoints(Some(Point(_, None)), _, _, None, _) =>
-        println("No takeoff or landing points detected. Collecting all data.")
-        println(flightPoints.show)
+        Stream.ioPrintln(flightPoints.show) >>
+        Stream.ioPrintln(s"${CYAN}No takeoff or landing points detected.${RESET} Collecting all data.") >>
         data
 
       case flightPoints @ FlightPoints(Some(Point(takeoff, Some(_))), _, _, None, _) =>
-        println(s"No landing detected. Collecting data from line ${keepFrom(takeoff)} until the end")
-        println(flightPoints.show)
-        data.drop(keepFrom(takeoff))
+        Stream.ioPrintln(flightPoints.show) >>
+        retainMinPoints(flightPoints, data) {
+          Stream.ioPrintln(s"${CYAN}No landing detected.${RESET} Collecting data from line ${keepFrom(takeoff)} until the end") >>
+          data.drop(keepFrom(takeoff))
+        }
 
       case flightPoints @ FlightPoints(Some(Point(takeoff, _)), _, _, Some(Point(landing, Some(_))), totalPoints) =>
-        println(s"Collecting data from line ${keepFrom(takeoff)} to line ${keepUntil(landing, totalPoints)}")
-        println(flightPoints.show)
-        data.drop(keepFrom(takeoff)).take(keepUntil(landing, totalPoints))
+        Stream.ioPrintln(flightPoints.show) >>
+        retainMinPoints(flightPoints, data) {
+          Stream.ioPrintln(s"Collecting data from line ${keepFrom(takeoff)} to line ${keepUntil(landing, totalPoints)}") >>
+          data.drop(keepFrom(takeoff)).take(keepUntil(landing, totalPoints))
+        }
 
       case flightPoints @ FlightPoints(None, _, _, Some(Point(landing, Some(_))), totalPoints) =>
-        println(s"No takeoff detected. Collecting data from line 0 to line ${keepUntil(landing, totalPoints)}")
-        println(flightPoints.show)
-        data.take(keepUntil(landing, totalPoints))
+        Stream.ioPrintln(flightPoints.show) >>
+        retainMinPoints(flightPoints, data) {
+          Stream.ioPrintln(s"${CYAN}No takeoff detected.${RESET} ") >>
+          Stream.ioPrintln(s"Collecting data from line 0 to line ${keepUntil(landing, totalPoints)}") >>
+          data.take(keepUntil(landing, totalPoints))
+        }
 
       case flightPoints =>
-        println(s"ERROR? Not sure why we're here. Collecting everything, just to be sure")
-        println(flightPoints.show)
+        Stream.ioPrintln(flightPoints.show) >>
+        Stream.ioPrintln(s"${RED}ERROR?${RESET} Not sure why we're here. Collecting everything, just to be sure") >>
         data
     }
+
+  def retainMinPoints(
+    flightPoints: FlightPoints,
+    data: => Stream[IO, FlysightPoint],
+  )(ifMore: => Stream[IO, FlysightPoint],
+  ): Stream[IO, FlysightPoint] =
+    if retainedPoints(flightPoints) < MinRetainedPoints then
+      Stream.ioPrintln(s"${YELLOW}Too many points dropped!${RESET} Collecting all data.") >>
+      data
+    else
+      ifMore
+    end if
+
+  def retainedPoints(flightPoints: FlightPoints): Double =
+    val first =
+      flightPoints
+        .takeoff
+        .fold(0L)(_.lineIndex)
+        .toDouble
+
+    val last =
+      flightPoints
+        .landing
+        .fold(flightPoints.lastPoint)(_.lineIndex)
+        .toDouble
+
+    (last - first) / flightPoints.lastPoint.toDouble
 
   def keepFrom(index: Long): Long =
     Math.max(index - BufferPoints, 0)
