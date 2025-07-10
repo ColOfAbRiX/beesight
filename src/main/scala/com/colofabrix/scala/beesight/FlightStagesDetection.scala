@@ -1,165 +1,121 @@
 package com.colofabrix.scala.beesight
 
+import cats.data.NonEmptyList
 import cats.effect.IO
 import cats.implicits.*
-import cats.Show
+import com.colofabrix.scala.beesight.FlightStagesDetection.*
 import com.colofabrix.scala.beesight.StreamUtils.*
-import com.colofabrix.scala.stats.PeakDetection
-import com.colofabrix.scala.stats.PeakDetection.*
+import com.colofabrix.scala.beesight.config.*
+import com.colofabrix.scala.beesight.model.*
+import com.colofabrix.scala.stats.*
+import com.colofabrix.scala.stats.CusumDetector.DetectorState as CusumState
+import com.colofabrix.scala.stats.PhysicsDetector.DetectorState as PhysicsState
 import fs2.*
-import scala.io.AnsiColor._
+import fs2.data.csv.*
+import java.time.*
 
-final class FlightStagesDetection(config: Config):
+
+final class FlightStagesDetection(config: Config) {
   import config.detectionConfig.*
 
-  final case class FlightPoints(
-    takeoff: Option[Point] = None,
-    freefall: Option[Point] = None,
-    canopy: Option[Point] = None,
-    landing: Option[Point] = None,
-    lastPoint: Long = 0,
+  private val cusumDetector =
+    CusumDetector(10, 0.75, 10.0)
+
+  private val physicsDetector =
+    PhysicsDetector(10)
+
+  def detect(data: fs2.Stream[IO, FlysightPoint]): IO[FlightStagesPoints] =
+    data
+      .through(detectPipe)
+      .compile
+      .lastOrError
+
+  private val detectPipe: Pipe[IO, FlysightPoint, FlightStagesPoints] =
+    data =>
+      data
+        .zipWithIndex
+        .scan(StreamState()) {
+          case (state, (point, i)) =>
+            val physics = physicsDetector.checkNextValue(state.physics, point.hMSL, point.time)
+
+            val cusum =
+              physics match {
+                case PhysicsState.Empty | PhysicsState.Filling(_) =>
+                  CusumState.Empty
+                case PhysicsState.Detection(valuesWindow, time, value, speed) =>
+                  cusumDetector.checkNextValue(state.cusum, speed)
+              }
+
+            StreamState(
+              dataPointIndex = i,
+              time = point.time.toInstant,
+              height = point.hMSL,
+              physics = physics,
+              cusum = cusum,
+            )
+        }
+        .through(writeDebug)
+        .fold(FlightStagesPoints.empty) {
+          case (state, _) =>
+            state
+        }
+
+  private def writeDebug: Pipe[IO, StreamState, StreamState] =
+    data =>
+      data
+        .through(FileOps.writeCsv(better.files.File("debug.csv")))
+        .flatMap(_ => data)
+
+}
+
+object FlightStagesDetection {
+
+  final private case class StreamState(
+    dataPointIndex: Long = 0,
+    time: Instant = Instant.EPOCH,
+    height: Double = 0.0,
+    cusum: CusumState = CusumState.Empty,
+    physics: PhysicsState = PhysicsState.Empty,
   )
 
-  final case class Point(
-    lineIndex: Long,
-    altitude: Option[Double] = None,
-  )
+  private object StreamState {
+    import com.colofabrix.scala.beesight.csv.Encoders.*
 
-  val flightPoints: Pipe[IO, FlysightPoint, FlightPoints] =
-    _.through(PeakDetection(WindowTime, TakeoffThreshold, Influence).detectStats(_.hMSL))
-      .zipWithIndex
-      .fold(FlightPoints()) {
-        case (flightPoints @ FlightPoints(None, _, _, _, _), ((_, Peak.Stable, stats), i)) =>
-          // Unknown state
-          val isAboveIgnoreLine = stats.average > IgnoreLandingAbove
-          val isAfterBuffering  = i > WindowTime
-          val isDataStable      = stats.stdDev < LandingThreshold
-
-          if !isAboveIgnoreLine && isAfterBuffering && isDataStable then
-            // Stable altitude, landing detected
-            flightPoints.copy(landing = Some(Point(i, Some(stats.average))), lastPoint = i)
-          else
-            // In flight
-            flightPoints.copy(lastPoint = i)
-
-        case (FlightPoints(None, _, _, _, _), ((_, _, stats), i)) =>
-          // We detected a peak. Is it because we took of or because we're climbing?
-          val isAboveIgnoreLine = stats.average > IgnoreLandingAbove
-
-          if isAboveIgnoreLine then
-            // We're already in flight and missed the beginning!
-            FlightPoints(takeoff = Some(Point(0, None)), lastPoint = i)
-          else
-            // Peak found, takeoff detected
-            FlightPoints(takeoff = Some(Point(i, Some(stats.average))), lastPoint = i)
-
-        case (flightPoints @ FlightPoints(Some(Point(takeoff, _)), _, _, None, _), ((_, _, stats), i)) =>
-          // We're in flight and we need to look for interesting points
-          val isAboveIgnoreLine = stats.average > IgnoreLandingAbove
-          val isAfterBuffering  = i > takeoff + WindowTime
-          val isDataStable      = stats.stdDev < LandingThreshold
-
-          if !isAboveIgnoreLine && isAfterBuffering && isDataStable then
-            // Stable altitude, landing detected
-            flightPoints.copy(landing = Some(Point(i, Some(stats.average))), lastPoint = i)
-          else
-            // In flight
-            flightPoints.copy(lastPoint = i)
-
-        case (flightPoints, ((_, _, _), i)) =>
-          // Landed
-          flightPoints.copy(lastPoint = i)
-      }
-
-  def cutData(data: Stream[IO, FlysightPoint]): Pipe[IO, FlightPoints, FlysightPoint] =
-    _.flatMap {
-      case flightPoints @ FlightPoints(None, None, None, None, _) =>
-        Stream.ioPrintln(flightPoints.show) >>
-        Stream.ioPrintln(s"${YELLOW}WARNING!${RESET} Stable data might not contain a flight recording.") >>
-        data
-
-      case flightPoints @ FlightPoints(Some(Point(_, None)), _, _, None, _) =>
-        Stream.ioPrintln(flightPoints.show) >>
-        Stream.ioPrintln(s"${CYAN}No takeoff or landing points detected.${RESET} Collecting all data.") >>
-        data
-
-      case flightPoints @ FlightPoints(Some(Point(takeoff, Some(_))), _, _, None, _) =>
-        Stream.ioPrintln(flightPoints.show) >>
-        retainMinPoints(flightPoints, data) {
-          Stream.ioPrintln(s"${CYAN}No landing detected.${RESET} Collecting data from line ${keepFrom(takeoff)} until the end") >>
-          data.drop(keepFrom(takeoff))
+    given csvRowEncoder: CsvRowEncoder[StreamState, String] with {
+      def apply(row: StreamState): CsvRow[String] =
+        CsvRow.fromNelHeaders {
+          NonEmptyList
+            .of(
+              ("dataPointIndex", row.dataPointIndex.toString),
+              ("height", formatDouble(row.height, 3)),
+              ("time", formatInstant(row.time, 3)),
+            )
+            .appendList(selector(row.physics))
+            .appendList(selector(row.cusum))
         }
-
-      case flightPoints @ FlightPoints(Some(Point(takeoff, _)), _, _, Some(Point(landing, Some(_))), totalPoints) =>
-        Stream.ioPrintln(flightPoints.show) >>
-        retainMinPoints(flightPoints, data) {
-          Stream.ioPrintln(s"Collecting data from line ${keepFrom(takeoff)} to line ${keepUntil(landing, totalPoints)}") >>
-          data.drop(keepFrom(takeoff)).take(keepUntil(landing, totalPoints))
-        }
-
-      case flightPoints @ FlightPoints(None, _, _, Some(Point(landing, Some(_))), totalPoints) =>
-        Stream.ioPrintln(flightPoints.show) >>
-        retainMinPoints(flightPoints, data) {
-          Stream.ioPrintln(s"${CYAN}No takeoff detected.${RESET} ") >>
-          Stream.ioPrintln(s"Collecting data from line 0 to line ${keepUntil(landing, totalPoints)}") >>
-          data.take(keepUntil(landing, totalPoints))
-        }
-
-      case flightPoints =>
-        Stream.ioPrintln(flightPoints.show) >>
-        Stream.ioPrintln(s"${RED}ERROR?${RESET} Not sure why we're here. Collecting everything, just to be sure") >>
-        data
     }
 
-  def retainMinPoints(
-    flightPoints: FlightPoints,
-    data: => Stream[IO, FlysightPoint],
-  )(ifMore: => Stream[IO, FlysightPoint],
-  ): Stream[IO, FlysightPoint] =
-    if retainedPoints(flightPoints) < MinRetainedPoints then
-      Stream.ioPrintln(s"${YELLOW}Too many points dropped!${RESET} Collecting all data.") >>
-      data
-    else
-      ifMore
-    end if
+    def selector[A](value: A): List[(String, String)] =
+      value match {
+        case state: CusumState   => cusumSelector(state)
+        case state: PhysicsState => physicsSelector(state)
+        case _                   => List.empty
+      }
 
-  def retainedPoints(flightPoints: FlightPoints): Double =
-    val first =
-      flightPoints
-        .takeoff
-        .fold(0L)(_.lineIndex)
-        .toDouble
+    def cusumSelector[A](state: CusumState): List[(String, String)] =
+      state match {
+        case _: CusumState.Empty.type => emptyProductRowEncoder[CusumState.Detection]("cusum")
+        case _: CusumState.Filling    => emptyProductRowEncoder[CusumState.Detection]("cusum")
+        case d: CusumState.Detection  => productRowEncoder("cusum", d)
+      }
 
-    val last =
-      flightPoints
-        .landing
-        .fold(flightPoints.lastPoint)(_.lineIndex)
-        .toDouble
+    def physicsSelector[A](state: PhysicsState): List[(String, String)] =
+      state match {
+        case _: PhysicsState.Empty.type => emptyProductRowEncoder[PhysicsState.Detection]("physics")
+        case _: PhysicsState.Filling    => emptyProductRowEncoder[PhysicsState.Detection]("physics")
+        case d: PhysicsState.Detection  => productRowEncoder("physics", d)
+      }
 
-    (last - first) / flightPoints.lastPoint.toDouble
+  }
 
-  def keepFrom(index: Long): Long =
-    Math.max(index - BufferPoints, 0)
-
-  def keepUntil(index: Long, max: Long): Long =
-    Math.min(index + BufferPoints, max)
-
-  //  ----  //
-
-  given niceOptionShow[A: Show]: Show[Option[A]] =
-    _.fold("N/A")(Show[A].show(_))
-
-  given niceDouble: Show[Double] =
-    value => f"${value}%.2f"
-
-  given nicePoint: Show[Point] =
-    point => s"point ${point.lineIndex.show} at altitude ${point.altitude.show}"
-
-  given niceFlightPoints: Show[FlightPoints] =
-    flightPoints =>
-      s"""Flight points:
-         |    Takeoff:  ${flightPoints.takeoff.show}
-         |    Freefall: ${flightPoints.freefall.show}
-         |    Canopy:   ${flightPoints.canopy.show}
-         |    Landing:  ${flightPoints.landing.show}
-         |""".stripMargin
+}

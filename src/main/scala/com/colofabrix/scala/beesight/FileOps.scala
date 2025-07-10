@@ -10,6 +10,9 @@ import fs2.*
 import fs2.data.csv.*
 import fs2.io.file.{ Files, Flags }
 
+/**
+ * Aggregations of operations on files
+ */
 object FileOps:
 
   def readCsv[A](filePath: File)(using CsvRowDecoder[A, String]): Stream[IO, A] =
@@ -28,18 +31,24 @@ object FileOps:
         .through(Files[IO].writeAll(filePath))
         .as(())
 
-  def findCsvFilesRecursively(directory: File): Stream[IO, File] =
-    Files[IO]
-      .list(directory)
-      .map(fs2ToBf)
-      .flatMap {
-        case path if path.isDirectory =>
-          findCsvFilesRecursively(path)
-        case path if path.extension(toLowerCase = true) === Some(".csv") =>
-          Stream.emit(path.absolute)
-        case path =>
-          Stream.empty
-      }
+  def findCsvFilesRecursively(inputPath: File): Stream[IO, File] =
+    if inputPath.isRegularFile then
+      if inputPath.extension(toLowerCase = true) === Some(".csv") then
+        Stream.emit(inputPath)
+      else
+        Stream.empty
+    else
+      Files[IO]
+        .list(inputPath)
+        .map(fs2ToBf)
+        .flatMap {
+          case path if path.isDirectory =>
+            findCsvFilesRecursively(path)
+          case path if path.extension(toLowerCase = true) === Some(".csv") =>
+            Stream.emit(path.absolute)
+          case path =>
+            Stream.empty
+        }
 
   val unixEol: Pipe[IO, String, String] =
     _.map(_.replace("\r\n", "\n"))

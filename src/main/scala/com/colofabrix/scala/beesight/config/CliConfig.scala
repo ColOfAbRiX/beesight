@@ -1,16 +1,17 @@
-package com.colofabrix.scala.beesight
+package com.colofabrix.scala.beesight.config
 
 import better.files.File
 import cats.data.*
 import cats.implicits.*
+import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.monovore.decline.*
 import scala.util.matching.Regex
 import scala.util.Try
 
-object CliConfig:
+object CliConfig {
 
   lazy val allOptions: Opts[Config] =
-    (input, output, limit, dryRun, peakDetectionParams)
+    (input, output, limit, dryRun, buffer, minPoints, peakParams)
       .mapN(Config.apply)
       .validate("Output directory must not match input directory")(config => config.input != config.output)
 
@@ -53,7 +54,27 @@ object CliConfig:
       )
       .orFalse
 
-  lazy val peakDetectionParams: Opts[DetectionConfig] =
+  lazy val buffer: Opts[Int] =
+    Opts
+      .option[Int](
+        long = "buffer",
+        short = "b",
+        help = "Number of points to keep before or after a landing or takeoff has been detected",
+      )
+      .map(Math.max(0, _))
+      .withDefault(500)
+
+  lazy val minPoints: Opts[Double] =
+    Opts
+      .option[Double](
+        long = "min-retain-points",
+        short = "k",
+        help = "Percentage of minimum point the tool must keep.",
+      )
+      .map(d => Math.min(1, Math.max(0, d)))
+      .withDefault(500)
+
+  lazy val peakParams: Opts[DetectionConfig] =
     Opts
       .option(
         long = "peak-detection-params",
@@ -89,8 +110,6 @@ object CliConfig:
       Influence = paramsMap.getDouble("influence", DetectionConfig.Default.TakeoffThreshold),
       LandingThreshold = paramsMap.getDouble("landingThreshold", DetectionConfig.Default.LandingThreshold),
       IgnoreLandingAbove = paramsMap.getDouble("ignoreLandingAbove", DetectionConfig.Default.IgnoreLandingAbove),
-      BufferPoints = paramsMap.getInt("bufferPoints", DetectionConfig.Default.BufferPoints),
-      MinRetainedPoints = paramsMap.getDouble("minRetainedPoints", DetectionConfig.Default.MinRetainedPoints),
     )
 
   extension (self: Map[String, String])
@@ -106,3 +125,5 @@ object CliConfig:
         .get(key.toLowerCase)
         .flatMap(_.toDoubleOption)
         .getOrElse(default)
+
+}

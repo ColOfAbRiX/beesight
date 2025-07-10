@@ -1,14 +1,16 @@
-package com.colofabrix.scala.beesight
+package com.colofabrix.scala.beesight.config
 
 import better.files.File
 
 /**
-  * Configuration for the tool
+  * Configuration for the command line tool
   *
   * @param input Input directory
   * @param output Output directory
   * @param processLimit Limits the number of files to process
   * @param dryRun Do a test run without creating output files
+  * @param bufferPoints Number of points to keep before or after a landing or takeoff has been detected
+  * @param minRetainedPoints Percentage of minimum point the tool must keep. If less that this percentage the whole data will be retained
   * @param detectionConfig Parameters for the flight stages detection algorithm
   */
 final case class Config(
@@ -16,6 +18,8 @@ final case class Config(
   output: Option[File],
   processLimit: Option[Int],
   dryRun: Boolean,
+  bufferPoints: Int,
+  minRetainedPoints: Double,
   detectionConfig: DetectionConfig,
 )
 
@@ -27,8 +31,6 @@ final case class Config(
   * @param Influence The influence of new signals on the mean and standard deviation
   * @param LandingThreshold The z-score at which the algorithm signals that a landing has happened
   * @param IgnoreLandingAbove Ignore landing detection above a specified height
-  * @param BufferPoints Number of points to keep before or after a landing or takeoff has been detected
-  * @param MinRetainedPoints Percentage of minimum point the tool must keep. If less that this percentage the whole data will be retained
   */
 final case class DetectionConfig(
   WindowTime: Int,
@@ -36,19 +38,15 @@ final case class DetectionConfig(
   Influence: Double,
   LandingThreshold: Double,
   IgnoreLandingAbove: Double,
-  BufferPoints: Int,
-  MinRetainedPoints: Double
 )
 
 object DetectionConfig:
 
   lazy val Default: DetectionConfig =
     DetectionConfig(
-      WindowTime = 30 * 5,
+      WindowTime = 400,
       TakeoffThreshold = 3.5,
       Influence = 0.9,
       LandingThreshold = 1.0,
       IgnoreLandingAbove = 600.0,
-      BufferPoints = 500,
-      MinRetainedPoints = 0.1
     )
