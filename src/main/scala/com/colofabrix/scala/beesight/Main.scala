@@ -54,10 +54,10 @@ final class Main(config: Config) {
   def processPath(inputFile: File): Stream[IO, Unit] =
     for {
       outputFile <- Stream.emit(buildOutputFileName(inputFile))
-      _          <- Stream.println(s"Processing file: $inputFile -> $outputFile")
-      _          <- Stream.io(mkdirs(outputFile.parent))
+      _          <- fs2Println(s"Processing file: $inputFile -> $outputFile")
+      _          <- fs2Io(mkdirs(outputFile.parent))
       _          <- processCsvFile(inputFile, outputFile)
-      _          <- Stream.println(s"DONE: $inputFile\n")
+      _          <- fs2Println(s"DONE: $inputFile\n")
     } yield ()
 
   def buildOutputFileName(inputFile: File): File =
@@ -76,7 +76,8 @@ final class Main(config: Config) {
     outputRoot / relativePath
 
   def processCsvFile(inputFile: File, outputFile: File): Stream[IO, Unit] =
-    if config.dryRun then Stream.empty
+    if config.dryRun then
+      Stream.empty
     else
       val stagesDetector = FlightStagesDetection(config)
       val dataCutter     = DataCutter(config)

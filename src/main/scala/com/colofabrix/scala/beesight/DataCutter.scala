@@ -16,46 +16,44 @@ final class DataCutter(config: Config) {
     data =>
       points match {
         case points @ FlightStagesPoints(None, None, None, None, _) =>
-          Stream.println(points.show) >>
-          Stream.println(
+          fs2Println(points.show) >>
+          fs2Println(
             s"${YELLOW}WARNING!${RESET} Found stable data only. Might not contain a flight recording.",
           ) >>
           data
 
         case points @ FlightStagesPoints(Some(DataPoint(_, None)), _, _, None, _) =>
-          Stream.println(points.show) >>
-          Stream.println(s"${CYAN}No takeoff or landing points detected.${RESET} Collecting all data.") >>
+          fs2Println(points.show) >>
+          fs2Println(s"${CYAN}No takeoff or landing points detected.${RESET} Collecting all data.") >>
           data
 
         case points @ FlightStagesPoints(Some(DataPoint(takeoff, Some(_))), _, _, None, _) =>
-          Stream.println(points.show) >>
+          fs2Println(points.show) >>
           retainMinPoints(points, data) {
-            Stream.println(
+            fs2Println(
               s"${CYAN}No landing detected.${RESET} Collecting data from line ${keepFrom(takeoff)} until the end",
             ) >>
             data.drop(keepFrom(takeoff))
           }
 
         case points @ FlightStagesPoints(Some(DataPoint(takeoff, _)), _, _, Some(DataPoint(landing, Some(_))), totalPoints) =>
-          Stream.println(points.show) >>
+          fs2Println(points.show) >>
           retainMinPoints(points, data) {
-            Stream.println(
-              s"Collecting data from line ${keepFrom(takeoff)} to line ${keepUntil(landing, totalPoints)}",
-            ) >>
+            fs2Println(s"Collecting data from line ${keepFrom(takeoff)} to line ${keepUntil(landing, totalPoints)}") >>
             data.drop(keepFrom(takeoff)).take(keepUntil(landing, totalPoints))
           }
 
         case points @ FlightStagesPoints(None, _, _, Some(DataPoint(landing, Some(_))), totalPoints) =>
-          Stream.println(points.show) >>
+          fs2Println(points.show) >>
           retainMinPoints(points, data) {
-            Stream.println(s"${CYAN}No takeoff detected.${RESET} ") >>
-            Stream.println(s"Collecting data from line 0 to line ${keepUntil(landing, totalPoints)}") >>
+            fs2Println(s"${CYAN}No takeoff detected.${RESET} ") >>
+            fs2Println(s"Collecting data from line 0 to line ${keepUntil(landing, totalPoints)}") >>
             data.take(keepUntil(landing, totalPoints))
           }
 
         case flightPoints =>
-          Stream.println(flightPoints.show) >>
-          Stream.println(s"${RED}ERROR?${RESET} Not sure why we're here. Collecting everything, just to be sure") >>
+          fs2Println(flightPoints.show) >>
+          fs2Println(s"${RED}ERROR?${RESET} Not sure why we're here. Collecting everything, just to be sure") >>
           data
       }
 
@@ -65,7 +63,7 @@ final class DataCutter(config: Config) {
   )(ifMore: => Stream[IO, FlysightPoint],
   ): Stream[IO, FlysightPoint] =
     if numberOfRetainedPoints(flightPoints) < config.minRetainedPoints then
-      Stream.println(s"${YELLOW}Too many points dropped!${RESET} Collecting all data.") >>
+      fs2Println(s"${YELLOW}Too many points dropped!${RESET} Collecting all data.") >>
       data
     else
       ifMore

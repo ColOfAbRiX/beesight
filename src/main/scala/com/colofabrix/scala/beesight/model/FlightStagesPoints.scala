@@ -9,7 +9,9 @@ final case class FlightStagesPoints(
 )
 
 object FlightStagesPoints {
+
   val empty: FlightStagesPoints = FlightStagesPoints(None, None, None, None, -1)
+
 }
 
 final case class DataPoint(

@@ -15,15 +15,21 @@ import fs2.data.csv.*
 import java.time.*
 
 
+/**
+ * Detects and analyzes different stages of a flight based on time-series data
+ */
 final class FlightStagesDetection(config: Config) {
   import config.detectionConfig.*
 
   private val cusumDetector =
-    CusumDetector(10, 0.75, 10.0)
+    CusumDetector(30, 0.6, 15.0)
 
   private val physicsDetector =
-    PhysicsDetector(10)
+    PhysicsDetector()
 
+  /**
+   * Processes a stream of flight data points to identify flight stages
+   */
   def detect(data: fs2.Stream[IO, FlysightPoint]): IO[FlightStagesPoints] =
     data
       .through(detectPipe)
@@ -36,19 +42,21 @@ final class FlightStagesDetection(config: Config) {
         .zipWithIndex
         .scan(StreamState()) {
           case (state, (point, i)) =>
-            val physics = physicsDetector.checkNextValue(state.physics, point.hMSL, point.time)
+            val time = point.time.toInstant
+
+            val physics = physicsDetector.checkNextValue(state.physics, point.hMSL, time)
 
             val cusum =
               physics match {
                 case PhysicsState.Empty | PhysicsState.Filling(_) =>
                   CusumState.Empty
-                case PhysicsState.Detection(valuesWindow, time, value, speed) =>
+                case PhysicsState.Detection(previous, time, value, speed, _) =>
                   cusumDetector.checkNextValue(state.cusum, speed)
               }
 
             StreamState(
               dataPointIndex = i,
-              time = point.time.toInstant,
+              time = time,
               height = point.hMSL,
               physics = physics,
               cusum = cusum,
@@ -95,6 +103,9 @@ object FlightStagesDetection {
         }
     }
 
+    /**
+     * Selects the appropriate encoder based on the type of state
+     */
     def selector[A](value: A): List[(String, String)] =
       value match {
         case state: CusumState   => cusumSelector(state)
@@ -102,6 +113,9 @@ object FlightStagesDetection {
         case _                   => List.empty
       }
 
+    /**
+     * Selects the appropriate encoder for CusumState
+     */
     def cusumSelector[A](state: CusumState): List[(String, String)] =
       state match {
         case _: CusumState.Empty.type => emptyProductRowEncoder[CusumState.Detection]("cusum")
@@ -109,6 +123,9 @@ object FlightStagesDetection {
         case d: CusumState.Detection  => productRowEncoder("cusum", d)
       }
 
+    /**
+     * Selects the appropriate encoder for PhysicsState
+     */
     def physicsSelector[A](state: PhysicsState): List[(String, String)] =
       state match {
         case _: PhysicsState.Empty.type => emptyProductRowEncoder[PhysicsState.Detection]("physics")

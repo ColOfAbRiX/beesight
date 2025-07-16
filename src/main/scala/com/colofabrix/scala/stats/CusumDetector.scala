@@ -19,25 +19,19 @@ import scala.collection.immutable.Queue
  *
  * See https://blog.stackademic.com/the-cusum-algorithm-all-the-essential-information-you-need-with-python-examples-f6a5651bf2e5
  */
-final class CusumDetector(windowSize: Int, slack: Double, threshold: Double):
-
-  private val safeWindowSize: Int =
-    Math.max(windowSize, 1)
-
-  private val safeThreshold: Double =
-    Math.max(threshold, 0.0)
-
-  private val safeSlack: Double =
-    Math.max(slack, 0.0)
+final class CusumDetector private (windowSize: Int, slack: Double, threshold: Double):
 
   def checkNextValue(state: DetectorState, value: Double): DetectorState =
     state match {
       case DetectorState.Empty =>
         DetectorState.Filling(Queue(value))
-      case DetectorState.Filling(window) if window.length < safeWindowSize =>
+
+      case DetectorState.Filling(window) if window.length < windowSize =>
         DetectorState.Filling(window.enqueue(value))
+
       case DetectorState.Filling(window) =>
         calculateStats(value, window, 0.0, 0.0)
+
       case DetectorState.Detection(_, window, _, _, _, positiveSum, negativeSum) =>
         calculateStats(value, window, positiveSum, negativeSum)
     }
@@ -55,11 +49,11 @@ final class CusumDetector(windowSize: Int, slack: Double, threshold: Double):
     // Calculate the positive and negative CUSUM values
     // S+ = max(0, S+ + (x - μ) - K*σ)
     // S- = max(0, S- - (x - μ) - K*σ)
-    val positiveSum = Math.max(0.0, prevPositiveSum + deviation - safeSlack * pStdDev)
-    val negativeSum = Math.max(0.0, prevNegativeSum - deviation - safeSlack * pStdDev)
+    val positiveSum = Math.max(0.0, prevPositiveSum + deviation - slack * pStdDev)
+    val negativeSum = Math.max(0.0, prevNegativeSum - deviation - slack * pStdDev)
 
     // The threshold is scaled by the standard deviation
-    val relativeThreshold = safeThreshold * pStdDev
+    val relativeThreshold = threshold * pStdDev
 
     // Determine if there's a peak based on the CUSUM values
     val peak =
@@ -85,6 +79,13 @@ final class CusumDetector(windowSize: Int, slack: Double, threshold: Double):
     )
 
 object CusumDetector {
+
+  def apply(windowSize: Int, slack: Double, threshold: Double): CusumDetector =
+    new CusumDetector(
+      windowSize = Math.max(windowSize, 1),
+      threshold = Math.max(threshold, 0.0),
+      slack = Math.max(slack, 0.0)
+    )
 
   enum DetectorState {
 
