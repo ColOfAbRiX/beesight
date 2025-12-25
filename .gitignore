@@ -1,0 +1,27 @@
+# Directories
+.bloop
+.bsp
+.history
+.idea
+.metals
+.scala-build
+.vscode
+out
+target
+
+# Files
+metals.sbt
+
+# File types
+*.class
+*.hprof
+*.iml
+*.ipr
+*.iws
+*.log
+
+# Temporary files
+TODO*
+
+# Sensitive files
+secrets.*
