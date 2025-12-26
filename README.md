@@ -9,7 +9,7 @@ It simplifies the creation of command-line applications by combining the declara
 
 ## Features
 
-- **Simple Integration** - Combine Decline's elegant argument parsing with Cats Effect's IO monad
+- **Simple Integration** - Combine Decline's argument parsing with Cats Effect's IO monad
 - **Minimal Boilerplate** - Just extend a trait and define your options
 - **Configurable** - Support for custom version flags, help messages, and more
 - **Type-Safe** - Leverage Scala's type system for compile-time safety
@@ -21,9 +21,9 @@ Add the following dependencies to your `build.sbt`:
 
 ```scala
 libraryDependencies ++= Seq(
-  "com.colofabrix.scala" %% "declinio"    % "0.1.0",
-  "com.monovore"         %% "decline"     % "2.4.1",  // Required peer dependency
-  "org.typelevel"        %% "cats-effect" % "3.5.4",  // Required peer dependency
+  "com.colofabrix.scala" %% "declinio"    % "1.0.0",
+  "com.monovore"         %% "decline"     % <version>,  // Required peer dependency
+  "org.typelevel"        %% "cats-effect" % <version>,  // Required peer dependency
 )
 ```
 
@@ -56,16 +56,16 @@ object MyApp extends IODeclineApp[Config]:
     "1.0.0"
 
   override def options: Opts[Config] =
-    val nameOpt    = Opts.option[String]("name", help = "Your name", short = "n")
-    val countOpt   = Opts.option[Int]("count", help = "Number of greetings", short = "c").withDefault(1)
-    val verboseOpt = Opts.flag("verbose", help = "Enable verbose output", short = "v").orFalse
+    val nameOpt    = Opts.option[String]("name", help = "Your name")
+    val countOpt   = Opts.option[Int]("count", help = "Number of greetings").withDefault(1)
+    val verboseOpt = Opts.flag("verbose", help = "Verbose output").orFalse
     (nameOpt, countOpt, verboseOpt).mapN(Config.apply)
 
   override def runWithConfig(config: Config): IO[ExitCode] =
     for {
       _ <- IO.println(s"Hello, ${config.name}!")
       _ <- if (config.verbose) IO.println(s"Greeting you ${config.count} times...") else IO.unit
-      _ <- (1 until config.count).toList.traverse_(_ => IO.println(s"Hello again, ${config.name}!"))
+      _ <- (1 until config.count).toList.traverse_(_ => IO.println(s"Hello ${config.name}!"))
     } yield ExitCode.Success
 ```
 
@@ -134,7 +134,8 @@ object CustomEffectApp extends IOApp with DeclineApp[IO, AppConfig]:
 
 ### DeclineApp[F, A]
 
-The main trait that provides Decline integration for any effect type `F[_]` that supports `Sync` and `Console`.
+The main trait that provides Decline integration for any effect type `F[_]` that supports `Sync` and
+`Console`.
 
 | Member           | Type                          | Description                                          |
 |------------------|-------------------------------|------------------------------------------------------|
@@ -148,11 +149,13 @@ The main trait that provides Decline integration for any effect type `F[_]` that
 
 ### IODeclineApp[A]
 
-A convenience trait that extends `IOApp` and `DeclineApp[IO, A]`. Use this for standard Cats Effect IO applications.
+A convenience trait that extends `IOApp` and `DeclineApp[IO, A]`. Use this for standard Cats Effect
+IO applications.
 
 ### IOUnitDeclineApp
 
-A convenience trait for applications that don't need command-line arguments. Extends `IODeclineApp[Unit]`.
+A convenience trait for applications that don't need command-line arguments. Extends
+`IODeclineApp[Unit]`.
 
 | Member        | Type           | Description                        |
 |---------------|----------------|------------------------------------|
@@ -218,26 +221,6 @@ override def runWithConfig(config: Config): IO[ExitCode] =
     .use { resource =>
       IO.println(s"Using $resource").as(ExitCode.Success)
     }
-```
-
-## Building from Source
-
-```bash
-# Clone the repository
-git clone https://github.com/ColOfAbRiX/declinio.git
-cd declinio
-
-# Compile
-sbt compile
-
-# Run tests
-sbt test
-
-# Generate documentation
-sbt doc
-
-# Publish locally
-sbt publishLocal
 ```
 
 ## Contributing

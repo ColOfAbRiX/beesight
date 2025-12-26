@@ -12,13 +12,14 @@ val declineVersion    = "2.4.1"
 Global / run / fork              := true
 Global / onChangedBuildSource    := ReloadOnSourceChanges
 Global / tpolecatExcludeOptions ++= Set(ScalacOptions.warnUnusedLocals)
+Test / tpolecatScalacOptions     := Set.empty
 
 lazy val root =
   project
     .in(file("."))
     .settings(
       name         := "declinio",
-      version      := "0.1.0",
+      version      := "1.0.0",
       description  := "A Cats Effect integration for Decline command-line parser",
       organization := "com.colofabrix.scala",
       scalaVersion := scala3Version,
