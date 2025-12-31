@@ -1,3 +1,6 @@
+real_data/
+.clinerules
+
 # macOS
 .DS_Store
 

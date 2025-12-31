@@ -9,23 +9,22 @@ import com.colofabrix.scala.beesight.config.*
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.stats.*
 import com.colofabrix.scala.stats.CusumDetector.DetectorState as CusumState
-import com.colofabrix.scala.stats.PhysicsDetector.DetectorState as PhysicsState
+import com.colofabrix.scala.stats.PhysicsCalculator.DetectorState as PhysicsState
 import fs2.*
 import fs2.data.csv.*
 import java.time.*
 
-
 /**
- * Detects and analyzes different stages of a flight based on time-series data
+ * Detects and analyses different stages of a flight based on time-series data
  */
 final class FlightStagesDetection(config: Config) {
   import config.detectionConfig.*
 
   private val cusumDetector =
-    CusumDetector(30, 0.6, 15.0)
+    CusumDetector.withMedian(50, 0.8, 25.0)
 
   private val physicsDetector =
-    PhysicsDetector()
+    PhysicsCalculator()
 
   /**
    * Processes a stream of flight data points to identify flight stages
@@ -43,7 +42,6 @@ final class FlightStagesDetection(config: Config) {
         .scan(StreamState()) {
           case (state, (point, i)) =>
             val time = point.time.toInstant
-
             val physics = physicsDetector.checkNextValue(state.physics, point.hMSL, time)
 
             val cusum =

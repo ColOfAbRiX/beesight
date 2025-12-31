@@ -2,20 +2,19 @@ package com.colofabrix.scala.stats
 
 import munit.CatsEffectSuite
 import com.colofabrix.scala.stats.Calculus.TimedValue
-import com.colofabrix.scala.stats.PhysicsDetector.DetectorState
+import com.colofabrix.scala.stats.PhysicsCalculator.DetectorState
 import java.time.Instant
 import scala.collection.immutable.Queue
 
 class PhysicsDetectorSpec extends CatsEffectSuite {
 
   test("PhysicsDetector - when in Empty state - should transition to Filling state with one data point") {
-    val detector     = PhysicsDetector()
+    val detector     = PhysicsCalculator()
     val initialState = DetectorState.Empty
     val time         = Instant.parse("2023-01-01T00:00:00Z")
     val value        = 100.0
 
-    val expected =
-      DetectorState.Filling(Queue(TimedValue(value, time)))
+    val expected = DetectorState.Filling(Queue(TimedValue(value, time)))
 
     val actual = detector.checkNextValue(initialState, value, time)
 
@@ -23,15 +22,14 @@ class PhysicsDetectorSpec extends CatsEffectSuite {
   }
 
   test("PhysicsDetector - when in Filling state with one data point - should remain in Filling state with two data points") {
-    val detector     = PhysicsDetector()
+    val detector     = PhysicsCalculator()
     val time1        = Instant.parse("2023-01-01T00:00:00Z")
     val time2        = Instant.parse("2023-01-01T00:00:01Z")
     val value1       = 100.0
     val value2       = 110.0
     val initialState = DetectorState.Filling(Queue(TimedValue(value1, time1)))
 
-    val expected =
-      DetectorState.Filling(Queue(TimedValue(value1, time1), TimedValue(value2, time2)))
+    val expected = DetectorState.Filling(Queue(TimedValue(value1, time1), TimedValue(value2, time2)))
 
     val actual = detector.checkNextValue(initialState, value2, time2)
 
@@ -39,7 +37,7 @@ class PhysicsDetectorSpec extends CatsEffectSuite {
   }
 
   test("PhysicsDetector - when in Filling state with two data points - should transition to Detection state with three data points") {
-    val detector     = PhysicsDetector()
+    val detector     = PhysicsCalculator()
     val time1        = Instant.parse("2023-01-01T00:00:00Z")
     val time2        = Instant.parse("2023-01-01T00:00:01Z")
     val time3        = Instant.parse("2023-01-01T00:00:02Z")
@@ -67,7 +65,7 @@ class PhysicsDetectorSpec extends CatsEffectSuite {
   }
 
   test("PhysicsDetector - when in Detection state - should update speed and acceleration with new data point") {
-    val detector = PhysicsDetector()
+    val detector = PhysicsCalculator()
     val time1    = Instant.parse("2023-01-01T00:00:00Z")
     val time2    = Instant.parse("2023-01-01T00:00:01Z")
     val time3    = Instant.parse("2023-01-01T00:00:02Z")
@@ -77,12 +75,13 @@ class PhysicsDetectorSpec extends CatsEffectSuite {
     val value3   = 125.0
     val value4   = 145.0
 
-    val initialState = DetectorState.Detection(
-      previous = Queue(TimedValue(value2, time2), TimedValue(value3, time3)),
-      time = time3,
-      value = value3,
-      acceleration = 5.0, // ((value3 - value2) - (value2 - value1)) / 1.0
-    )
+    val initialState =
+      DetectorState.Detection(
+        previous = Queue(TimedValue(value2, time2), TimedValue(value3, time3)),
+        time = time3,
+        value = value3,
+        acceleration = 5.0, // ((value3 - value2) - (value2 - value1)) / 1.0
+      )
 
     val speed3       = (value4 - value3) / 1.0 // 20.0 m/s
     val speed2       = (value3 - value2) / 1.0 // 15.0 m/s
@@ -103,7 +102,7 @@ class PhysicsDetectorSpec extends CatsEffectSuite {
   }
 
   test("PhysicsDetector - with real-world data - should calculate correct speed and acceleration") {
-    val detector = PhysicsDetector()
+    val detector = PhysicsCalculator()
     val time1    = Instant.parse("2023-01-01T00:00:00Z")
     val time2    = Instant.parse("2023-01-01T00:00:01Z")
     val time3    = Instant.parse("2023-01-01T00:00:02Z")
@@ -136,7 +135,7 @@ class PhysicsDetectorSpec extends CatsEffectSuite {
   }
 
   test("PhysicsDetector - with edge cases - should handle zero time difference") {
-    val detector = PhysicsDetector()
+    val detector = PhysicsCalculator()
     val time1    = Instant.parse("2023-01-01T00:00:00Z")
     val time2    = Instant.parse("2023-01-01T00:00:01Z")
     val time3    = time2 // Same time as previous point
@@ -152,7 +151,7 @@ class PhysicsDetectorSpec extends CatsEffectSuite {
   }
 
   test("PhysicsDetector - with edge cases - should handle negative time difference") {
-    val detector = PhysicsDetector()
+    val detector = PhysicsCalculator()
     val time1    = Instant.parse("2023-01-01T00:00:00Z")
     val time2    = Instant.parse("2023-01-01T00:00:01Z")
     val time3    = Instant.parse("2023-01-01T00:00:00.500Z") // Earlier than time2

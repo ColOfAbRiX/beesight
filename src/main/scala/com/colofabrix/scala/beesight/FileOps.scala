@@ -20,6 +20,9 @@ object FileOps:
       .readAll(filePath, 1024, Flags.Read)
       .through(fs2.text.utf8.decode)
       .through(unixEol)
+      .through(text.lines)
+      .filter(line => line.trim.nonEmpty && !line.trim.startsWith("#"))
+      .intersperse("\n")
       .through(lenient.attemptDecodeUsingHeaders[A]())
       .collect { case Right(decoded) => decoded }
 
