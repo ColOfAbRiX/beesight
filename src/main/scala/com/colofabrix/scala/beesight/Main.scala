@@ -7,7 +7,7 @@ import cats.implicits.*
 import com.colofabrix.scala.beesight.StreamUtils.*
 import com.colofabrix.scala.beesight.config.*
 import com.colofabrix.scala.beesight.model.*
-import com.colofabrix.scala.decline.IODeclineApp
+import com.colofabrix.scala.declinio.IODeclineApp
 import com.monovore.decline.Opts
 import fs2.*
 
