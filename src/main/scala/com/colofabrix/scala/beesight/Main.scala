@@ -4,6 +4,7 @@ import cats.effect.*
 import cats.effect.implicits.given
 import cats.implicits.given
 import com.colofabrix.scala.beesight.config.*
+import com.colofabrix.scala.beesight.debug.ChartGenerator
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.declinio.IODeclineApp
 import com.monovore.decline.Opts
@@ -47,23 +48,24 @@ object Main extends IODeclineApp[Config] {
     yield result
 
   private def processCsvFile(inputFile: Path, outputFile: Path): IOConfig[Unit] =
-    IOConfig.flatMapConfig { config =>
-      if !config.dryRun then
-        val dataCutter     = DataCutter(config)
-        val csvStream      = CsvFileOps.readCsv[FlysightPoint](inputFile)
+    val csvStream = CsvFileOps.readCsv[FlysightPoint](inputFile)
+    val chartPath = computeChartPath(outputFile)
 
-        FlightStagesDetection
-          .detect(csvStream)
-          .flatMap { flightPoints =>
-            csvStream
-              .through(dataCutter.cut(flightPoints))
-              .through(CsvFileOps.writeCsv(outputFile))
-              .compile
-              .drain
-          }
-          .to[IOConfig]
-      else
-        IOConfig.unit
-    }
+    for
+      flightPoints <- FlightStagesDetection.detect(csvStream).to[IOConfig]
+      _            <- ChartGenerator.generate(csvStream, flightPoints, chartPath).to[IOConfig]
+      _            <- CsvFileOps.writeData(csvStream, flightPoints, outputFile)
+    yield ()
+
+  private def computeChartPath(outputFile: Path): Path =
+    val baseName =
+      outputFile
+        .getFileName
+        .toString
+        .replaceFirst("\\.[^.]+$", "")
+
+    Option(outputFile.getParent)
+      .getOrElse(Paths.get("."))
+      .resolve(s"$baseName.html")
 
 }
