@@ -1,15 +1,14 @@
 package com.colofabrix.scala.beesight
 
-import better.files.Dsl.*
-import better.files.File
 import cats.effect.*
-import cats.implicits.*
-import com.colofabrix.scala.beesight.StreamUtils.*
+import cats.effect.implicits.given
+import cats.implicits.given
 import com.colofabrix.scala.beesight.config.*
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.declinio.IODeclineApp
 import com.monovore.decline.Opts
-import fs2.*
+import java.nio.file.*
+import scala.jdk.CollectionConverters.*
 
 object Main extends IODeclineApp[Config] {
 
@@ -17,76 +16,54 @@ object Main extends IODeclineApp[Config] {
     "beesight"
 
   val header: String =
-    "Beesight - A Flysight data cleaner tool"
+    "Beesight - A Flysight data cleaner and manipulator tool"
 
   val options: Opts[Config] =
     CliConfig.allOptions
 
-  override def runWithConfig(config: Config): IO[ExitCode] =
-    Main(config).start
+  override def runWithConfig(config: Config): IO[ExitCode] = {
+    for
+      inputFiles     <- FileOps.discoverCsvFiles(config.input).to[IOConfig]
+      filesToProcess <- applyLimit(inputFiles)
+      _              <- IOConfig.println(s"Found ${inputFiles.size} CSV files, processing ${filesToProcess.size}")
+      _              <- filesToProcess.traverse(processFile)
+    yield ExitCode.Success
+  }.run(config)
 
-}
-
-final class Main(config: Config) {
-
-  lazy val start =
-    FileOps
-      .findCsvFilesRecursively(config.input)
-      .through(removeOutputDirectory)
-      .through(limitProcessing)
-      .flatMap(processPath)
-      .compile
-      .drain
-      .as(ExitCode.Success)
-
-  lazy val removeOutputDirectory: Pipe[IO, File, File] =
-    _.filterNot {
-      _.toString.startsWith(config.output.toString)
+  private def applyLimit(files: List[Path]): IOConfig[List[Path]] =
+    IOConfig.mapConfig { config =>
+      config
+        .processLimit
+        .fold(files)(limit => files.take(limit))
     }
 
-  lazy val limitProcessing: Pipe[IO, File, File] =
-    _.zipWithIndex.flatMap {
-      case (path, _) if config.processLimit.isEmpty          => Stream.emit(path)
-      case (path, i) if i < config.processLimit.getOrElse(0) => Stream.emit(path)
-      case _                                                 => Stream.empty
-    }
+  private def processFile(inputFile: Path): IOConfig[Unit] =
+    for
+      outputFile <- FileOps.computeOutputPath(inputFile)
+      _          <- IOConfig.println(s"Processing: $inputFile -> $outputFile")
+      _          <- IOConfig.blocking(Files.createDirectories(outputFile.getParent))
+      result     <- processCsvFile(inputFile, outputFile)
+      _          <- IOConfig.println(s"DONE: $inputFile\n")
+    yield result
 
-  def processPath(inputFile: File): Stream[IO, Unit] =
-    for {
-      outputFile <- Stream.emit(buildOutputFileName(inputFile))
-      _          <- fs2Println(s"Processing file: $inputFile -> $outputFile")
-      _          <- fs2Io(mkdirs(outputFile.parent))
-      _          <- processCsvFile(inputFile, outputFile)
-      _          <- fs2Println(s"DONE: $inputFile\n")
-    } yield ()
+  private def processCsvFile(inputFile: Path, outputFile: Path): IOConfig[Unit] =
+    IOConfig.flatMapConfig { config =>
+      if !config.dryRun then
+        val dataCutter     = DataCutter(config)
+        val csvStream      = CsvFileOps.readCsv[FlysightPoint](inputFile)
 
-  def buildOutputFileName(inputFile: File): File =
-    val outputRoot =
-      config.output.getOrElse {
-        if config.input.isDirectory then config.input / "processed"
-        else config.input.parent / "processed"
-      }
-
-    val relativePath =
-      if config.input.isDirectory then
-        config.input.path.toAbsolutePath().relativize(inputFile.path.toAbsolutePath()).toString
+        FlightStagesDetection
+          .detect(csvStream)
+          .flatMap { flightPoints =>
+            csvStream
+              .through(dataCutter.cut(flightPoints))
+              .through(CsvFileOps.writeCsv(outputFile))
+              .compile
+              .drain
+          }
+          .to[IOConfig]
       else
-        inputFile.name
-
-    outputRoot / relativePath
-
-  def processCsvFile(inputFile: File, outputFile: File): Stream[IO, Unit] =
-    if config.dryRun then
-      Stream.empty
-    else
-      val stagesDetector = FlightStagesDetection(config)
-      val dataCutter     = DataCutter(config)
-
-      val csvStream = FileOps.readCsv[FlysightPoint](inputFile)
-
-      Stream
-        .eval(stagesDetector.detect(csvStream))
-        .flatMap(flightPoints => csvStream.through(dataCutter.cut(flightPoints)))
-        .through(FileOps.writeCsv(outputFile))
+        IOConfig.unit
+    }
 
 }

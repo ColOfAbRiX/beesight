@@ -25,7 +25,7 @@ final class CusumDetector private (
   threshold: Double,
   meanFn: WinStat,
   stdDevFn: WinStat,
-):
+) {
 
   def checkNextValue(state: DetectorState, value: Double): DetectorState =
     state match {
@@ -78,6 +78,8 @@ final class CusumDetector private (
       peakResult = peak,
     )
 
+}
+
 object CusumDetector {
 
   private type WinStat = (Queue[Double], Double) => Double
@@ -93,20 +95,29 @@ object CusumDetector {
 
   private def EMA(tailSize: Int): WinStat =
     (window, current) =>
-      if window.isEmpty then
-        current
-      else
-        val alpha = 1.0 / tailSize.toDouble
-        alpha * window.dequeue._1 + (1.0 - alpha) * current
+      val alpha = 2.0 / (tailSize.toDouble + 1.0)
+      val allValues = window.enqueue(current)
+      allValues.foldLeft(allValues.head) { (ema, value) =>
+        alpha * value + (1.0 - alpha) * ema
+      }
 
-  // This is incorrect
   private def EMAStdDev(tailSize: Int): WinStat =
     (window, current) =>
-      if window.isEmpty then
-        current
-      else
-        val alpha = 1.0 / tailSize.toDouble
-        alpha * window(0) + (1.0 - alpha) * window(1)
+      val alpha = 2.0 / (tailSize.toDouble + 1.0)
+      val allValues = window.enqueue(current)
+
+      val emaMean =
+        allValues.foldLeft(allValues.head) { (ema, value) =>
+          alpha * value + (1.0 - alpha) * ema
+        }
+
+      val emaVariance =
+        allValues.foldLeft(0.0) { (emaVar, value) =>
+          val deviation = value - emaMean
+          alpha * (deviation * deviation) + (1.0 - alpha) * emaVar
+        }
+
+      sqrt(emaVariance)
 
   def apply(windowSize: Int, slack: Double, threshold: Double, meanFn: WinStat, stdDevFn: WinStat): CusumDetector =
     new CusumDetector(
@@ -142,6 +153,15 @@ object CusumDetector {
       slack = Math.max(slack, 0.0),
       meanFn = EMA(windowSize),
       stdDevFn = StdDevFn,
+    )
+
+  def withFullEMA(windowSize: Int, slack: Double, threshold: Double): CusumDetector =
+    new CusumDetector(
+      windowSize = Math.max(windowSize, 1),
+      threshold = Math.max(threshold, 0.0),
+      slack = Math.max(slack, 0.0),
+      meanFn = EMA(windowSize),
+      stdDevFn = EMAStdDev(windowSize),
     )
 
   enum DetectorState {

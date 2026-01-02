@@ -3,7 +3,6 @@ package com.colofabrix.scala.beesight
 import cats.Show
 import cats.effect.IO
 import cats.implicits.*
-import com.colofabrix.scala.beesight.*
 import com.colofabrix.scala.beesight.StreamUtils.*
 import com.colofabrix.scala.beesight.config.*
 import com.colofabrix.scala.beesight.model.*

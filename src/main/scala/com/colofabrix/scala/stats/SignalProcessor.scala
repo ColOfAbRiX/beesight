@@ -1,5 +1,7 @@
 package com.colofabrix.scala.stats
 
+import breeze.linalg.DenseVector
+import breeze.stats.median
 import scala.collection.immutable.Queue
 
 /**
@@ -12,10 +14,10 @@ object SignalProcessor {
    */
   final case class FlightMetrics(
     altitude: Double,
-    velD: Double,
+    velocityDown: Double,
     horizontalSpeed: Double,
     totalSpeed: Double,
-    filteredVelD: Double,
+    filteredVelocityDown: Double,
   )
 
   /**
@@ -23,21 +25,21 @@ object SignalProcessor {
    */
   def computeMetrics(
     altitude: Double,
-    velN: Double,
-    velE: Double,
-    velD: Double,
-    velDWindow: Queue[Double],
+    velocityNorth: Double,
+    velocityEast: Double,
+    velocityDown: Double,
+    velocityDownWindow: Queue[Double],
   ): FlightMetrics =
-    val horizontalSpeed = Math.sqrt(velN * velN + velE * velE)
-    val totalSpeed = Math.sqrt(velN * velN + velE * velE + velD * velD)
-    val filteredVelD = medianFilter(velDWindow, velD)
+    val horizontalSpeed      = Math.sqrt(velocityNorth * velocityNorth + velocityEast * velocityEast)
+    val totalSpeed           = Math.sqrt(velocityNorth * velocityNorth + velocityEast * velocityEast + velocityDown * velocityDown)
+    val filteredVelocityDown = medianFilter(velocityDownWindow, velocityDown)
 
     FlightMetrics(
       altitude = altitude,
-      velD = velD,
+      velocityDown = velocityDown,
       horizontalSpeed = horizontalSpeed,
       totalSpeed = totalSpeed,
-      filteredVelD = filteredVelD,
+      filteredVelocityDown = filteredVelocityDown,
     )
 
   /**
@@ -47,12 +49,7 @@ object SignalProcessor {
     if window.isEmpty then
       currentValue
     else
-      val values = (window.toSeq :+ currentValue).sorted
-      val mid = values.length / 2
-      if values.length % 2 == 0 then
-        (values(mid - 1) + values(mid)) / 2.0
-      else
-        values(mid)
+      median(DenseVector((window.toSeq :+ currentValue).toArray))
 
   /**
    * Maintains a sliding window of values for filtering

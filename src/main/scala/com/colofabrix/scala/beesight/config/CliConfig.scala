@@ -1,38 +1,34 @@
 package com.colofabrix.scala.beesight.config
 
-import better.files.File
 import cats.data.*
 import cats.implicits.*
-import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.monovore.decline.*
-import scala.util.matching.Regex
-import scala.util.Try
+import java.nio.file.Path
+import java.nio.file.Paths
 
 object CliConfig {
 
   lazy val allOptions: Opts[Config] =
-    (input, output, limit, dryRun, buffer, minPoints, peakParams)
-      .mapN(Config.apply)
-      .validate("Output directory must not match input directory")(config => config.input != config.output)
+    (input, output, limit, dryRun, buffer, minPoints).mapN(Config.apply)
 
-  lazy val input: Opts[File] =
+  lazy val input: Opts[Path] =
     Opts
       .option[String](
         long = "input",
         short = "i",
-        help = "Input directory where to discover CSV files",
+        help = "Input path (file or directory, supports glob patterns)",
       )
-      .mapValidated(validateDirectory)
-      .withDefault(File.currentWorkingDirectory)
+      .map(Paths.get(_))
+      .withDefault(Paths.get("."))
 
-  lazy val output: Opts[Option[File]] =
+  lazy val output: Opts[Option[Path]] =
     Opts
       .option[String](
         long = "output",
-        short = "i",
+        short = "o",
         help = "Output directory where to place the produced CSV files",
       )
-      .mapValidated(validateDirectory)
+      .map(Paths.get(_))
       .orNone
 
   lazy val limit: Opts[Option[Int]] =
@@ -71,59 +67,7 @@ object CliConfig {
         short = "k",
         help = "Percentage of minimum point the tool must keep.",
       )
-      .map(d => Math.min(1, Math.max(0, d)))
-      .withDefault(500)
-
-  lazy val peakParams: Opts[DetectionConfig] =
-    Opts
-      .option(
-        long = "peak-detection-params",
-        short = "p",
-        help = "Parameters to fine tune the peak detection.",
-      )
-      .map(parsePeakDetectionParams)
-      .withDefault(DetectionConfig.Default)
-
-  private def validateDirectory(path: String): ValidatedNel[String, File] =
-    val file = File(path)
-    Validated.condNel(
-      file.isDirectory,
-      file,
-      s"Path '$path' doesn't correspond to a valid directory.",
-    )
-
-  private val keyValueRegex: Regex =
-    "^\\s*(\\w+)\\s*=\\s*([^,]*)\\s*$".r
-
-  private def parsePeakDetectionParams(params: String): DetectionConfig =
-    val splitValues =
-      for
-        pair    <- params.split(",").toList
-        matches <- keyValueRegex.findAllMatchIn(pair).toList
-      yield (matches.group(1).toLowerCase, matches.group(2))
-
-    val paramsMap = splitValues.toMap
-
-    DetectionConfig(
-      WindowTime = paramsMap.getInt("windowTime", DetectionConfig.Default.WindowTime),
-      TakeoffThreshold = paramsMap.getDouble("takeoffThreshold", DetectionConfig.Default.TakeoffThreshold),
-      Influence = paramsMap.getDouble("influence", DetectionConfig.Default.TakeoffThreshold),
-      LandingThreshold = paramsMap.getDouble("landingThreshold", DetectionConfig.Default.LandingThreshold),
-      IgnoreLandingAbove = paramsMap.getDouble("ignoreLandingAbove", DetectionConfig.Default.IgnoreLandingAbove),
-    )
-
-  extension (self: Map[String, String])
-
-    def getInt(key: String, default: => Int): Int =
-      self
-        .get(key.toLowerCase)
-        .flatMap(_.toIntOption)
-        .getOrElse(default)
-
-    def getDouble(key: String, default: => Double): Double =
-      self
-        .get(key.toLowerCase)
-        .flatMap(_.toDoubleOption)
-        .getOrElse(default)
+      .map(d => Math.min(1.0, Math.max(0.0, d)))
+      .withDefault(0.1)
 
 }
