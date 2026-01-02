@@ -1,17 +1,35 @@
 package com.colofabrix.scala.beesight.model
 
+/**
+ * Represents the detected flight stage points from a jump file
+ *
+ * @param takeoff The detected takeoff point (if found)
+ * @param freefall The detected freefall/exit point (if found)
+ * @param canopy The detected canopy deployment point (if found)
+ * @param landing The detected landing point (if found)
+ * @param lastPoint Index of the last processed data point
+ * @param isValid True if this appears to be a valid skydiving jump (freefall detected)
+ */
 final case class FlightStagesPoints(
   takeoff: Option[DataPoint],
   freefall: Option[DataPoint],
   canopy: Option[DataPoint],
   landing: Option[DataPoint],
-  lastPoint: Long
+  lastPoint: Long,
+  isValid: Boolean,
 )
 
 object FlightStagesPoints {
 
   val empty: FlightStagesPoints =
-    FlightStagesPoints(None, None, None, None, -1)
+    FlightStagesPoints(
+      takeoff = None,
+      freefall = None,
+      canopy = None,
+      landing = None,
+      lastPoint = -1,
+      isValid = false,
+    )
 
 }
 

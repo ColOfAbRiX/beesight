@@ -18,14 +18,19 @@ import scala.collection.immutable.Queue
  */
 object FlightStagesDetection {
 
-  private val TakeoffSpeedThreshold         = 25.0 // m/s - horizontal speed above this indicates takeoff
-  private val TakeoffClimbRate              = -1.0 // m/s - velocityDown below this indicates climbing (negative = up)
-  private val FreefallVelocityDownThreshold = 20.0 // m/s - velocityDown above this indicates freefall
-  private val FreefallAccelThreshold        = 3.0  // m/s per sample - rapid velocityDown increase indicates exit
-  private val CanopyVelocityDownMax         = 12.0 // m/s - velocityDown below this after freefall indicates canopy
-  private val LandingSpeedMax               = 3.0  // m/s - total speed below this indicates landing
-  private val MedianFilterWindow            = 5    // points - window size for median filter
-  private val BacknumberWindow              = 25   // points - how far back to look for true exit point
+  // Detection thresholds
+  private val TakeoffSpeedThreshold           = 25.0   // m/s - horizontal speed above this indicates takeoff
+  private val TakeoffClimbRate                = -1.0   // m/s - velocityDown below this indicates climbing (negative = up)
+  private val FreefallVelocityDownThreshold   = 20.0   // m/s - velocityDown above this indicates freefall
+  private val FreefallAccelThreshold          = 3.0    // m/s per sample - rapid velocityDown increase indicates exit
+  private val CanopyVelocityDownMax           = 12.0   // m/s - velocityDown below this after freefall indicates canopy
+  private val LandingSpeedMax                 = 3.0    // m/s - total speed below this indicates landing
+  private val MedianFilterWindow              = 5      // points - window size for median filter
+  private val BacknumberWindow                = 25     // points - how far back to look for true exit point
+  private val TakeoffMaxAltitude              = 600.0  // m - takeoff cannot happen above this altitude
+  private val FreefallMinAltitudeAboveTakeoff = 600.0  // m - freefall must be at least this high above takeoff
+  private val FreefallMinAltitudeAbsolute     = 1000.0 // m - freefall must be at least this high (when takeoff missed)
+  private val LandingAltitudeTolerance        = 500.0  // m - landing must be within ±this of takeoff altitude
 
   private val freefallCusum = CusumDetector.withMedian(25, 0.5, 15.0)
   private val canopyCusum   = CusumDetector.withMedian(25, 0.5, 15.0)
@@ -73,13 +78,21 @@ object FlightStagesDetection {
     // Update velocityDown history for backnumbering (keep last BacknumberWindow points)
     val updatedVelocityDownHistory =
       if state.velocityDownHistory.size >= BacknumberWindow then
-        state.velocityDownHistory.tail :+ VelocityDownSample(index, metrics.filteredVelocityDown, state.height)
+        state.velocityDownHistory.tail :+ VelocityDownSample(index, metrics.filteredVelocityDown, point.hMSL)
       else
-        state.velocityDownHistory :+ VelocityDownSample(index, metrics.filteredVelocityDown, state.height)
+        state.velocityDownHistory :+ VelocityDownSample(index, metrics.filteredVelocityDown, point.hMSL)
 
     val accelerationDown = metrics.filteredVelocityDown - state.filteredVelocityDown
-    val detectedPhase    = detectPhase(state, metrics, accelerationDown, freefallCusumState, canopyCusumState)
-    val wasInFreefall    = state.wasInFreefall || detectedPhase == DetectedPhase.Freefall
+
+    // Detect if we started recording after takeoff (data starts high and climbing)
+    val assumedTakeoffMissed =
+      if index == 0 then
+        point.hMSL > TakeoffMaxAltitude && point.velD < 0 // Above 600m and climbing
+      else
+        state.assumedTakeoffMissed
+
+    val detectedPhase = detectPhase(state, metrics, accelerationDown, freefallCusumState, canopyCusumState)
+    val wasInFreefall = state.wasInFreefall || detectedPhase == DetectedPhase.Freefall
 
     StreamState(
       dataPointIndex = index,
@@ -96,6 +109,7 @@ object FlightStagesDetection {
       canopyCusum = canopyCusumState,
       detectedPhase = detectedPhase,
       wasInFreefall = wasInFreefall,
+      assumedTakeoffMissed = assumedTakeoffMissed,
     )
 
   private def detectPhase(
@@ -129,35 +143,63 @@ object FlightStagesDetection {
   private def updateResults(result: FlightStagesPoints, state: StreamState): FlightStagesPoints =
     val currentPoint = DataPoint(state.dataPointIndex, Some(state.height))
 
-    // Update takeoff detection - capture first takeoff point
+    // Takeoff constraint: only detect if altitude < 600m and not already assumed missed
     val updatedTakeoff =
-      if result.takeoff.isEmpty && state.detectedPhase == DetectedPhase.Takeoff then
+      if result.takeoff.isEmpty
+          && state.detectedPhase == DetectedPhase.Takeoff
+          && !state.assumedTakeoffMissed
+          && state.height < TakeoffMaxAltitude
+      then
         Some(currentPoint)
       else
         result.takeoff
 
-    // Update freefall detection - capture first freefall point with backnumbering
+    // Get takeoff altitude for constraints (if known)
+    val takeoffAltitude = updatedTakeoff.flatMap(_.altitude)
+
+    // Freefall constraint: must be above takeoff + 600m (or > 1000m if takeoff missed)
+    val freefallAltitudeOk =
+      takeoffAltitude match {
+        case Some(tAlt) => state.height > tAlt + FreefallMinAltitudeAboveTakeoff
+        case None       => state.height > FreefallMinAltitudeAbsolute
+      }
+
     val updatedFreefall =
-      if result.freefall.isEmpty && state.detectedPhase == DetectedPhase.Freefall then
+      if result.freefall.isEmpty && state.detectedPhase == DetectedPhase.Freefall && freefallAltitudeOk then
         // Backnumber: find where acceleration actually started
         val backnumberedPoint = findExitStart(state.velocityDownHistory, currentPoint)
         Some(backnumberedPoint)
       else
         result.freefall
 
-    // Update canopy detection - capture first canopy point
+    // Canopy constraint: requires freefall to have been detected (already enforced by wasInFreefall)
     val updatedCanopy =
-      if result.canopy.isEmpty && state.detectedPhase == DetectedPhase.Canopy then
+      if result.canopy.isEmpty && state.detectedPhase == DetectedPhase.Canopy && result.freefall.isDefined then
         Some(currentPoint)
       else
         result.canopy
 
-    // Update landing detection - capture first landing point
+    // Landing constraints:
+    // 1. Requires canopy to have been detected
+    // 2. Altitude must be within ±500m of takeoff (if takeoff known)
+    val landingAltitudeOk =
+      takeoffAltitude match {
+        case Some(tAlt) => Math.abs(state.height - tAlt) < LandingAltitudeTolerance
+        case None       => true // No constraint if takeoff altitude unknown
+      }
+
     val updatedLanding =
-      if result.landing.isEmpty && state.detectedPhase == DetectedPhase.Landing then
+      if result.landing.isEmpty
+          && state.detectedPhase == DetectedPhase.Landing
+          && updatedCanopy.isDefined
+          && landingAltitudeOk
+      then
         Some(currentPoint)
       else
         result.landing
+
+    // File is valid if freefall was detected
+    val isValid = updatedFreefall.isDefined
 
     FlightStagesPoints(
       takeoff = updatedTakeoff,
@@ -165,6 +207,7 @@ object FlightStagesDetection {
       canopy = updatedCanopy,
       landing = updatedLanding,
       lastPoint = state.dataPointIndex,
+      isValid = isValid,
     )
 
   /**
@@ -219,6 +262,7 @@ object FlightStagesDetection {
     canopyCusum: CusumState = CusumState.Empty,
     detectedPhase: DetectedPhase = DetectedPhase.Unknown,
     wasInFreefall: Boolean = false,
+    assumedTakeoffMissed: Boolean = false,
   )
 
 }

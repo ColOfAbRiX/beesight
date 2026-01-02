@@ -14,35 +14,35 @@ final class DataCutter(config: Config) {
   def cut(points: FlightStagesPoints): Pipe[IO, FlysightPoint, FlysightPoint] =
     data =>
       points match {
-        case points @ FlightStagesPoints(None, None, None, None, _) =>
+        case points @ FlightStagesPoints(None, None, None, None, _, _) =>
+          val msg = s"${YELLOW}WARNING!${RESET} Found stable data only. Might not contain a flight recording."
           fs2Println(points.show) >>
-          fs2Println(
-            s"${YELLOW}WARNING!${RESET} Found stable data only. Might not contain a flight recording.",
-          ) >>
+          fs2Println(msg) >>
           data
 
-        case points @ FlightStagesPoints(Some(DataPoint(_, None)), _, _, None, _) =>
+        case points @ FlightStagesPoints(Some(DataPoint(_, None)), _, _, None, _, _) =>
+          val msg = s"${CYAN}No takeoff or landing points detected.${RESET} Collecting all data."
           fs2Println(points.show) >>
-          fs2Println(s"${CYAN}No takeoff or landing points detected.${RESET} Collecting all data.") >>
+          fs2Println(msg) >>
           data
 
-        case points @ FlightStagesPoints(Some(DataPoint(takeoff, Some(_))), _, _, None, _) =>
+        case points @ FlightStagesPoints(Some(DataPoint(takeoff, Some(_))), _, _, None, _, _) =>
+          val msg = s"${CYAN}No landing detected.${RESET} Collecting data from line ${keepFrom(takeoff)} until the end"
           fs2Println(points.show) >>
           retainMinPoints(points, data) {
-            fs2Println(
-              s"${CYAN}No landing detected.${RESET} Collecting data from line ${keepFrom(takeoff)} until the end",
-            ) >>
+            fs2Println(msg) >>
             data.drop(keepFrom(takeoff))
           }
 
-        case points @ FlightStagesPoints(Some(DataPoint(takeoff, _)), _, _, Some(DataPoint(landing, Some(_))), totalPoints) =>
+        case points @ FlightStagesPoints(Some(DataPoint(to, _)), _, _, Some(DataPoint(landing, Some(_))), tp, _) =>
           fs2Println(points.show) >>
           retainMinPoints(points, data) {
-            fs2Println(s"Collecting data from line ${keepFrom(takeoff)} to line ${keepUntil(landing, totalPoints)}") >>
-            data.drop(keepFrom(takeoff)).take(keepUntil(landing, totalPoints))
+            val msg = s"Collecting data from line ${keepFrom(to)} to line ${keepUntil(landing, tp)}"
+            fs2Println(msg) >>
+            data.drop(keepFrom(to)).take(keepUntil(landing, tp))
           }
 
-        case points @ FlightStagesPoints(None, _, _, Some(DataPoint(landing, Some(_))), totalPoints) =>
+        case points @ FlightStagesPoints(None, _, _, Some(DataPoint(landing, Some(_))), totalPoints, _) =>
           fs2Println(points.show) >>
           retainMinPoints(points, data) {
             fs2Println(s"${CYAN}No takeoff detected.${RESET} ") >>
