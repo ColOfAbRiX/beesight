@@ -5,9 +5,9 @@ import cats.arrow.FunctionK
 import cats.effect.*
 
 /**
- * Decline application for Cats' IO and configuration A that uses a run method to pass the configuration
+ * Decline application for Cats' IO and configuration A that uses a ReaderT to pass the configuration
  */
-trait IODeclineApp[A] extends DeclineApp[IO, A]:
+trait IODeclineReaderApp[A] extends DeclineReaderApp[IO, A]:
 
   protected final def runEffectToIO: IO ~> IO =
     FunctionK.id

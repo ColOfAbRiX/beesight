@@ -4,16 +4,19 @@ import cats.effect.*
 import com.monovore.decline.*
 
 /**
- * Decline-ready application that uses Cats' IO and no configuration
+ * Decline application for Cats' IO that uses a run method and no configuration
  */
 trait IOUnitDeclineApp extends IODeclineApp[Unit] {
+
+  /**
+   * Application main method that does not use configuration
+   */
+  def runNoConfig: IO[ExitCode]
 
   final override def options: Opts[Unit] =
     Opts.unit
 
   final override def runWithConfig(config: Unit): IO[ExitCode] =
-    runNoConfig()
-
-  def runNoConfig(): IO[ExitCode]
+    runNoConfig
 
 }
