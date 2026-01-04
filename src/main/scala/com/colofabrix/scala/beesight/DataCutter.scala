@@ -3,7 +3,6 @@ package com.colofabrix.scala.beesight
 import cats.Show
 import cats.effect.IO
 import cats.implicits.*
-import com.colofabrix.scala.beesight.StreamUtils.*
 import com.colofabrix.scala.beesight.config.*
 import com.colofabrix.scala.beesight.model.*
 import fs2.*
@@ -88,6 +87,9 @@ final class DataCutter(config: Config) {
 
   private def keepUntil(index: Long, max: Long): Long =
     Math.min(index + config.bufferPoints, max)
+
+  private def fs2Println[A: cats.Show](a: => A): Stream[IO, Unit] =
+    Stream.eval(IO.println(a))
 
   given niceOptionShow[A: Show]: Show[Option[A]] =
     _.fold("N/A")(Show[A].show(_))

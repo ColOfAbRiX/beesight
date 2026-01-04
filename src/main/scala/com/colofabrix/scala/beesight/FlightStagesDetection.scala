@@ -3,10 +3,8 @@ package com.colofabrix.scala.beesight
 import cats.effect.IO
 import com.colofabrix.scala.beesight.FlightStagesDetection.*
 import com.colofabrix.scala.beesight.model.*
-import com.colofabrix.scala.stats.*
-import com.colofabrix.scala.stats.CusumDetector.DetectorState as CusumState
-import com.colofabrix.scala.stats.SignalProcessor
-import fs2.*
+import com.colofabrix.scala.beesight.stats.*
+import com.colofabrix.scala.beesight.stats.CusumDetector.DetectorState as CusumState
 import java.time.*
 import scala.collection.immutable.Queue
 
@@ -42,7 +40,7 @@ object FlightStagesDetection {
       .compile
       .lastOrError
 
-  private val detectPipe: Pipe[IO, FlysightPoint, FlightStagesPoints] =
+  private val detectPipe: fs2.Pipe[IO, FlysightPoint, FlightStagesPoints] =
     data =>
       data
         .zipWithIndex
@@ -269,7 +267,7 @@ object FlightStagesDetection {
 
   // ─── Types ─────────────────────────────────────────────────────────────────────
 
-  enum DetectedPhase {
+  private enum DetectedPhase {
     case Unknown, Takeoff, Freefall, Canopy, Landing
   }
 

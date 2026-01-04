@@ -2,8 +2,9 @@ package com.colofabrix.scala.beesight
 
 import cats.data.ReaderT
 import cats.effect.IO
-import com.colofabrix.scala.beesight.config.Config
 import cats.effect.LiftIO
+import cats.effect.std.Console
+import com.colofabrix.scala.beesight.config.Config
 
 type IOConfig[A] = ReaderT[IO, Config, A]
 
@@ -19,19 +20,12 @@ extension (self: ReaderT.type) {
     ReaderT.liftF(IO.unit)
 
   def println[A](a: A): IOConfig[Unit] =
-    ReaderT.liftF(IO.println(a))
+    ReaderT.liftF(Console[IO].println(a))
+
+  def errorln[A](a: A): IOConfig[Unit] =
+    ReaderT.liftF(Console[IO].errorln(a))
 
   def blocking[A](thunk: => A): IOConfig[A] =
     ReaderT.liftF(IO.blocking(thunk))
 
-  def askConfig: IOConfig[Config] =
-    ReaderT.ask[IO, Config]
-
-  def mapConfig[A](f: Config => A): IOConfig[A] =
-    ReaderT.ask[IO, Config].map(f)
-
-  def flatMapConfig[A](f: Config => IOConfig[A]): IOConfig[A] =
-    ReaderT.ask[IO, Config].flatMap(f)
-
 }
-

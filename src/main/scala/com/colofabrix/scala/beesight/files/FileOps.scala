@@ -1,4 +1,4 @@
-package com.colofabrix.scala.beesight
+package com.colofabrix.scala.beesight.files
 
 import cats.effect.*
 import cats.implicits.*
@@ -17,13 +17,16 @@ object FileOps {
         .iterator()
         .asScala
         .filter(Files.isRegularFile(_))
-        .filter(p => matcher.matches(baseDir.relativize(p)))
+        .filter { p =>
+          val rel = baseDir.relativize(p)
+          matcher.matches(Paths.get(rel.toString.toLowerCase))
+        }
         .toList
         .sorted
     }
 
   def computeOutputPath(inputFile: Path): IOConfig[Path] =
-    IOConfig.mapConfig { config =>
+    IOConfig.ask.map { config =>
       val absoluteInput = inputFile.toAbsolutePath.normalize
 
       val inputBaseDir =
@@ -45,6 +48,17 @@ object FileOps {
         .resolve(relativePath)
     }
 
+  def computeChartPath(outputFile: Path): Path =
+    val baseName =
+      outputFile
+        .getFileName
+        .toString
+        .replaceFirst("\\.[^.]+$", "")
+
+    Option(outputFile.getParent)
+      .getOrElse(Paths.get("."))
+      .resolve(s"$baseName.html")
+
   private def parseInputAsGlob(input: Path): (Path, String) =
     val absoluteInput = input.toAbsolutePath.normalize
     val inputStr      = absoluteInput.toString
@@ -52,10 +66,8 @@ object FileOps {
     if Files.isRegularFile(absoluteInput) then
       val parent = Option(absoluteInput.getParent).getOrElse(Paths.get("."))
       (parent, absoluteInput.getFileName.toString)
-
     else if Files.isDirectory(absoluteInput) then
       (absoluteInput, "{*.csv,**/*.csv}")
-
     else if inputStr.contains("*") || inputStr.contains("?") then
       val idx     = inputStr.indexWhere(c => c == '*' || c == '?')
       val lastSep = inputStr.lastIndexOf(FileSystems.getDefault.getSeparator, idx)
@@ -63,7 +75,6 @@ object FileOps {
         (Paths.get(inputStr.substring(0, lastSep)), inputStr.substring(lastSep + 1))
       else
         (Paths.get(".").toAbsolutePath.normalize, inputStr)
-
     else
       val parent = Option(absoluteInput.getParent).getOrElse(Paths.get("."))
       (parent, absoluteInput.getFileName.toString)

@@ -1,9 +1,9 @@
-package com.colofabrix.scala.stats
+package com.colofabrix.scala.beesight.stats
 
 import breeze.linalg.*
 import breeze.stats.*
 import cats.effect.IO
-import com.colofabrix.scala.stats.CusumDetector.*
+import com.colofabrix.scala.beesight.stats.CusumDetector.*
 import java.lang.Math.*
 import scala.collection.immutable.Queue
 
@@ -82,7 +82,8 @@ final class CusumDetector private (
 
 object CusumDetector {
 
-  private type WinStat = (Queue[Double], Double) => Double
+  private type WinStat =
+    (Queue[Double], Double) => Double
 
   private val MeanFn: WinStat =
     (window, current) => breeze.stats.mean(DenseVector(window.enqueue(current).toArray))
@@ -163,6 +164,10 @@ object CusumDetector {
       meanFn = EMA(windowSize),
       stdDevFn = EMAStdDev(windowSize),
     )
+
+  enum Peak {
+    case PositivePeak, Stable, NegativePeak
+  }
 
   enum DetectorState {
 

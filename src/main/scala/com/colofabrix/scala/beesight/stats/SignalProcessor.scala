@@ -1,4 +1,4 @@
-package com.colofabrix.scala.stats
+package com.colofabrix.scala.beesight.stats
 
 import breeze.linalg.DenseVector
 import breeze.stats.median

@@ -5,13 +5,14 @@ import cats.effect.implicits.given
 import cats.implicits.given
 import com.colofabrix.scala.beesight.config.*
 import com.colofabrix.scala.beesight.debug.ChartGenerator
+import com.colofabrix.scala.beesight.files.*
 import com.colofabrix.scala.beesight.model.*
-import com.colofabrix.scala.declinio.IODeclineApp
+import com.colofabrix.scala.declinio.*
 import com.monovore.decline.Opts
 import java.nio.file.*
 import scala.jdk.CollectionConverters.*
 
-object Main extends IODeclineApp[Config] {
+object Main extends IODeclineReaderApp[Config] {
 
   val name: String =
     "beesight"
@@ -22,17 +23,17 @@ object Main extends IODeclineApp[Config] {
   val options: Opts[Config] =
     CliConfig.allOptions
 
-  override def runWithConfig(config: Config): IO[ExitCode] = {
+  override def runWithReader: IOConfig[ExitCode] =
     for
+      config         <- IOConfig.ask
       inputFiles     <- FileOps.discoverCsvFiles(config.input).to[IOConfig]
       filesToProcess <- applyLimit(inputFiles)
       _              <- IOConfig.println(s"Found ${inputFiles.size} CSV files, processing ${filesToProcess.size}")
       _              <- filesToProcess.traverse(processFile)
     yield ExitCode.Success
-  }.run(config)
 
   private def applyLimit(files: List[Path]): IOConfig[List[Path]] =
-    IOConfig.mapConfig { config =>
+    IOConfig.ask.map { config =>
       config
         .processLimit
         .fold(files)(limit => files.take(limit))
@@ -48,24 +49,14 @@ object Main extends IODeclineApp[Config] {
     yield result
 
   private def processCsvFile(inputFile: Path, outputFile: Path): IOConfig[Unit] =
-    val csvStream = CsvFileOps.readCsv[FlysightPoint](inputFile)
-    val chartPath = computeChartPath(outputFile)
-
     for
-      flightPoints <- FlightStagesDetection.detect(csvStream).to[IOConfig]
-      _            <- ChartGenerator.generate(csvStream, flightPoints, chartPath).to[IOConfig]
-      _            <- CsvFileOps.writeData(csvStream, flightPoints, outputFile)
+      config         <- IOConfig.ask
+      csvStream       = CsvFileOps.readCsv[FlysightPoint](inputFile)
+      flightPoints   <- FlightStagesDetection.detect(csvStream).to[IOConfig]
+      chartPath       = FileOps.computeChartPath(outputFile)
+      _              <- ChartGenerator.generate(csvStream, flightPoints, chartPath).to[IOConfig]
+      outputCsvStream = csvStream.through(DataCutter(config).cut(flightPoints))
+      _              <- CsvFileOps.writeData(outputCsvStream, outputFile)
     yield ()
-
-  private def computeChartPath(outputFile: Path): Path =
-    val baseName =
-      outputFile
-        .getFileName
-        .toString
-        .replaceFirst("\\.[^.]+$", "")
-
-    Option(outputFile.getParent)
-      .getOrElse(Paths.get("."))
-      .resolve(s"$baseName.html")
 
 }

@@ -1,11 +1,12 @@
-package com.colofabrix.scala.beesight
+package com.colofabrix.scala.beesight.files
 
 import cats.effect.IO
+import com.colofabrix.scala.beesight.IOConfig
+import com.colofabrix.scala.beesight.model.FlightStagesPoints
+import com.colofabrix.scala.beesight.model.FlysightPoint
 import fs2.data.csv.*
 import fs2.io.file.{ Files, Flags, Path as Fs2Path }
 import java.nio.file.Path
-import com.colofabrix.scala.beesight.model.FlysightPoint
-import com.colofabrix.scala.beesight.model.FlightStagesPoints
 
 /**
  * Aggregations of operations on files using fs2
@@ -21,15 +22,18 @@ object CsvFileOps {
       .through(fs2.text.utf8.decode)
       .through(unixEol)
       .through(fs2.text.lines)
-      .filter(line => line.trim.nonEmpty && !line.trim.startsWith("#"))
+      .filter { line =>
+        line.trim.nonEmpty && !line.trim.startsWith("#")
+      }
       .intersperse("\n")
       .through(lenient.attemptDecodeUsingHeaders[A]())
-      .collect { case Right(decoded) => decoded }
+      .collect {
+        case Right(decoded) => decoded
+      }
 
-  def writeData(csvStream: fs2.Stream[IO, FlysightPoint], points: FlightStagesPoints, output: Path): IOConfig[Unit] =
+  def writeData(csvStream: fs2.Stream[IO, FlysightPoint], output: Path): IOConfig[Unit] =
     IOConfig { config =>
       csvStream
-        .through(DataCutter(config).cut(points))
         .through { stream =>
           if !config.dryRun then stream else fs2.Stream.empty
         }
