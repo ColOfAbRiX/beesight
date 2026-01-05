@@ -14,10 +14,10 @@ object SignalProcessor {
    */
   final case class FlightMetrics(
     altitude: Double,
-    velocityDown: Double,
+    verticalSpeed: Double,
     horizontalSpeed: Double,
     totalSpeed: Double,
-    filteredVelocityDown: Double,
+    filteredVerticalSpeed: Double,
   )
 
   /**
@@ -25,21 +25,21 @@ object SignalProcessor {
    */
   def computeMetrics(
     altitude: Double,
-    velocityNorth: Double,
-    velocityEast: Double,
-    velocityDown: Double,
-    velocityDownWindow: Queue[Double],
+    northSpeed: Double,
+    eastSpeed: Double,
+    verticalSpeed: Double,
+    verticalSpeedWindow: Queue[Double],
   ): FlightMetrics =
-    val horizontalSpeed      = Math.sqrt(velocityNorth * velocityNorth + velocityEast * velocityEast)
-    val totalSpeed           = Math.sqrt(velocityNorth * velocityNorth + velocityEast * velocityEast + velocityDown * velocityDown)
-    val filteredVelocityDown = medianFilter(velocityDownWindow, velocityDown)
+    val horizontalSpeed       = Math.sqrt(northSpeed * northSpeed + eastSpeed * eastSpeed)
+    val totalSpeed            = Math.sqrt(northSpeed * northSpeed + eastSpeed * eastSpeed + verticalSpeed * verticalSpeed)
+    val filteredVerticalSpeed = medianFilter(verticalSpeedWindow, verticalSpeed)
 
     FlightMetrics(
       altitude = altitude,
-      velocityDown = velocityDown,
+      verticalSpeed = verticalSpeed,
       horizontalSpeed = horizontalSpeed,
       totalSpeed = totalSpeed,
-      filteredVelocityDown = filteredVelocityDown,
+      filteredVerticalSpeed = filteredVerticalSpeed,
     )
 
   /**

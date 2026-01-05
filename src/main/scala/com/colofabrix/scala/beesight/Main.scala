@@ -18,7 +18,7 @@ object Main extends IODeclineReaderApp[Config] {
     "beesight"
 
   val header: String =
-    "Beesight - A Flysight data cleaner and manipulator tool"
+    "Beesight - A Flysight data manipulator tool"
 
   val options: Opts[Config] =
     CliConfig.allOptions
