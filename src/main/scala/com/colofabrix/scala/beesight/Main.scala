@@ -48,27 +48,26 @@ object Main extends IODeclineReaderApp[Config] {
 
   private def processCsvFile(inputFile: Path, outputFile: Path): IOConfig[Unit] =
     for
-      config       <- IOConfig.ask
-      csvStream     = CsvFileOps.readCsv[FlysightPoint](inputFile)
-      flightPoints <- FlightStagesDetection.detect(csvStream).to[IOConfig]
-      cutStream     = csvStream.through(DataCutter(config).cut(flightPoints))
-      _            <- processOutputsStream(cutStream, flightPoints, outputFile)
+      config     <- IOConfig.ask
+      dataCutter <- DataCutter()
+      csvStream   = CsvFileOps.readCsv[FlysightPoint](inputFile)
+      pipeline    = buildPipeline(csvStream, dataCutter, outputFile, config)
+      _          <- pipeline.compile.drain.to[IOConfig]
     yield ()
 
-  private def processOutputsStream(
-    stream: fs2.Stream[IO, FlysightPoint],
-    points: FlightStagesPoints,
+  private def buildPipeline(
+    csvStream: fs2.Stream[IO, FlysightPoint],
+    dataCutter: DataCutter,
     outputFile: Path,
-  ): IOConfig[Unit] =
-    IOConfig.ask.flatMap { config =>
-      stream
-        .broadcastThrough(
-          CsvFileOps.writeIntoCsv(outputFile, config.dryRun),
-          ChartGenerator.chartPipe(points, outputFile),
-        )
-        .compile
-        .drain
-        .to[IOConfig]
-    }
+    config: Config,
+  ): fs2.Stream[IO, Unit] =
+    csvStream
+      .map(InputFlightPoint.fromFlysightPoint)
+      .through(FlightStagesDetection.streamDetect)
+      .through(dataCutter.cutPipe)
+      .broadcastThrough(
+        _.map(_.source).through(CsvFileOps.writeIntoCsv(outputFile, config.dryRun)),
+        ChartGenerator.chartPipe(outputFile)(_.hMSL, _.velD),
+      )
 
 }

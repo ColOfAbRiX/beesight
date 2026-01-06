@@ -35,14 +35,14 @@ object FlightStagesDetection {
   /**
    * Processes a stream of flight data points to identify flight stages
    */
-  def detect(data: fs2.Stream[IO, FlysightPoint]): IO[FlightStagesPoints] =
-    data
-      .map(InputFlightPoint.fromFlysightPoint)
-      .through(streamDetect)
-      .compile
-      .last
-      .map { maybeOutput =>
-        maybeOutput.fold(FlightStagesPoints.empty) { output =>
+  def detect(data: fs2.Stream[fs2.Pure, FlysightPoint]): IO[FlightStagesPoints] =
+    IO {
+      data
+        .map(InputFlightPoint.fromFlysightPoint)
+        .through(streamDetect)
+        .toList
+        .lastOption
+        .map { output =>
           FlightStagesPoints(
             takeoff = output.takeoff,
             freefall = output.freefall,
@@ -52,12 +52,13 @@ object FlightStagesDetection {
             isValid = output.isValid,
           )
         }
-      }
+        .getOrElse(FlightStagesPoints.empty)
+    }
 
   /**
    * Streaming detection - emits an OutputFlightPoint for each input
    */
-  def streamDetect[A]: fs2.Pipe[IO, InputFlightPoint[A], OutputFlightPoint[A]] =
+  def streamDetect[F[_], A]: fs2.Pipe[F, InputFlightPoint[A], OutputFlightPoint[A]] =
     _.zipWithIndex
       .scan((Option.empty[StreamState[A]], FlightStagesPoints.empty)) {
         case ((stateOpt, result), (point, i)) =>
@@ -206,13 +207,12 @@ object FlightStagesDetection {
       else if state.detectedPhase != FlightPhase.Freefall then
         None
       else
-        // Altitude constraints
-        val altitudeOk = takeoff.map(_.altitude) match {
-          case Some(tAlt) => state.height > tAlt + FreefallMinAltitudeAbove
-          case None       => state.height > FreefallMinAltitudeAbsolute
-        }
+        val altitudeOk =
+          takeoff.map(_.altitude) match {
+            case Some(tAlt) => state.height > tAlt + FreefallMinAltitudeAbove
+            case None       => state.height > FreefallMinAltitudeAbsolute
+          }
 
-        // Time ordering: freefall must be after takeoff
         val afterTakeoff = takeoff isAfter state.dataPointIndex
 
         if altitudeOk && afterTakeoff then
@@ -232,7 +232,6 @@ object FlightStagesDetection {
       else if freefall.isEmpty then
         None // Requires freefall to have been detected
       else
-        // Altitude constraints
         val aboveTakeoff =
           takeoff
             .map(_.altitude)
@@ -243,7 +242,6 @@ object FlightStagesDetection {
             .map(_.altitude)
             .forall(fAlt => state.height < fAlt)
 
-        // Time ordering: canopy must be after freefall
         val afterFreefall = freefall isAfter state.dataPointIndex
 
         if aboveTakeoff && belowFreefall && afterFreefall then
@@ -271,7 +269,6 @@ object FlightStagesDetection {
             case None       => true
           }
 
-        // Time ordering: landing must be after canopy
         val afterCanopy = canopy isAfter state.dataPointIndex
 
         if altitudeOk && afterCanopy then

@@ -1,7 +1,6 @@
 package com.colofabrix.scala.beesight.debug
 
 import cats.effect.IO
-import com.colofabrix.scala.beesight.files.FileOps
 import com.colofabrix.scala.beesight.model.*
 import java.nio.file.*
 
@@ -11,26 +10,63 @@ import java.nio.file.*
 object ChartGenerator {
 
   /**
-   * Returns a pipe that generates an HTML chart from the stream
+   * Returns a pipe that generates an HTML chart from the stream of OutputFlightPoints
    */
-  def chartPipe(stages: FlightStagesPoints, outputFile: Path): fs2.Pipe[IO, FlysightPoint, Nothing] =
+  def chartPipe[A](outputFile: Path)(
+    extractAltitude: A => Double,
+    extractVelD: A => Double,
+  ): fs2.Pipe[IO, OutputFlightPoint[A], Nothing] =
     _.zipWithIndex
-      .fold((StringBuilder(), StringBuilder(), StringBuilder())) {
-        case ((idxAcc, altAcc, velAcc), (point, idx)) =>
-          val sep = if idx == 0 then "" else ","
-          (
-            idxAcc.append(sep).append(idx),
-            altAcc.append(sep).append(point.hMSL),
-            velAcc.append(sep).append(point.velD),
-          )
+      .fold(ChartState[A]()) {
+        case (state, (point, idx)) =>
+          updateChartState(state, point, idx, extractAltitude, extractVelD)
       }
-      .evalMap {
-        case (indices, altitudes, velDs) =>
-          val html       = createHtmlFromBuilders(indices, altitudes, velDs, stages)
-          val outputPath = computeChartPath(outputFile)
-          writeHtmlFile(html, outputPath)
+      .evalMap { state =>
+        val html       = createHtmlFromState(state)
+        val outputPath = computeChartPath(outputFile)
+        writeHtmlFile(html, outputPath)
       }
       .drain
+
+  private def updateChartState[A](
+    state: ChartState[A],
+    point: OutputFlightPoint[A],
+    idx: Long,
+    extractAltitude: A => Double,
+    extractVelD: A => Double,
+  ): ChartState[A] =
+    val sep = if idx == 0 then "" else ","
+
+    // Update data builders
+    val newIndices   = state.indices.append(sep).append(idx)
+    val newAltitudes = state.altitudes.append(sep).append(extractAltitude(point.source))
+    val newVelDs     = state.velDs.append(sep).append(extractVelD(point.source))
+
+    // Detect phase transition
+    val transition =
+      if state.prevPhase != point.phase && point.phase != FlightPhase.Unknown then
+        Some(PhaseTransition(point.phase, idx, extractAltitude(point.source)))
+      else
+        None
+
+    ChartState(
+      indices = newIndices,
+      altitudes = newAltitudes,
+      velDs = newVelDs,
+      transitions = state.transitions ++ transition.toList,
+      prevPhase = point.phase,
+      lastStages = extractStages(point),
+    )
+
+  private def extractStages[A](point: OutputFlightPoint[A]): FlightStagesPoints =
+    FlightStagesPoints(
+      takeoff = point.takeoff,
+      freefall = point.freefall,
+      canopy = point.canopy,
+      landing = point.landing,
+      lastPoint = point.lastPoint,
+      isValid = point.isValid,
+    )
 
   private def computeChartPath(outputFile: Path): Path =
     val baseName =
@@ -49,16 +85,12 @@ object ChartGenerator {
       val _ = Files.writeString(outputPath, html)
     }
 
-  private def createHtmlFromBuilders(
-    indices: StringBuilder,
-    altitudes: StringBuilder,
-    velDs: StringBuilder,
-    stages: FlightStagesPoints,
-  ): String =
-    val indicesJs    = s"[${indices.result()}]"
-    val altitudesJs  = s"[${altitudes.result()}]"
-    val velDsJs      = s"[${velDs.result()}]"
-    val stageMarkers = createStageMarkersJs(stages)
+  private def createHtmlFromState[A](state: ChartState[A]): String =
+    val indicesJs   = s"[${state.indices.result()}]"
+    val altitudesJs = s"[${state.altitudes.result()}]"
+    val velDsJs     = s"[${state.velDs.result()}]"
+    val stages      = state.lastStages
+    val markers     = createTransitionMarkersJs(state.transitions)
 
     s"""<!DOCTYPE html>
        |<html>
@@ -107,7 +139,7 @@ object ChartGenerator {
        |      yaxis: 'y2'
        |    };
        |
-       |    $stageMarkers
+       |    $markers
        |
        |    var layout = {
        |      title: 'Flight Data',
@@ -124,44 +156,55 @@ object ChartGenerator {
        |
        |    var config = {responsive: true};
        |
-       |    Plotly.newPlot('plot', [altitudeTrace, velocityTrace].concat(stageMarkers), layout, config);
+       |    Plotly.newPlot('plot', [altitudeTrace, velocityTrace].concat(transitionMarkers), layout, config);
        |  </script>
        |</body>
        |</html>
        |""".stripMargin
 
-  private def createStageMarkersJs(stages: FlightStagesPoints): String =
-    val markers =
-      Vector(
-        ("Takeoff", stages.takeoff, "rgb(44, 160, 44)"),
-        ("Freefall", stages.freefall, "rgb(214, 39, 40)"),
-        ("Canopy", stages.canopy, "rgb(148, 103, 189)"),
-        ("Landing", stages.landing, "rgb(140, 86, 75)"),
-      )
+  private def createTransitionMarkersJs(transitions: List[PhaseTransition]): String =
+    val colorMap = Map(
+      FlightPhase.Takeoff  -> "rgb(44, 160, 44)",
+      FlightPhase.Freefall -> "rgb(214, 39, 40)",
+      FlightPhase.Canopy   -> "rgb(148, 103, 189)",
+      FlightPhase.Landing  -> "rgb(140, 86, 75)",
+      FlightPhase.Unknown  -> "rgb(128, 128, 128)",
+    )
 
     val jsMarkers =
-      markers.flatMap {
-        case (name, Some(FlightStagePoint(idx, altitude)), color) =>
-          Some(
-            s"""{
-               |  x: [$idx],
-               |  y: [$altitude],
-               |  name: '$name',
-               |  type: 'scatter',
-               |  mode: 'markers',
-               |  marker: {color: '$color', size: 14, symbol: 'diamond'}
-               |}""".stripMargin,
-          )
-        case _ =>
-          None
+      transitions.map { t =>
+        val color = colorMap.getOrElse(t.phase, "rgb(128, 128, 128)")
+        s"""{
+           |  x: [${t.index}],
+           |  y: [${t.altitude}],
+           |  name: '${t.phase}',
+           |  type: 'scatter',
+           |  mode: 'markers',
+           |  marker: {color: '$color', size: 14, symbol: 'diamond'}
+           |}""".stripMargin
       }
 
-    s"var stageMarkers = [${jsMarkers.mkString(",\n")}];"
+    s"var transitionMarkers = [${jsMarkers.mkString(",\n")}];"
 
   private def formatStage(point: Option[FlightStagePoint]): String =
     point match {
       case Some(FlightStagePoint(idx, alt)) => f"Point $idx at altitude $alt%.2fm"
       case None                             => "Not detected"
     }
+
+  final private case class PhaseTransition(
+    phase: FlightPhase,
+    index: Long,
+    altitude: Double,
+  )
+
+  final private case class ChartState[A](
+    indices: StringBuilder = StringBuilder(),
+    altitudes: StringBuilder = StringBuilder(),
+    velDs: StringBuilder = StringBuilder(),
+    transitions: List[PhaseTransition] = Nil,
+    prevPhase: FlightPhase = FlightPhase.Unknown,
+    lastStages: FlightStagesPoints = FlightStagesPoints.empty,
+  )
 
 }
