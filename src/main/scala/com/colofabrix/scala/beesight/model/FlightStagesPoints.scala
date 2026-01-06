@@ -37,3 +37,21 @@ final case class DataPoint(
   lineIndex: Long,
   altitude: Option[Double],
 )
+
+final case class ComputableFlightPoint[A](
+  altitude: Double,
+  northSpeed: Double,
+  eastSpeed: Double,
+  verticalSpeed: Double,
+  source: A
+)
+
+final case class ResultFlightPoint[A](
+  takeoff: Option[DataPoint],
+  freefall: Option[DataPoint],
+  canopy: Option[DataPoint],
+  landing: Option[DataPoint],
+  lastPoint: Long,
+  isValid: Boolean,
+  source: A
+)

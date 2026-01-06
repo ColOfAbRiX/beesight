@@ -1,6 +1,7 @@
 package com.colofabrix.scala.beesight.debug
 
 import cats.effect.IO
+import com.colofabrix.scala.beesight.files.FileOps
 import com.colofabrix.scala.beesight.model.*
 import java.nio.file.*
 
@@ -12,12 +13,24 @@ object ChartGenerator {
   /**
    * Generates an interactive HTML chart for a flight
    */
-  def generate(data: fs2.Stream[IO, FlysightPoint], stages: FlightStagesPoints, outputPath: Path): IO[Unit] =
+  def generate(data: fs2.Stream[IO, FlysightPoint], stages: FlightStagesPoints, outputFile: Path): IO[Unit] =
     for
       allPoints <- data.compile.toVector
+      outputPath = computeChartPath(outputFile)
       html       = createHtmlChart(allPoints, stages)
       _         <- writeHtmlFile(html, outputPath)
     yield ()
+
+  private def computeChartPath(outputFile: Path): Path =
+    val baseName =
+      outputFile
+        .getFileName
+        .toString
+        .replaceFirst("\\.[^.]+$", "")
+
+    Option(outputFile.getParent)
+      .getOrElse(Paths.get("."))
+      .resolve(s"$baseName.html")
 
   private def writeHtmlFile(html: String, outputPath: Path): IO[Unit] =
     IO.blocking {

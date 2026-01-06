@@ -19,13 +19,18 @@ extension (self: ReaderT.type) {
   def unit: IOConfig[Unit] =
     ReaderT.liftF(IO.unit)
 
-  def println[A](a: A): IOConfig[Unit] =
+  def stdout[A](a: A): IOConfig[Unit] =
     ReaderT.liftF(Console[IO].println(a))
 
-  def errorln[A](a: A): IOConfig[Unit] =
+  def stderr[A](a: A): IOConfig[Unit] =
     ReaderT.liftF(Console[IO].errorln(a))
 
   def blocking[A](thunk: => A): IOConfig[A] =
     ReaderT.liftF(IO.blocking(thunk))
 
+}
+
+extension (self: String) {
+  def stdout: IOConfig[Unit] = IOConfig.stdout(self)
+  def stderr: IOConfig[Unit] = IOConfig.stderr(self)
 }

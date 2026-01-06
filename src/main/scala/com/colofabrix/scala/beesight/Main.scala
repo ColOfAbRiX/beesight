@@ -25,10 +25,9 @@ object Main extends IODeclineReaderApp[Config] {
 
   override def runWithReader: IOConfig[ExitCode] =
     for
-      config         <- IOConfig.ask
-      inputFiles     <- FileOps.discoverCsvFiles(config.input).to[IOConfig]
+      inputFiles     <- FileOps.discoverCsvFiles()
       filesToProcess <- applyLimit(inputFiles)
-      _              <- IOConfig.println(s"Found ${inputFiles.size} CSV files, processing ${filesToProcess.size}")
+      _              <- s"Found ${inputFiles.size} CSV files, processing ${filesToProcess.size}".stdout
       _              <- filesToProcess.traverse(processFile)
     yield ExitCode.Success
 
@@ -41,11 +40,10 @@ object Main extends IODeclineReaderApp[Config] {
 
   private def processFile(inputFile: Path): IOConfig[Unit] =
     for
-      outputFile <- FileOps.computeOutputPath(inputFile)
-      _          <- IOConfig.println(s"Processing: $inputFile -> $outputFile")
-      _          <- IOConfig.blocking(Files.createDirectories(outputFile.getParent))
+      outputFile <- FileOps.createOutputFile(inputFile)
+      _          <- s"Processing: $inputFile -> $outputFile".stdout
       result     <- processCsvFile(inputFile, outputFile)
-      _          <- IOConfig.println(s"DONE: $inputFile\n")
+      _          <- s"DONE: $inputFile\n".stdout
     yield result
 
   private def processCsvFile(inputFile: Path, outputFile: Path): IOConfig[Unit] =
@@ -53,8 +51,7 @@ object Main extends IODeclineReaderApp[Config] {
       config         <- IOConfig.ask
       csvStream       = CsvFileOps.readCsv[FlysightPoint](inputFile)
       flightPoints   <- FlightStagesDetection.detect(csvStream).to[IOConfig]
-      chartPath       = FileOps.computeChartPath(outputFile)
-      _              <- ChartGenerator.generate(csvStream, flightPoints, chartPath).to[IOConfig]
+      _              <- ChartGenerator.generate(csvStream, flightPoints, outputFile).to[IOConfig]
       outputCsvStream = csvStream.through(DataCutter(config).cut(flightPoints))
       _              <- CsvFileOps.writeData(outputCsvStream, outputFile)
     yield ()

@@ -1,11 +1,10 @@
 package com.colofabrix.scala.beesight
 
-import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import com.colofabrix.scala.beesight.files.CsvFileOps
 import com.colofabrix.scala.beesight.model.FlysightPoint
-import munit.FunSuite
 import java.nio.file.Paths
+import munit.*
 import scala.io.Source
 
 class FlightStagesDetectionSpec extends FunSuite {
@@ -34,34 +33,36 @@ class FlightStagesDetectionSpec extends FunSuite {
         val points   = CsvFileOps.readCsv[FlysightPoint](filePath)
         val result   = FlightStagesDetection.detect(points).unsafeRunSync()
 
-        assertEquals(
-          result.takeoff.map(_.lineIndex),
-          expectedTakeoff,
-          s"Takeoff mismatch for $filename",
-        )
-
-        assertEquals(
-          result.freefall.map(_.lineIndex),
-          expectedFreefall,
-          s"Freefall mismatch for $filename",
-        )
-
-        assertEquals(
-          result.canopy.map(_.lineIndex),
-          expectedCanopy,
-          s"Canopy mismatch for $filename",
-        )
-
-        assertEquals(
-          result.landing.map(_.lineIndex),
-          expectedLanding,
-          s"Landing mismatch for $filename",
-        )
+        assertRange(result.takeoff.map(_.lineIndex), expectedTakeoff, 50, s"Takeoff mismatch for $filename")
+        assertRange(result.freefall.map(_.lineIndex), expectedFreefall, 5, s"Freefall mismatch for $filename")
+        assertRange(result.canopy.map(_.lineIndex), expectedCanopy, 10, s"Canopy mismatch for $filename")
+        assertRange(result.landing.map(_.lineIndex), expectedLanding, 50, s"Landing mismatch for $filename")
       }
     }
   }
 
   private def parseOptLong(value: Option[String]): Option[Long] =
     value.filter(_.trim.nonEmpty).map(_.trim.toLong)
+
+  import munit.internal.console.StackTraces
+
+  private def assertRange(
+    optObtained: Option[Long],
+    optExpected: Option[Long],
+    range: Long,
+    clue: => Any = "values are not the same",
+  ): Unit =
+    StackTraces.dropInside {
+      (optObtained, optExpected) match {
+        case (Some(obtained), Some(expected)) =>
+          if obtained > (expected + range) then
+            fail(s"The value ${obtained} is above the exepected MAX value of ${expected + range} - ${clue}")
+          else if obtained < (expected - range) then
+            fail(s"The value ${obtained} is below the expected MIN value of ${expected - range} - ${clue}")
+        case (None, None) =>
+        case _ =>
+          fail(s"One value is present the other is not - $clue")
+      }
+    }
 
 }

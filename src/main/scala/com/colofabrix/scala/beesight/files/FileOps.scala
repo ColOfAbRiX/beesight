@@ -8,56 +8,65 @@ import scala.jdk.CollectionConverters.*
 
 object FileOps {
 
-  def discoverCsvFiles(input: Path): IO[List[Path]] =
-    IO.blocking {
-      val (baseDir, globPattern) = parseInputAsGlob(input)
-      val matcher                = FileSystems.getDefault.getPathMatcher(s"glob:$globPattern")
-      Files
-        .walk(baseDir)
-        .iterator()
-        .asScala
-        .filter(Files.isRegularFile(_))
-        .filter { p =>
-          val rel = baseDir.relativize(p)
-          matcher.matches(Paths.get(rel.toString.toLowerCase))
-        }
-        .toList
-        .sorted
+  def discoverCsvFiles(): IOConfig[List[Path]] =
+    IOConfig.ask.flatMap { config =>
+      val (baseDir, glob) = parseInputAsGlob(config.input)
+      val matcher         = FileSystems.getDefault.getPathMatcher(s"glob:$glob")
+
+      IOConfig.blocking {
+        Files
+          .walk(baseDir)
+          .iterator()
+          .asScala
+          .filter(Files.isRegularFile(_))
+          .filter { p =>
+            val rel = baseDir.relativize(p)
+            matcher.matches(Paths.get(rel.toString.toLowerCase))
+          }
+          .toList
+          .sorted
+      }
     }
 
-  def computeOutputPath(inputFile: Path): IOConfig[Path] =
+  /**
+   * Builds and creates the output root directory
+   */
+  def buildAndGetOutputRoot(): IOConfig[Path] =
+    IOConfig.ask.flatMap { config =>
+      val (inputBaseDir, _) = parseInputAsGlob(config.input)
+      val parent            = Option(inputBaseDir.getParent).getOrElse(Paths.get("."))
+      val outputRoot        = config.output.getOrElse(parent.resolve("processed"))
+      IOConfig.blocking {
+        Files.createDirectories(outputRoot)
+        outputRoot
+      }
+    }
+
+  /**
+   * Computes the output path and creates parent directories
+   */
+  def createOutputFile(inputFile: Path): IOConfig[Path] =
+    for
+      outputPath <- computeOutputPath(inputFile)
+      _          <- IOConfig.blocking(Files.createDirectories(outputPath.getParent))
+    yield outputPath
+
+  /**
+   * Computes the output path for a given input file
+   */
+  private def computeOutputPath(inputFile: Path): IOConfig[Path] =
     IOConfig.ask.map { config =>
-      val absoluteInput = inputFile.toAbsolutePath.normalize
-
-      val inputBaseDir =
-        if Files.isRegularFile(absoluteInput) then
-          Option(absoluteInput.getParent).getOrElse(Paths.get("."))
-        else
-          absoluteInput
-
-      lazy val relativePath = inputBaseDir.relativize(inputFile.toAbsolutePath.normalize)
+      val (inputBaseDir, _) = parseInputAsGlob(config.input)
+      val parent            = Option(inputBaseDir.getParent).getOrElse(Paths.get("."))
+      val inputDirName      = inputBaseDir.getFileName
+      val relativePath      = inputBaseDir.relativize(inputFile.toAbsolutePath.normalize)
 
       config
         .output
-        .getOrElse {
-          Option(inputBaseDir.getParent)
-            .getOrElse(Paths.get("."))
-            .resolve("processed")
-            .resolve(inputBaseDir.getFileName)
-        }
+        .getOrElse(parent.resolve("processed"))
+        .resolve(inputDirName)
         .resolve(relativePath)
     }
-
-  def computeChartPath(outputFile: Path): Path =
-    val baseName =
-      outputFile
-        .getFileName
-        .toString
-        .replaceFirst("\\.[^.]+$", "")
-
-    Option(outputFile.getParent)
-      .getOrElse(Paths.get("."))
-      .resolve(s"$baseName.html")
 
   private def parseInputAsGlob(input: Path): (Path, String) =
     val absoluteInput = input.toAbsolutePath.normalize
@@ -71,6 +80,7 @@ object FileOps {
     else if inputStr.contains("*") || inputStr.contains("?") then
       val idx     = inputStr.indexWhere(c => c == '*' || c == '?')
       val lastSep = inputStr.lastIndexOf(FileSystems.getDefault.getSeparator, idx)
+
       if lastSep >= 0 then
         (Paths.get(inputStr.substring(0, lastSep)), inputStr.substring(lastSep + 1))
       else
