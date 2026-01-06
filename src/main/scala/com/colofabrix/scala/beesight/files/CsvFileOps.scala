@@ -31,16 +31,17 @@ object CsvFileOps {
         case Right(decoded) => decoded
       }
 
-  def writeData(csvStream: fs2.Stream[IO, FlysightPoint], output: Path): IOConfig[Unit] =
-    IOConfig { config =>
-      csvStream
-        .through { stream =>
-          if !config.dryRun then stream else fs2.Stream.empty
+  /**
+   * Returns a pipe that writes FlysightPoints to a CSV file
+   */
+  def writeIntoCsv(filePath: Path, dryRun: Boolean): fs2.Pipe[IO, FlysightPoint, Nothing] =
+    stream =>
+      stream
+        .through { s =>
+          if !dryRun then s else fs2.Stream.empty
         }
-        .through(writeCsv(output))
-        .compile
+        .through(writeCsv(filePath))
         .drain
-    }
 
   private def writeCsv[A](filePath: Path)(using CsvRowEncoder[A, String]): fs2.Pipe[IO, A, Unit] =
     data =>

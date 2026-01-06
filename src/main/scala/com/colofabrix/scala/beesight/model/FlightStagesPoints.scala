@@ -11,10 +11,10 @@ package com.colofabrix.scala.beesight.model
  * @param isValid True if this appears to be a valid skydiving jump (freefall detected)
  */
 final case class FlightStagesPoints(
-  takeoff: Option[DataPoint],
-  freefall: Option[DataPoint],
-  canopy: Option[DataPoint],
-  landing: Option[DataPoint],
+  takeoff: Option[FlightStagePoint],
+  freefall: Option[FlightStagePoint],
+  canopy: Option[FlightStagePoint],
+  landing: Option[FlightStagePoint],
   lastPoint: Long,
   isValid: Boolean,
 )
@@ -33,12 +33,16 @@ object FlightStagesPoints {
 
 }
 
-final case class DataPoint(
+final case class FlightStagePoint(
   lineIndex: Long,
-  altitude: Option[Double],
+  altitude: Double,
 )
 
-final case class ComputableFlightPoint[A](
+enum FlightPhase {
+  case Unknown, Takeoff, Freefall, Canopy, Landing
+}
+
+final case class InputFlightPoint[A](
   altitude: Double,
   northSpeed: Double,
   eastSpeed: Double,
@@ -46,11 +50,12 @@ final case class ComputableFlightPoint[A](
   source: A
 )
 
-final case class ResultFlightPoint[A](
-  takeoff: Option[DataPoint],
-  freefall: Option[DataPoint],
-  canopy: Option[DataPoint],
-  landing: Option[DataPoint],
+final case class OutputFlightPoint[A](
+  phase: FlightStagePoint,
+  takeoff: Option[FlightStagePoint],
+  freefall: Option[FlightStagePoint],
+  canopy: Option[FlightStagePoint],
+  landing: Option[FlightStagePoint],
   lastPoint: Long,
   isValid: Boolean,
   source: A

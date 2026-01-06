@@ -11,15 +11,26 @@ import java.nio.file.*
 object ChartGenerator {
 
   /**
-   * Generates an interactive HTML chart for a flight
+   * Returns a pipe that generates an HTML chart from the stream
    */
-  def generate(data: fs2.Stream[IO, FlysightPoint], stages: FlightStagesPoints, outputFile: Path): IO[Unit] =
-    for
-      allPoints <- data.compile.toVector
-      outputPath = computeChartPath(outputFile)
-      html       = createHtmlChart(allPoints, stages)
-      _         <- writeHtmlFile(html, outputPath)
-    yield ()
+  def chartPipe(stages: FlightStagesPoints, outputFile: Path): fs2.Pipe[IO, FlysightPoint, Nothing] =
+    _.zipWithIndex
+      .fold((StringBuilder(), StringBuilder(), StringBuilder())) {
+        case ((idxAcc, altAcc, velAcc), (point, idx)) =>
+          val sep = if idx == 0 then "" else ","
+          (
+            idxAcc.append(sep).append(idx),
+            altAcc.append(sep).append(point.hMSL),
+            velAcc.append(sep).append(point.velD),
+          )
+      }
+      .evalMap {
+        case (indices, altitudes, velDs) =>
+          val html       = createHtmlFromBuilders(indices, altitudes, velDs, stages)
+          val outputPath = computeChartPath(outputFile)
+          writeHtmlFile(html, outputPath)
+      }
+      .drain
 
   private def computeChartPath(outputFile: Path): Path =
     val baseName =
@@ -38,24 +49,16 @@ object ChartGenerator {
       val _ = Files.writeString(outputPath, html)
     }
 
-  private def createHtmlChart(data: Vector[FlysightPoint], stages: FlightStagesPoints): String =
-    val (indices, altitudes, velDs) =
-      data
-        .zipWithIndex
-        .foldLeft((StringBuilder(), StringBuilder(), StringBuilder())) {
-          case ((idxAcc, altAcc, velAcc), (point, idx)) =>
-            val sep       = if idx == 0 then "" else ","
-            val indices   = idxAcc.append(sep).append(idx)
-            val altitudes = altAcc.append(sep).append(point.hMSL)
-            val velDs     = velAcc.append(sep).append(point.velD)
-            (indices, altitudes, velDs)
-        }
-
-    val indicesJs   = s"[${indices.result()}]"
-    val altitudesJs = s"[${altitudes.result()}]"
-    val velDsJs     = s"[${velDs.result()}]"
-
-    val stageMarkers = createStageMarkersJs(stages, data)
+  private def createHtmlFromBuilders(
+    indices: StringBuilder,
+    altitudes: StringBuilder,
+    velDs: StringBuilder,
+    stages: FlightStagesPoints,
+  ): String =
+    val indicesJs    = s"[${indices.result()}]"
+    val altitudesJs  = s"[${altitudes.result()}]"
+    val velDsJs      = s"[${velDs.result()}]"
+    val stageMarkers = createStageMarkersJs(stages)
 
     s"""<!DOCTYPE html>
        |<html>
@@ -127,7 +130,7 @@ object ChartGenerator {
        |</html>
        |""".stripMargin
 
-  private def createStageMarkersJs(stages: FlightStagesPoints, data: Vector[FlysightPoint]): String =
+  private def createStageMarkersJs(stages: FlightStagesPoints): String =
     val markers =
       Vector(
         ("Takeoff", stages.takeoff, "rgb(44, 160, 44)"),
@@ -136,30 +139,29 @@ object ChartGenerator {
         ("Landing", stages.landing, "rgb(140, 86, 75)"),
       )
 
-    val jsMarkers = markers.flatMap {
-      case (name, Some(DataPoint(idx, altOpt)), color) =>
-        val altitude = altOpt.getOrElse(data.lift(idx.toInt).map(_.hMSL).getOrElse(0.0))
-        Some(
-          s"""{
-             |  x: [$idx],
-             |  y: [$altitude],
-             |  name: '$name',
-             |  type: 'scatter',
-             |  mode: 'markers',
-             |  marker: {color: '$color', size: 14, symbol: 'diamond'}
-             |}""".stripMargin,
-        )
-      case _ =>
-        None
-    }
+    val jsMarkers =
+      markers.flatMap {
+        case (name, Some(FlightStagePoint(idx, altitude)), color) =>
+          Some(
+            s"""{
+               |  x: [$idx],
+               |  y: [$altitude],
+               |  name: '$name',
+               |  type: 'scatter',
+               |  mode: 'markers',
+               |  marker: {color: '$color', size: 14, symbol: 'diamond'}
+               |}""".stripMargin,
+          )
+        case _ =>
+          None
+      }
 
     s"var stageMarkers = [${jsMarkers.mkString(",\n")}];"
 
-  private def formatStage(point: Option[DataPoint]): String =
+  private def formatStage(point: Option[FlightStagePoint]): String =
     point match {
-      case Some(DataPoint(idx, Some(alt))) => f"Point $idx at altitude $alt%.2fm"
-      case Some(DataPoint(idx, None))      => s"Point $idx (altitude unknown)"
-      case None                            => "Not detected"
+      case Some(FlightStagePoint(idx, alt)) => f"Point $idx at altitude $alt%.2fm"
+      case None                             => "Not detected"
     }
 
 }

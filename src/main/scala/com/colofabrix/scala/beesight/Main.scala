@@ -48,12 +48,27 @@ object Main extends IODeclineReaderApp[Config] {
 
   private def processCsvFile(inputFile: Path, outputFile: Path): IOConfig[Unit] =
     for
-      config         <- IOConfig.ask
-      csvStream       = CsvFileOps.readCsv[FlysightPoint](inputFile)
-      flightPoints   <- FlightStagesDetection.detect(csvStream).to[IOConfig]
-      _              <- ChartGenerator.generate(csvStream, flightPoints, outputFile).to[IOConfig]
-      outputCsvStream = csvStream.through(DataCutter(config).cut(flightPoints))
-      _              <- CsvFileOps.writeData(outputCsvStream, outputFile)
+      config       <- IOConfig.ask
+      csvStream     = CsvFileOps.readCsv[FlysightPoint](inputFile)
+      flightPoints <- FlightStagesDetection.detect(csvStream).to[IOConfig]
+      cutStream     = csvStream.through(DataCutter(config).cut(flightPoints))
+      _            <- processOutputsStream(cutStream, flightPoints, outputFile)
     yield ()
+
+  private def processOutputsStream(
+    stream: fs2.Stream[IO, FlysightPoint],
+    points: FlightStagesPoints,
+    outputFile: Path,
+  ): IOConfig[Unit] =
+    IOConfig.ask.flatMap { config =>
+      stream
+        .broadcastThrough(
+          CsvFileOps.writeIntoCsv(outputFile, config.dryRun),
+          ChartGenerator.chartPipe(points, outputFile),
+        )
+        .compile
+        .drain
+        .to[IOConfig]
+    }
 
 }

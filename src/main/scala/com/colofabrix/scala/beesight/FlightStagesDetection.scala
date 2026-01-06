@@ -126,7 +126,7 @@ object FlightStagesDetection {
       DetectedPhase.Unknown
 
   private def updateResults(result: FlightStagesPoints, state: StreamState): FlightStagesPoints =
-    val currentPoint = DataPoint(state.dataPointIndex, Some(state.height))
+    val currentPoint = FlightStagePoint(state.dataPointIndex, state.height)
 
     val updatedPoints =
       for
@@ -147,9 +147,9 @@ object FlightStagesDetection {
 
   // ─── Detection Methods ─────────────────────────────────────────────────────────
 
-  private type TryDetect[A] = Reader[(FlightStagesPoints, StreamState, DataPoint), A]
+  private type TryDetect[A] = Reader[(FlightStagesPoints, StreamState, FlightStagePoint), A]
 
-  private def tryDetectTakeoff(): TryDetect[Option[DataPoint]] =
+  private def tryDetectTakeoff(): TryDetect[Option[FlightStagePoint]] =
     Reader { (result, state, currentPoint) =>
       if result.takeoff.isDefined then
         result.takeoff
@@ -163,7 +163,7 @@ object FlightStagesDetection {
         Some(currentPoint)
     }
 
-  private def tryDetectFreefall(takeoff: Option[DataPoint]): TryDetect[Option[DataPoint]] =
+  private def tryDetectFreefall(takeoff: Option[FlightStagePoint]): TryDetect[Option[FlightStagePoint]] =
     Reader { (result, state, currentPoint) =>
       if result.freefall.isDefined then
         result.freefall
@@ -171,7 +171,7 @@ object FlightStagesDetection {
         None
       else
         // Altitude constraints
-        val altitudeOk = takeoff.flatMap(_.altitude) match {
+        val altitudeOk = takeoff.map(_.altitude) match {
           case Some(tAlt) => state.height > tAlt + FreefallMinAltitudeAbove
           case None       => state.height > FreefallMinAltitudeAbsolute
         }
@@ -185,7 +185,7 @@ object FlightStagesDetection {
           None
     }
 
-  private def tryDetectCanopy(takeoff: Option[DataPoint], freefall: Option[DataPoint]): TryDetect[Option[DataPoint]] =
+  private def tryDetectCanopy(takeoff: Option[FlightStagePoint], freefall: Option[FlightStagePoint]): TryDetect[Option[FlightStagePoint]] =
     Reader { (result, state, currentPoint) =>
       if result.canopy.isDefined then
         result.canopy
@@ -197,12 +197,12 @@ object FlightStagesDetection {
         // Altitude constraints
         val aboveTakeoff =
           takeoff
-            .flatMap(_.altitude)
+            .map(_.altitude)
             .forall(tAlt => state.height > tAlt)
 
         val belowFreefall =
           freefall
-            .flatMap(_.altitude)
+            .map(_.altitude)
             .forall(fAlt => state.height < fAlt)
 
         // Time ordering: canopy must be after freefall
@@ -214,7 +214,7 @@ object FlightStagesDetection {
           None
     }
 
-  private def tryDetectLanding(takeoff: Option[DataPoint], canopy: Option[DataPoint]): TryDetect[Option[DataPoint]] =
+  private def tryDetectLanding(takeoff: Option[FlightStagePoint], canopy: Option[FlightStagePoint]): TryDetect[Option[FlightStagePoint]] =
     Reader { (result, state, currentPoint) =>
       if result.landing.isDefined then
         result.landing
@@ -225,7 +225,7 @@ object FlightStagesDetection {
       else
         // Altitude constraint: within ±LandingAltitudeTolerance of takeoff
         val altitudeOk =
-          takeoff.flatMap(_.altitude) match {
+          takeoff.map(_.altitude) match {
             case Some(tAlt) => Math.abs(state.height - tAlt) < LandingAltitudeTolerance
             case None       => true
           }
@@ -241,16 +241,16 @@ object FlightStagesDetection {
 
   // ─── Helpers ───────────────────────────────────────────────────────────────────
 
-  extension (self: Option[DataPoint]) {
+  extension (self: Option[FlightStagePoint]) {
     private infix def isAfter(currentIndex: Long): Boolean =
       self.map(_.lineIndex).forall(currentIndex > _)
   }
 
   private def findInflectionPoint(
     history: Vector[VerticalSpeedSample],
-    detectedPoint: DataPoint,
+    detectedPoint: FlightStagePoint,
     isRising: Boolean,
-  ): DataPoint =
+  ): FlightStagePoint =
     if history.isEmpty then
       detectedPoint
     else
@@ -265,7 +265,7 @@ object FlightStagesDetection {
           .headOption
           .getOrElse(if isRising then history.head else history.maxBy(_.verticalSpeed))
 
-      DataPoint(candidate.index, Some(candidate.altitude))
+      FlightStagePoint(candidate.index, candidate.altitude)
 
   // ─── Types ─────────────────────────────────────────────────────────────────────
 

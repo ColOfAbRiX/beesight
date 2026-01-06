@@ -19,13 +19,7 @@ final class DataCutter(config: Config) {
           fs2Println(msg) >>
           data
 
-        case points @ FlightStagesPoints(Some(DataPoint(_, None)), _, _, None, _, _) =>
-          val msg = s"${CYAN}No takeoff or landing points detected.${RESET} Collecting all data."
-          fs2Println(points.show) >>
-          fs2Println(msg) >>
-          data
-
-        case points @ FlightStagesPoints(Some(DataPoint(takeoff, Some(_))), _, _, None, _, _) =>
+        case points @ FlightStagesPoints(Some(FlightStagePoint(takeoff, _)), _, _, None, _, _) =>
           val msg = s"${CYAN}No landing detected.${RESET} Collecting data from line ${keepFrom(takeoff)} until the end"
           fs2Println(points.show) >>
           retainMinPoints(points, data) {
@@ -33,7 +27,7 @@ final class DataCutter(config: Config) {
             data.drop(keepFrom(takeoff))
           }
 
-        case points @ FlightStagesPoints(Some(DataPoint(to, _)), _, _, Some(DataPoint(landing, Some(_))), tp, _) =>
+        case points @ FlightStagesPoints(Some(FlightStagePoint(to, _)), _, _, Some(FlightStagePoint(landing, _)), tp, _) =>
           fs2Println(points.show) >>
           retainMinPoints(points, data) {
             val msg = s"Collecting data from line ${keepFrom(to)} to line ${keepUntil(landing, tp)}"
@@ -41,7 +35,7 @@ final class DataCutter(config: Config) {
             data.drop(keepFrom(to)).take(keepUntil(landing, tp))
           }
 
-        case points @ FlightStagesPoints(None, _, _, Some(DataPoint(landing, Some(_))), totalPoints, _) =>
+        case points @ FlightStagesPoints(None, _, _, Some(FlightStagePoint(landing, _)), totalPoints, _) =>
           fs2Println(points.show) >>
           retainMinPoints(points, data) {
             fs2Println(s"${CYAN}No takeoff detected.${RESET} ") >>
@@ -97,7 +91,7 @@ final class DataCutter(config: Config) {
   given niceDouble: Show[Double] =
     value => f"${value}%.2f"
 
-  given nicePoint: Show[DataPoint] =
+  given nicePoint: Show[FlightStagePoint] =
     point => s"point ${point.lineIndex.show} at altitude ${point.altitude.show}"
 
   given niceFlightPoints: Show[FlightStagesPoints] =
