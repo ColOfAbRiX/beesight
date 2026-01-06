@@ -25,7 +25,6 @@ lazy val root =
       libraryDependencies ++= List(
         "co.fs2"               %% "fs2-core"             % "3.10.2",
         "co.fs2"               %% "fs2-io"               % "3.10.2",
-        "com.github.pathikrit" %% "better-files"         % "3.9.2",
         "com.monovore"         %% "decline"              % "2.4.1",
         "com.colofabrix.scala" %% "declinio"             % "1.0.0",
         "io.github.pityka"     %% "nspl-awt"             % "0.10.0",

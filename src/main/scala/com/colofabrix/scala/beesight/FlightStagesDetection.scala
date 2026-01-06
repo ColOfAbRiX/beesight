@@ -1,13 +1,13 @@
 package com.colofabrix.scala.beesight
 
 import cats.effect.IO
+import cats.data.Reader
 import com.colofabrix.scala.beesight.FlightStagesDetection.*
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.stats.*
 import com.colofabrix.scala.beesight.stats.CusumDetector.DetectorState as CusumState
 import java.time.*
 import scala.collection.immutable.Queue
-import cats.data.Reader
 
 /**
  * Detects and analyses different stages of a flight based on time-series data
@@ -37,60 +37,92 @@ object FlightStagesDetection {
    */
   def detect(data: fs2.Stream[IO, FlysightPoint]): IO[FlightStagesPoints] =
     data
-      .through {
-        _.zipWithIndex
-          .scan(StreamState()) {
-            case (state, (point, i)) => processPoint(state, point, i)
-          }
-          .fold(FlightStagesPoints.empty) {
-            case (result, state) => updateResults(result, state)
-          }
-      }
+      .map(InputFlightPoint.fromFlysightPoint)
+      .through(streamDetect)
       .compile
-      .lastOrError
+      .last
+      .map { maybeOutput =>
+        maybeOutput.fold(FlightStagesPoints.empty) { output =>
+          FlightStagesPoints(
+            takeoff = output.takeoff,
+            freefall = output.freefall,
+            canopy = output.canopy,
+            landing = output.landing,
+            lastPoint = output.lastPoint,
+            isValid = output.isValid,
+          )
+        }
+      }
 
-  // TODO: Return each input FlysightPoint enriched with Stages info
-  def detectDebug: fs2.Pipe[IO, FlysightPoint, (FlysightPoint, FlightStagesPoints)] =
+  /**
+   * Streaming detection - emits an OutputFlightPoint for each input
+   */
+  def streamDetect[A]: fs2.Pipe[IO, InputFlightPoint[A], OutputFlightPoint[A]] =
     _.zipWithIndex
-      .scan(StreamState()) {
-        case (state, (point, i)) => processPoint(state, point, i)
+      .scan((Option.empty[StreamState[A]], FlightStagesPoints.empty)) {
+        case ((stateOpt, result), (point, i)) =>
+          val newState  = processInputPoint(stateOpt, point, i)
+          val newResult = updateResults(result, newState)
+          (Some(newState), newResult)
       }
-      .fold(FlightStagesPoints.empty) {
-        case (result, state) =>
-          updateResults(result, state)
+      .collect {
+        case (Some(state), result) =>
+          OutputFlightPoint(
+            phase = state.detectedPhase,
+            takeoff = result.takeoff,
+            freefall = result.freefall,
+            canopy = result.canopy,
+            landing = result.landing,
+            lastPoint = result.lastPoint,
+            isValid = result.isValid,
+            source = state.inputPoint.source,
+          )
       }
-      .as(???)
 
-  private def processPoint(state: StreamState, point: FlysightPoint, index: Long): StreamState =
+  private def processInputPoint[A](
+    stateOpt: Option[StreamState[A]],
+    point: InputFlightPoint[A],
+    index: Long,
+  ): StreamState[A] =
+    val prevState = stateOpt.getOrElse(StreamState.empty(point))
+
     val verticalSpeedWindow =
-      SignalProcessor.updateWindow(state.verticalSpeedWindow, point.velD, MedianFilterWindow)
+      SignalProcessor.updateWindow(prevState.verticalSpeedWindow, point.verticalSpeed, MedianFilterWindow)
 
-    val metrics = SignalProcessor.computeMetrics(point.hMSL, point.velN, point.velE, point.velD, verticalSpeedWindow)
+    val metrics =
+      SignalProcessor.computeMetrics(
+        point.altitude,
+        point.northSpeed,
+        point.eastSpeed,
+        point.verticalSpeed,
+        verticalSpeedWindow,
+      )
 
-    val accelerationDown = metrics.filteredVerticalSpeed - state.filteredVerticalSpeed
-    val detectedPhase    = detectPhase(state, metrics, accelerationDown)
-    val wasInFreefall    = state.wasInFreefall || detectedPhase == DetectedPhase.Freefall
+    val verticalAccel = metrics.filteredVerticalSpeed - prevState.filteredVerticalSpeed
+    val detectedPhase = detectPhase(prevState, metrics, verticalAccel)
+    val wasInFreefall = prevState.wasInFreefall || detectedPhase == FlightPhase.Freefall
 
-    val freefallCusumState = freefallCusum.checkNextValue(state.freefallCusum, metrics.filteredVerticalSpeed)
-    val canopyCusumState   = canopyCusum.checkNextValue(state.canopyCusum, metrics.filteredVerticalSpeed)
+    val freefallCusumState = freefallCusum.checkNextValue(prevState.freefallCusum, metrics.filteredVerticalSpeed)
+    val canopyCusumState   = canopyCusum.checkNextValue(prevState.canopyCusum, metrics.filteredVerticalSpeed)
 
     val updatedHistory =
-      if state.verticalSpeedHistory.size >= BacknumberWindow then
-        state.verticalSpeedHistory.tail :+ VerticalSpeedSample(index, metrics.filteredVerticalSpeed, point.hMSL)
+      if prevState.verticalSpeedHistory.size >= BacknumberWindow then
+        prevState.verticalSpeedHistory.tail :+ VerticalSpeedSample(index, metrics.filteredVerticalSpeed, point.altitude)
       else
-        state.verticalSpeedHistory :+ VerticalSpeedSample(index, metrics.filteredVerticalSpeed, point.hMSL)
+        prevState.verticalSpeedHistory :+ VerticalSpeedSample(index, metrics.filteredVerticalSpeed, point.altitude)
 
     val assumedTakeoffMissed =
-      if index == 0 then point.hMSL > TakeoffMaxAltitude && point.velD < 0
-      else state.assumedTakeoffMissed
+      if index == 0 then point.altitude > TakeoffMaxAltitude && point.verticalSpeed < 0
+      else prevState.assumedTakeoffMissed
 
     StreamState(
+      inputPoint = point,
       dataPointIndex = index,
-      time = point.time.toInstant,
-      height = point.hMSL,
-      verticalSpeed = point.velD,
+      time = point.time,
+      height = point.altitude,
+      verticalSpeed = point.verticalSpeed,
       filteredVerticalSpeed = metrics.filteredVerticalSpeed,
-      accelerationDown = accelerationDown,
+      verticalAccel = verticalAccel,
       horizontalSpeed = metrics.horizontalSpeed,
       totalSpeed = metrics.totalSpeed,
       verticalSpeedWindow = verticalSpeedWindow,
@@ -102,30 +134,34 @@ object FlightStagesDetection {
       assumedTakeoffMissed = assumedTakeoffMissed,
     )
 
-  private def detectPhase(state: StreamState, metrics: SignalProcessor.FlightMetrics, accDown: Double): DetectedPhase =
+  private def detectPhase[A](
+    state: StreamState[A],
+    metrics: SignalProcessor.FlightMetrics,
+    accDown: Double,
+  ): FlightPhase =
     val isFreefallByThreshold = metrics.filteredVerticalSpeed > FreefallVerticalSpeedThreshold
     val isFreefallByAccel     = accDown > FreefallAccelThreshold && metrics.filteredVerticalSpeed > FreefallAccelMinVelocity
 
     if isFreefallByThreshold || isFreefallByAccel then
-      DetectedPhase.Freefall
+      FlightPhase.Freefall
     else if state.wasInFreefall
         && metrics.filteredVerticalSpeed > 0
         && metrics.filteredVerticalSpeed < CanopyVerticalSpeedMax
     then
-      DetectedPhase.Canopy
+      FlightPhase.Canopy
     else if metrics.totalSpeed < LandingSpeedMax
-        && state.detectedPhase == DetectedPhase.Canopy
+        && state.detectedPhase == FlightPhase.Canopy
     then
-      DetectedPhase.Landing
+      FlightPhase.Landing
     else if !state.wasInFreefall
         && metrics.horizontalSpeed > TakeoffSpeedThreshold
         && metrics.filteredVerticalSpeed < TakeoffClimbRate
     then
-      DetectedPhase.Takeoff
+      FlightPhase.Takeoff
     else
-      DetectedPhase.Unknown
+      FlightPhase.Unknown
 
-  private def updateResults(result: FlightStagesPoints, state: StreamState): FlightStagesPoints =
+  private def updateResults[A](result: FlightStagesPoints, state: StreamState[A]): FlightStagesPoints =
     val currentPoint = FlightStagePoint(state.dataPointIndex, state.height)
 
     val updatedPoints =
@@ -147,13 +183,13 @@ object FlightStagesDetection {
 
   // ─── Detection Methods ─────────────────────────────────────────────────────────
 
-  private type TryDetect[A] = Reader[(FlightStagesPoints, StreamState, FlightStagePoint), A]
+  private type TryDetect[B] = Reader[(FlightStagesPoints, StreamState[?], FlightStagePoint), B]
 
   private def tryDetectTakeoff(): TryDetect[Option[FlightStagePoint]] =
     Reader { (result, state, currentPoint) =>
       if result.takeoff.isDefined then
         result.takeoff
-      else if state.detectedPhase != DetectedPhase.Takeoff then
+      else if state.detectedPhase != FlightPhase.Takeoff then
         None
       else if state.assumedTakeoffMissed then
         None // Data started after takeoff
@@ -167,7 +203,7 @@ object FlightStagesDetection {
     Reader { (result, state, currentPoint) =>
       if result.freefall.isDefined then
         result.freefall
-      else if state.detectedPhase != DetectedPhase.Freefall then
+      else if state.detectedPhase != FlightPhase.Freefall then
         None
       else
         // Altitude constraints
@@ -185,11 +221,13 @@ object FlightStagesDetection {
           None
     }
 
-  private def tryDetectCanopy(takeoff: Option[FlightStagePoint], freefall: Option[FlightStagePoint]): TryDetect[Option[FlightStagePoint]] =
+  private def tryDetectCanopy(takeoff: Option[FlightStagePoint], freefall: Option[FlightStagePoint]): TryDetect[
+    Option[FlightStagePoint],
+  ] =
     Reader { (result, state, currentPoint) =>
       if result.canopy.isDefined then
         result.canopy
-      else if state.detectedPhase != DetectedPhase.Canopy then
+      else if state.detectedPhase != FlightPhase.Canopy then
         None
       else if freefall.isEmpty then
         None // Requires freefall to have been detected
@@ -214,11 +252,14 @@ object FlightStagesDetection {
           None
     }
 
-  private def tryDetectLanding(takeoff: Option[FlightStagePoint], canopy: Option[FlightStagePoint]): TryDetect[Option[FlightStagePoint]] =
+  private def tryDetectLanding(
+    takeoff: Option[FlightStagePoint],
+    canopy: Option[FlightStagePoint],
+  ): TryDetect[Option[FlightStagePoint]] =
     Reader { (result, state, currentPoint) =>
       if result.landing.isDefined then
         result.landing
-      else if state.detectedPhase != DetectedPhase.Landing then
+      else if state.detectedPhase != FlightPhase.Landing then
         None
       else if canopy.isEmpty then
         None // Requires canopy to have been detected
@@ -269,32 +310,36 @@ object FlightStagesDetection {
 
   // ─── Types ─────────────────────────────────────────────────────────────────────
 
-  private enum DetectedPhase {
-    case Unknown, Takeoff, Freefall, Canopy, Landing
-  }
-
   final private case class VerticalSpeedSample(
     index: Long,
     verticalSpeed: Double,
     altitude: Double,
   )
 
-  final private case class StreamState(
+  final private case class StreamState[A](
+    inputPoint: InputFlightPoint[A],
     dataPointIndex: Long = 0,
     time: Instant = Instant.EPOCH,
     height: Double = 0.0,
     verticalSpeed: Double = 0.0,
     filteredVerticalSpeed: Double = 0.0,
-    accelerationDown: Double = 0.0,
+    verticalAccel: Double = 0.0,
     horizontalSpeed: Double = 0.0,
     totalSpeed: Double = 0.0,
     verticalSpeedWindow: Queue[Double] = Queue.empty,
     verticalSpeedHistory: Vector[VerticalSpeedSample] = Vector.empty,
     freefallCusum: CusumState = CusumState.Empty,
     canopyCusum: CusumState = CusumState.Empty,
-    detectedPhase: DetectedPhase = DetectedPhase.Unknown,
+    detectedPhase: FlightPhase = FlightPhase.Unknown,
     wasInFreefall: Boolean = false,
     assumedTakeoffMissed: Boolean = false,
   )
+
+  private object StreamState {
+
+    def empty[A](point: InputFlightPoint[A]): StreamState[A] =
+      StreamState(inputPoint = point)
+
+  }
 
 }

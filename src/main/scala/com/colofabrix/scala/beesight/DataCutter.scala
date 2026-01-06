@@ -10,6 +10,9 @@ import scala.io.AnsiColor.*
 
 final class DataCutter(config: Config) {
 
+  def cutPipe[A]: fs2.Pipe[fs2.Pure, OutputFlightPoint[A], OutputFlightPoint[A]] =
+    ???
+
   def cut(points: FlightStagesPoints): Pipe[IO, FlysightPoint, FlysightPoint] =
     data =>
       points match {
