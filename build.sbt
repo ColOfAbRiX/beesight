@@ -11,6 +11,7 @@ Global / tpolecatExcludeOptions ++=
     ScalacOptions.warnUnusedLocals,
     ScalacOptions.privateKindProjector,
   )
+Test / tpolecatScalacOptions := Set.empty
 
 lazy val root =
   project
@@ -33,7 +34,6 @@ lazy val root =
         "org.scalanlp"         %% "breeze"               % "2.1.0",
         "org.typelevel"        %% "cats-core"            % "2.12.0",
         "org.typelevel"        %% "cats-effect"          % "3.5.4",
-        "org.scalameta"        %% "munit"                % "1.0.0" % Test,
-        "org.typelevel"        %% "munit-cats-effect"    % "2.0.0" % Test,
+        "org.scalatest"        %% "scalatest"            % "3.2.18" % Test,
       ),
     )

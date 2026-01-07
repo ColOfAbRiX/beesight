@@ -1,68 +1,82 @@
 package com.colofabrix.scala.beesight
 
+import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import com.colofabrix.scala.beesight.files.CsvFileOps
-import com.colofabrix.scala.beesight.model.FlysightPoint
+import com.colofabrix.scala.beesight.model.*
 import java.nio.file.Paths
-import munit.*
+import org.scalatest.Inspectors.forEvery
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 import scala.io.Source
 
-class FlightStagesDetectionSpec extends FunSuite {
+class FlightStagesDetectionSpec extends AnyWordSpec with Matchers with FlightStagesMatchers {
 
   private val flysightDir = Paths.get("src/test/resources/flysight")
   private val resultsFile = Paths.get("src/test/resources/points_results.csv")
 
-  test("detect all flight stages correctly for untagged files") {
-    val lines     = Source.fromFile(resultsFile.toFile).getLines().toList
-    val header    = lines.head.split(",").zipWithIndex.toMap
-    val dataLines = lines.tail.filter(_.trim.nonEmpty)
+  "FlightStagesDetection" should {
 
-    for (line <- dataLines) {
-      val cols     = line.split(",", -1) // -1 to keep trailing empty strings
-      val filename = cols(header("filename"))
-      val tag      = cols.lift(header("tag")).getOrElse("").trim
+    "detect all flight stages correctly for untagged files" in {
+      val lines     = Source.fromFile(resultsFile.toFile).getLines().toList
+      val header    = lines.head.split(",").zipWithIndex.toMap
+      val dataLines = lines.tail.filter(_.trim.nonEmpty)
 
-      // Skip rows with tags
-      if (tag.isEmpty) {
-        val expectedTakeoff  = parseOptLong(cols.lift(header("takeoff_pt")))
-        val expectedFreefall = parseOptLong(cols.lift(header("freefall_pt")))
-        val expectedCanopy   = parseOptLong(cols.lift(header("canopy_pt")))
-        val expectedLanding  = parseOptLong(cols.lift(header("landing_pt")))
+      val untaggedLines =
+        dataLines.filter { line =>
+          val cols = line.split(",", -1)
+          val tag  = cols.lift(header("tag")).getOrElse("").trim
+          tag.isEmpty
+        }
+
+      forEvery(untaggedLines) { line =>
+        val cols     = line.split(",", -1)
+        val filename = cols(header("filename"))
+
+        val expected =
+          FlightStagesPoints(
+            takeoff = parseOptLong(cols.lift(header("takeoff_pt"))).map(FlightStagePoint(_, 0.0)),
+            freefall = parseOptLong(cols.lift(header("freefall_pt"))).map(FlightStagePoint(_, 0.0)),
+            canopy = parseOptLong(cols.lift(header("canopy_pt"))).map(FlightStagePoint(_, 0.0)),
+            landing = parseOptLong(cols.lift(header("landing_pt"))).map(FlightStagePoint(_, 0.0)),
+            lastPoint = 0,
+            isValid = true,
+          )
 
         val filePath = flysightDir.resolve(filename)
         val points   = CsvFileOps.readCsv[FlysightPoint](filePath)
-        val result   = FlightStagesDetection.detect(points).unsafeRunSync()
+        val result   = detectPoints(points).unsafeRunSync()
 
-        assertRange(result.takeoff.map(_.lineIndex), expectedTakeoff, 50, s"Takeoff mismatch for $filename")
-        assertRange(result.freefall.map(_.lineIndex), expectedFreefall, 5, s"Freefall mismatch for $filename")
-        assertRange(result.canopy.map(_.lineIndex), expectedCanopy, 10, s"Canopy mismatch for $filename")
-        assertRange(result.landing.map(_.lineIndex), expectedLanding, 50, s"Landing mismatch for $filename")
+        withClue(s"File: $filename\n") {
+          result.should(matchStages(expected))
+        }
       }
     }
+
   }
 
   private def parseOptLong(value: Option[String]): Option[Long] =
     value.filter(_.trim.nonEmpty).map(_.trim.toLong)
 
-  import munit.internal.console.StackTraces
-
-  private def assertRange(
-    optObtained: Option[Long],
-    optExpected: Option[Long],
-    range: Long,
-    clue: => Any = "values are not the same",
-  ): Unit =
-    StackTraces.dropInside {
-      (optObtained, optExpected) match {
-        case (Some(obtained), Some(expected)) =>
-          if obtained > (expected + range) then
-            fail(s"The value ${obtained} is above the exepected MAX value of ${expected + range} - ${clue}")
-          else if obtained < (expected - range) then
-            fail(s"The value ${obtained} is below the expected MIN value of ${expected - range} - ${clue}")
-        case (None, None) =>
-        case _ =>
-          fail(s"One value is present the other is not - $clue")
+  private def detectPoints(data: fs2.Stream[IO, FlysightPoint]): IO[FlightStagesPoints] =
+    data
+      .map(InputFlightPoint.fromFlysightPoint)
+      .through(FlightStagesDetection.streamDetect)
+      .compile
+      .last
+      .map { optOutput =>
+        optOutput
+          .map { output =>
+            FlightStagesPoints(
+              takeoff = output.takeoff,
+              freefall = output.freefall,
+              canopy = output.canopy,
+              landing = output.landing,
+              lastPoint = output.lastPoint,
+              isValid = output.isValid,
+            )
+          }
+          .getOrElse(FlightStagesPoints.empty)
       }
-    }
 
 }

@@ -20,28 +20,18 @@ final class DataCutter private (config: Config) {
       stream
         .zipWithIndex
         .mapAccumulate(CutState[A]()) {
-          case (state, (point, index)) =>
-            processPoint(state, point, index)
+          case (state, (point, index)) => processPoint(state, point, index)
         }
         .flatMap {
-          case (_, toEmit) =>
-            Stream.emits(toEmit)
+          case (_, toEmit) => Stream.emits(toEmit)
         }
 
-  private def processPoint[A](
-    state: CutState[A],
-    point: OutputFlightPoint[A],
-    index: Long,
-  ): StreamState[A] =
+  private def processPoint[A](state: CutState[A], point: OutputFlightPoint[A], index: Long): StreamState[A] =
     state.phase match {
-      case CutPhase.BeforeTakeoff =>
-        handleBeforeTakeoff(state, point, index)
-      case CutPhase.InFlight =>
-        handleInFlight(state, point, index)
-      case CutPhase.AfterLanding =>
-        handleAfterLanding(state, point)
-      case CutPhase.Done =>
-        (state, Nil)
+      case CutPhase.BeforeTakeoff => handleBeforeTakeoff(state, point, index)
+      case CutPhase.InFlight      => handleInFlight(state, point, index)
+      case CutPhase.AfterLanding  => handleAfterLanding(state, point)
+      case CutPhase.Done          => (state, Nil)
     }
 
   private def handleBeforeTakeoff[A](state: CutState[A], point: OutputFlightPoint[A], index: Long): StreamState[A] =
@@ -52,16 +42,11 @@ final class DataCutter private (config: Config) {
         .exists(t => index >= keepFrom(t))
 
     if startEmitting then
-      val newState =
-        CutState[A](
-          phase = CutPhase.InFlight,
-          preBuffer = Queue.empty,
-          afterCount = 0,
-        )
-
       // Transition to InFlight: emit buffered elements + current
+      val newState = CutState[A](phase = CutPhase.InFlight, preBuffer = Queue.empty, afterCount = 0)
       (newState, state.preBuffer.toList :+ point)
     else
+      // Keep buffering (ring buffer of last bufferPoints elements)
       val updatedBuffer =
         if state.preBuffer.size >= config.bufferPoints then
           state.preBuffer.tail.enqueue(point)
@@ -69,8 +54,6 @@ final class DataCutter private (config: Config) {
           state.preBuffer.enqueue(point)
 
       val newState = state.copy(preBuffer = updatedBuffer)
-
-      // Keep buffering (ring buffer of last bufferPoints elements)
       (newState, Nil)
 
   private def handleInFlight[A](state: CutState[A], point: OutputFlightPoint[A], index: Long): StreamState[A] =
@@ -78,14 +61,8 @@ final class DataCutter private (config: Config) {
     val isAfterLanding = landingIndex.exists(l => index > l)
 
     if isAfterLanding then
-      val newState =
-        CutState[A](
-          phase = CutPhase.AfterLanding,
-          preBuffer = Queue.empty,
-          afterCount = 1,
-        )
-
       // Transition to AfterLanding
+      val newState = CutState[A](phase = CutPhase.AfterLanding, preBuffer = Queue.empty, afterCount = 1)
       (newState, List(point))
     else
       // Still in flight - emit
@@ -93,113 +70,16 @@ final class DataCutter private (config: Config) {
 
   private def handleAfterLanding[A](state: CutState[A], point: OutputFlightPoint[A]): StreamState[A] =
     if state.afterCount >= config.bufferPoints then
-      val newState = state.copy(phase = CutPhase.Done)
       // Done - stop emitting
+      val newState = state.copy(phase = CutPhase.Done)
       (newState, Nil)
     else
-      val newState = state.copy(afterCount = state.afterCount + 1)
       // Still emitting post-landing buffer
+      val newState = state.copy(afterCount = state.afterCount + 1)
       (newState, List(point))
 
   private def keepFrom(index: Long): Long =
     Math.max(index - config.bufferPoints, 0)
-
-  // def cut(points: FlightStagesPoints): Pipe[IO, FlysightPoint, FlysightPoint] =
-  //   data =>
-  //     points match {
-  //       case points @ FlightStagesPoints(None, None, None, None, _, _) =>
-  //         val msg = s"${YELLOW}WARNING!${RESET} Found stable data only. Might not contain a flight recording."
-  //         fs2Println(points.show) >>
-  //         fs2Println(msg) >>
-  //         data
-
-  //       case points @ FlightStagesPoints(Some(FlightStagePoint(takeoff, _)), _, _, None, _, _) =>
-  //         val msg = s"${CYAN}No landing detected.${RESET} Collecting data from line ${keepFrom(takeoff)} until the end"
-  //         fs2Println(points.show) >>
-  //         retainMinPoints(points, data) {
-  //           fs2Println(msg) >>
-  //           data.drop(keepFrom(takeoff))
-  //         }
-
-  //       case points @ FlightStagesPoints(
-  //             Some(FlightStagePoint(to, _)),
-  //             _,
-  //             _,
-  //             Some(FlightStagePoint(landing, _)),
-  //             tp,
-  //             _,
-  //           ) =>
-  //         fs2Println(points.show) >>
-  //         retainMinPoints(points, data) {
-  //           val msg = s"Collecting data from line ${keepFrom(to)} to line ${keepUntil(landing, tp)}"
-  //           fs2Println(msg) >>
-  //           data.drop(keepFrom(to)).take(keepUntil(landing, tp))
-  //         }
-
-  //       case points @ FlightStagesPoints(None, _, _, Some(FlightStagePoint(landing, _)), totalPoints, _) =>
-  //         fs2Println(points.show) >>
-  //         retainMinPoints(points, data) {
-  //           fs2Println(s"${CYAN}No takeoff detected.${RESET} ") >>
-  //           fs2Println(s"Collecting data from line 0 to line ${keepUntil(landing, totalPoints)}") >>
-  //           data.take(keepUntil(landing, totalPoints))
-  //         }
-
-  //       case flightPoints =>
-  //         fs2Println(flightPoints.show) >>
-  //         fs2Println(s"${RED}ERROR?${RESET} Not sure why we're here. Collecting everything, just to be sure") >>
-  //         data
-  //     }
-
-  // private def retainMinPoints(
-  //   flightPoints: FlightStagesPoints,
-  //   data: => Stream[IO, FlysightPoint],
-  // )(ifMore: => Stream[IO, FlysightPoint],
-  // ): Stream[IO, FlysightPoint] =
-  //   if numberOfRetainedPoints(flightPoints) < config.minRetainedPoints then
-  //     fs2Println(s"${YELLOW}Too many points dropped!${RESET} Collecting all data.") >>
-  //     data
-  //   else
-  //     ifMore
-  //   end if
-
-  // private def numberOfRetainedPoints(flightPoints: FlightStagesPoints): Double =
-  //   val first =
-  //     flightPoints
-  //       .takeoff
-  //       .fold(0L)(_.lineIndex)
-  //       .toDouble
-
-  //   val last =
-  //     flightPoints
-  //       .landing
-  //       .fold(flightPoints.lastPoint)(_.lineIndex)
-  //       .toDouble
-
-  //   (last - first) / flightPoints.lastPoint.toDouble
-
-  // private def keepUntil(index: Long, max: Long): Long =
-  //   Math.min(index + config.bufferPoints, max)
-
-  // private def fs2Println[A: cats.Show](a: => A): Stream[IO, Unit] =
-  //   Stream.eval(IO.println(a))
-
-  // given niceOptionShow[A: Show]: Show[Option[A]] =
-  //   _.fold("N/A")(Show[A].show(_))
-
-  // given niceDouble: Show[Double] =
-  //   value => f"${value}%.2f"
-
-  // given nicePoint: Show[FlightStagePoint] =
-  //   point => s"point ${point.lineIndex.show} at altitude ${point.altitude.show}"
-
-  // given niceFlightPoints: Show[FlightStagesPoints] =
-  //   flightPoints =>
-  //     s"""Flight points:
-  //        |    Takeoff:  ${flightPoints.takeoff.show}
-  //        |    Freefall: ${flightPoints.freefall.show}
-  //        |    Canopy:   ${flightPoints.canopy.show}
-  //        |    Landing:  ${flightPoints.landing.show}
-  //        |""".stripMargin
 
 }
 
@@ -212,21 +92,10 @@ object DataCutter {
   }
 
   final private case class CutState[A](
-    phase: CutPhase,
-    preBuffer: Queue[OutputFlightPoint[A]],
-    afterCount: Long,
+    phase: CutPhase = CutPhase.BeforeTakeoff,
+    preBuffer: Queue[OutputFlightPoint[A]] = Queue.empty[OutputFlightPoint[A]],
+    afterCount: Long = 0,
   )
-
-  private object CutState {
-
-    def apply[A](): CutState[A] =
-      CutState[A](
-        phase = CutPhase.BeforeTakeoff,
-        preBuffer = Queue.empty[OutputFlightPoint[A]],
-        afterCount = 0,
-      )
-
-  }
 
   def apply(): IOConfig[DataCutter] =
     IOConfig.ask.map(new DataCutter(_))

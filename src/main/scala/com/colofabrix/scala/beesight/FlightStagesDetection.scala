@@ -33,29 +33,6 @@ object FlightStagesDetection {
   private val canopyCusum   = CusumDetector.withMedian(25, 0.5, 15.0)
 
   /**
-   * Processes a stream of flight data points to identify flight stages
-   */
-  def detect(data: fs2.Stream[fs2.Pure, FlysightPoint]): IO[FlightStagesPoints] =
-    IO {
-      data
-        .map(InputFlightPoint.fromFlysightPoint)
-        .through(streamDetect)
-        .toList
-        .lastOption
-        .map { output =>
-          FlightStagesPoints(
-            takeoff = output.takeoff,
-            freefall = output.freefall,
-            canopy = output.canopy,
-            landing = output.landing,
-            lastPoint = output.lastPoint,
-            isValid = output.isValid,
-          )
-        }
-        .getOrElse(FlightStagesPoints.empty)
-    }
-
-  /**
    * Streaming detection - emits an OutputFlightPoint for each input
    */
   def streamDetect[F[_], A]: fs2.Pipe[F, InputFlightPoint[A], OutputFlightPoint[A]] =

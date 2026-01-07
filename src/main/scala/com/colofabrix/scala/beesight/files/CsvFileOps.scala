@@ -7,6 +7,7 @@ import com.colofabrix.scala.beesight.model.FlysightPoint
 import fs2.data.csv.*
 import fs2.io.file.{ Files, Flags, Path as Fs2Path }
 import java.nio.file.Path
+import com.colofabrix.scala.beesight.model.OutputFlightPoint
 
 /**
  * Aggregations of operations on files using fs2
@@ -34,22 +35,22 @@ object CsvFileOps {
   /**
    * Returns a pipe that writes FlysightPoints to a CSV file
    */
-  def writeIntoCsv(filePath: Path, dryRun: Boolean): fs2.Pipe[IO, FlysightPoint, Nothing] =
+  def writeCsvPipe[A](
+    filePath: Path,
+    dryRun: Boolean,
+  )(using CsvRowEncoder[A, String],
+  ): fs2.Pipe[IO, OutputFlightPoint[A], Nothing] =
     stream =>
       stream
         .through { s =>
           if !dryRun then s else fs2.Stream.empty
         }
-        .through(writeCsv(filePath))
-        .drain
-
-  private def writeCsv[A](filePath: Path)(using CsvRowEncoder[A, String]): fs2.Pipe[IO, A, Unit] =
-    data =>
-      data
+        .map(_.source)
         .through(encodeUsingFirstHeaders(fullRows = true))
         .through(fs2.text.utf8.encode)
         .through(Files[IO].writeAll(Fs2Path.fromNioPath(filePath)))
         .as(())
+        .drain
 
   private val unixEol: fs2.Pipe[IO, String, String] =
     _.map(_.replace("\r\n", "\n"))
