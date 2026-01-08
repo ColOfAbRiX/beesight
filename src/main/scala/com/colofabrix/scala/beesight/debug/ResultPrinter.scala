@@ -1,22 +1,23 @@
 package com.colofabrix.scala.beesight.debug
 
-import cats.implicits.given
 import cats.effect.IO
+import cats.implicits.given
 import cats.Show
+import com.colofabrix.scala.beesight.*
 import com.colofabrix.scala.beesight.model.*
 import scala.io.AnsiColor.*
 
 object ResultPrinter {
 
-  def printStagesPipe: fs2.Pipe[IO, OutputFlightPoint[FlysightPoint], Nothing] =
+  def printStagesPipe: fs2.Pipe[IOConfig, OutputFlightPoint[FlysightPoint], Nothing] =
     data =>
       data
         .fold(Option.empty[FlightStagesPoints]) { (_, point) =>
           Some(extractStages(point))
         }
         .evalMap {
-          case Some(stages) => IO.println(stages.show)
-          case None         => IO.println(s"${YELLOW}WARNING!${RESET} No data processed.")
+          case Some(stages) => IOConfig.stdout(stages.show)
+          case None         => IOConfig.stdout(s"${YELLOW}WARNING!${RESET} No data processed.")
         }
         .drain
 

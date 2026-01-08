@@ -35,8 +35,10 @@ object FlightStagesDetection {
   /**
    * Streaming detection - emits an OutputFlightPoint for each input
    */
-  def streamDetect[F[_], A]: fs2.Pipe[F, InputFlightPoint[A], OutputFlightPoint[A]] =
-    _.zipWithIndex
+  def streamDetectA[F[_], A](using A: FlightInfo[A]): fs2.Pipe[F, A, OutputFlightPoint[A]] = data =>
+    data
+      .map(A.toInputFlightPoint)
+      .zipWithIndex
       .scan((Option.empty[StreamState[A]], FlightStagesPoints.empty)) {
         case ((stateOpt, result), (point, i)) =>
           val newState  = processInputPoint(stateOpt, point, i)
@@ -117,27 +119,43 @@ object FlightStagesDetection {
     metrics: SignalProcessor.FlightMetrics,
     accDown: Double,
   ): FlightPhase =
-    val isFreefallByThreshold = metrics.filteredVerticalSpeed > FreefallVerticalSpeedThreshold
-    val isFreefallByAccel     = accDown > FreefallAccelThreshold && metrics.filteredVerticalSpeed > FreefallAccelMinVelocity
-
-    if isFreefallByThreshold || isFreefallByAccel then
-      FlightPhase.Freefall
-    else if state.wasInFreefall
-        && metrics.filteredVerticalSpeed > 0
-        && metrics.filteredVerticalSpeed < CanopyVerticalSpeedMax
-    then
-      FlightPhase.Canopy
-    else if metrics.totalSpeed < LandingSpeedMax
-        && state.detectedPhase == FlightPhase.Canopy
-    then
+    if state.detectedPhase == FlightPhase.Landing then
+      // Terminal state - stay landed
       FlightPhase.Landing
-    else if !state.wasInFreefall
-        && metrics.horizontalSpeed > TakeoffSpeedThreshold
-        && metrics.filteredVerticalSpeed < TakeoffClimbRate
-    then
-      FlightPhase.Takeoff
+    else if state.detectedPhase == FlightPhase.Canopy then
+      // In canopy - can only transition to landing
+      if metrics.totalSpeed < LandingSpeedMax then
+        FlightPhase.Landing
+      else
+        FlightPhase.Canopy
+    else if state.wasInFreefall then
+      // After freefall detected - can only transition to canopy
+      if metrics.filteredVerticalSpeed > 0 && metrics.filteredVerticalSpeed < CanopyVerticalSpeedMax then
+        FlightPhase.Canopy
+      else
+        FlightPhase.Freefall
+    else if state.detectedPhase == FlightPhase.Takeoff then
+      // In takeoff - can only transition to freefall
+      val isFreefallByThreshold = metrics.filteredVerticalSpeed > FreefallVerticalSpeedThreshold
+      val isFreefallByAccel     =
+        accDown > FreefallAccelThreshold && metrics.filteredVerticalSpeed > FreefallAccelMinVelocity
+
+      if isFreefallByThreshold || isFreefallByAccel then
+        FlightPhase.Freefall
+      else
+        FlightPhase.Takeoff
     else
-      FlightPhase.Unknown
+      // Before takeoff - check for freefall entry or takeoff
+      val isFreefallByThreshold = metrics.filteredVerticalSpeed > FreefallVerticalSpeedThreshold
+      val isFreefallByAccel     =
+        accDown > FreefallAccelThreshold && metrics.filteredVerticalSpeed > FreefallAccelMinVelocity
+
+      if isFreefallByThreshold || isFreefallByAccel then
+        FlightPhase.Freefall
+      else if metrics.horizontalSpeed > TakeoffSpeedThreshold && metrics.filteredVerticalSpeed < TakeoffClimbRate then
+        FlightPhase.Takeoff
+      else
+        FlightPhase.Unknown
 
   private def updateResults[A](result: FlightStagesPoints, state: StreamState[A]): FlightStagesPoints =
     val currentPoint = FlightStagePoint(state.dataPointIndex, state.height)

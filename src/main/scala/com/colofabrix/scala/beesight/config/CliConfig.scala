@@ -19,7 +19,7 @@ object CliConfig {
         help = "Input path (file or directory, supports glob patterns)",
       )
       .map(Paths.get(_))
-      .withDefault(Paths.get("."))
+      .withDefault(Config.default.input)
 
   lazy val output: Opts[Option[Path]] =
     Opts
@@ -58,7 +58,7 @@ object CliConfig {
         help = "Number of points to keep before or after a landing or takeoff has been detected",
       )
       .map(Math.max(0, _))
-      .withDefault(500)
+      .withDefault(Config.default.bufferPoints)
 
   lazy val minPoints: Opts[Double] =
     Opts
@@ -68,6 +68,6 @@ object CliConfig {
         help = "Percentage of minimum point the tool must keep.",
       )
       .map(d => Math.min(1.0, Math.max(0.0, d)))
-      .withDefault(0.1)
+      .withDefault(Config.default.minRetainedPoints)
 
 }

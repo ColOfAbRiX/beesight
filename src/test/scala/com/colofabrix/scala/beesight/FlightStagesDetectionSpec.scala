@@ -2,6 +2,7 @@ package com.colofabrix.scala.beesight
 
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
+import com.colofabrix.scala.beesight.config.Config
 import com.colofabrix.scala.beesight.files.CsvFileOps
 import com.colofabrix.scala.beesight.model.*
 import java.nio.file.Paths
@@ -10,7 +11,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import scala.io.Source
 
-class FlightStagesDetectionSpec extends AnyWordSpec with Matchers with FlightStagesMatchers {
+class FlightStagesDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues with FlightStagesMatchers {
 
   private val flysightDir = Paths.get("src/test/resources/flysight")
   private val resultsFile = Paths.get("src/test/resources/points_results.csv")
@@ -45,7 +46,7 @@ class FlightStagesDetectionSpec extends AnyWordSpec with Matchers with FlightSta
 
         val filePath = flysightDir.resolve(filename)
         val points   = CsvFileOps.readCsv[FlysightPoint](filePath)
-        val result   = detectPoints(points).unsafeRunSync()
+        val result   = detectPoints(points).result()
 
         withClue(s"File: $filename\n") {
           result.should(matchStages(expected))
@@ -58,7 +59,7 @@ class FlightStagesDetectionSpec extends AnyWordSpec with Matchers with FlightSta
   private def parseOptLong(value: Option[String]): Option[Long] =
     value.filter(_.trim.nonEmpty).map(_.trim.toLong)
 
-  private def detectPoints(data: fs2.Stream[IO, FlysightPoint]): IO[FlightStagesPoints] =
+  private def detectPoints(data: fs2.Stream[IOConfig, FlysightPoint]): IOConfig[FlightStagesPoints] =
     data
       .map(InputFlightPoint.fromFlysightPoint)
       .through(FlightStagesDetection.streamDetect)

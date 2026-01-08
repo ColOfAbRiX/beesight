@@ -29,23 +29,9 @@ object FileOps {
     }
 
   /**
-   * Builds and creates the output root directory
-   */
-  def buildAndGetOutputRoot(): IOConfig[Path] =
-    IOConfig.ask.flatMap { config =>
-      val (inputBaseDir, _) = parseInputAsGlob(config.input)
-      val parent            = Option(inputBaseDir.getParent).getOrElse(Paths.get("."))
-      val outputRoot        = config.output.getOrElse(parent.resolve("processed"))
-      IOConfig.blocking {
-        Files.createDirectories(outputRoot)
-        outputRoot
-      }
-    }
-
-  /**
    * Computes the output path and creates parent directories
    */
-  def createOutputFile(inputFile: Path): IOConfig[Path] =
+  def createOutputDirectory(inputFile: Path): IOConfig[Path] =
     for
       outputPath <- computeOutputPath(inputFile)
       _          <- IOConfig.blocking(Files.createDirectories(outputPath.getParent))
@@ -54,7 +40,7 @@ object FileOps {
   /**
    * Computes the output path for a given input file
    */
-  private def computeOutputPath(inputFile: Path): IOConfig[Path] =
+  def computeOutputPath(inputFile: Path): IOConfig[Path] =
     IOConfig.ask.map { config =>
       val (inputBaseDir, _) = parseInputAsGlob(config.input)
       val parent            = Option(inputBaseDir.getParent).getOrElse(Paths.get("."))

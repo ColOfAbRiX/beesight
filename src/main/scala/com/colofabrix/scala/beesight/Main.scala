@@ -27,7 +27,8 @@ object Main extends IODeclineReaderApp[Config] {
       inputFiles     <- FileOps.discoverCsvFiles()
       filesToProcess <- applyLimit(inputFiles)
       _              <- s"Found ${inputFiles.size} CSV files, processing ${filesToProcess.size}".stdout
-      _              <- filesToProcess.traverse(processFile)
+      summaryRows    <- filesToProcess.traverse(processFile)
+      _              <- ResultsSummary.writeSummaryCsv(summaryRows)
     yield ExitCode.Success
 
   private def applyLimit(files: List[Path]): IOConfig[List[Path]] =
@@ -37,33 +38,33 @@ object Main extends IODeclineReaderApp[Config] {
         .fold(files)(limit => files.take(limit))
     }
 
-  private def processFile(inputFile: Path): IOConfig[Unit] =
+  private def processFile(inputFile: Path): IOConfig[(Path, Option[OutputFlightPoint[FlysightPoint]])] =
     for
-      outputFile <- FileOps.createOutputFile(inputFile)
+      outputFile <- FileOps.createOutputDirectory(inputFile)
       _          <- s"Processing: $inputFile -> $outputFile".stdout
       dataCutter <- DataCutter()
       csvStream   = CsvFileOps.readCsv[FlysightPoint](inputFile)
       pipeline   <- buildPipeline(csvStream, dataCutter, outputFile)
-      result     <- pipeline.compile.drain.to[IOConfig]
+      lastPoint  <- pipeline.compile.last
       _          <- s"DONE: $inputFile\n".stdout
-    yield result
+    yield (inputFile, lastPoint)
 
   private def buildPipeline(
-    csvStream: fs2.Stream[IO, FlysightPoint],
+    csvStream: fs2.Stream[IOConfig, FlysightPoint],
     dataCutter: DataCutter,
-    outputFile: Path,
-  ): IOConfig[fs2.Stream[IO, Unit]] =
+    outputCsvFile: Path,
+  ): IOConfig[fs2.Stream[IOConfig, OutputFlightPoint[FlysightPoint]]] =
     IOConfig
       .ask
       .map { config =>
         csvStream
-          .map(InputFlightPoint.fromFlysightPoint)
-          .through(FlightStagesDetection.streamDetect)
+          .through(FlightStagesDetection.streamDetectA)
           .through(dataCutter.cutPipe)
           .broadcastThrough(
-            CsvFileOps.writeCsvPipe(outputFile, config.dryRun),
-            ChartGenerator.chartPipe(outputFile)(_.hMSL, _.velD),
+            CsvFileOps.writeCsvPipe(outputCsvFile, config.dryRun),
+            ChartGenerator.chartPipe(outputCsvFile),
             ResultPrinter.printStagesPipe,
+            identity,
           )
       }
 

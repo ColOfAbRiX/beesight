@@ -1,6 +1,9 @@
 package com.colofabrix.scala.beesight.debug
 
-import cats.effect.IO
+import com.colofabrix.scala.beesight.*
+import com.colofabrix.scala.beesight.files.FileOps
+import com.colofabrix.scala.beesight.IOConfig
+import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.model.*
 import java.nio.file.*
 
@@ -12,19 +15,17 @@ object ChartGenerator {
   /**
    * Returns a pipe that generates an HTML chart from the stream of OutputFlightPoints
    */
-  def chartPipe[A](outputFile: Path)(
-    extractAltitude: A => Double,
-    extractVelD: A => Double,
-  ): fs2.Pipe[IO, OutputFlightPoint[A], Nothing] =
+  def chartPipe[A: FlightInfo](outputFile: Path): fs2.Pipe[IOConfig, OutputFlightPoint[A], Nothing] =
     _.zipWithIndex
       .fold(ChartState[A]()) {
-        case (state, (point, idx)) =>
-          updateChartState(state, point, idx, extractAltitude, extractVelD)
+        case (state, (point, idx)) => updateChartState(state, point, idx)
       }
       .evalMap { state =>
-        val html       = createHtmlFromState(state)
-        val outputPath = computeChartPath(outputFile)
-        writeHtmlFile(html, outputPath)
+        for
+          outputPath <- computeChartPath(outputFile)
+          html        = createHtmlFromState(state)
+          _          <- writeHtmlFile(html, outputPath)
+        yield ()
       }
       .drain
 
@@ -32,20 +33,20 @@ object ChartGenerator {
     state: ChartState[A],
     point: OutputFlightPoint[A],
     idx: Long,
-    extractAltitude: A => Double,
-    extractVelD: A => Double,
+  )(using
+    A: FlightInfo[A],
   ): ChartState[A] =
     val sep = if idx == 0 then "" else ","
 
     // Update data builders
     val newIndices   = state.indices.append(sep).append(idx)
-    val newAltitudes = state.altitudes.append(sep).append(extractAltitude(point.source))
-    val newVelDs     = state.velDs.append(sep).append(extractVelD(point.source))
+    val newAltitudes = state.altitudes.append(sep).append(A.altitude(point.source))
+    val newVelDs     = state.velDs.append(sep).append(A.verticalSpeed(point.source))
 
     // Detect phase transition
     val transition =
       if state.prevPhase != point.phase && point.phase != FlightPhase.Unknown then
-        Some(PhaseTransition(point.phase, idx, extractAltitude(point.source)))
+        Some(PhaseTransition(point.phase, idx, A.altitude(point.source)))
       else
         None
 
@@ -68,20 +69,19 @@ object ChartGenerator {
       isValid = point.isValid,
     )
 
-  private def computeChartPath(outputFile: Path): Path =
+  private def computeChartPath(outputFile: Path): IOConfig[Path] =
     val baseName =
       outputFile
         .getFileName
         .toString
         .replaceFirst("\\.[^.]+$", "")
 
-    Option(outputFile.getParent)
-      .getOrElse(Paths.get("."))
-      .resolve(s"$baseName.html")
+    val chartInputPath = outputFile.resolveSibling(s"$baseName.html")
 
-  private def writeHtmlFile(html: String, outputPath: Path): IO[Unit] =
-    IO.blocking {
-      Files.createDirectories(Option(outputPath.getParent).getOrElse(Paths.get(".")))
+    FileOps.createOutputDirectory(chartInputPath)
+
+  private def writeHtmlFile(html: String, outputPath: Path): IOConfig[Unit] =
+    IOConfig.blocking {
       val _ = Files.writeString(outputPath, html)
     }
 

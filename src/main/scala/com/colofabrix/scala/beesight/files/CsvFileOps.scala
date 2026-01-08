@@ -17,8 +17,8 @@ object CsvFileOps {
   /**
    * Reads a CSV file and decodes it into a stream of type A
    */
-  def readCsv[A](filePath: Path)(using CsvRowDecoder[A, String]): fs2.Stream[IO, A] =
-    Files[IO]
+  def readCsv[A](filePath: Path)(using CsvRowDecoder[A, String]): fs2.Stream[IOConfig, A] =
+    Files[IOConfig]
       .readAll(Fs2Path.fromNioPath(filePath), 1024, Flags.Read)
       .through(fs2.text.utf8.decode)
       .through(unixEol)
@@ -39,7 +39,7 @@ object CsvFileOps {
     filePath: Path,
     dryRun: Boolean,
   )(using CsvRowEncoder[A, String],
-  ): fs2.Pipe[IO, OutputFlightPoint[A], Nothing] =
+  ): fs2.Pipe[IOConfig, OutputFlightPoint[A], Nothing] =
     stream =>
       stream
         .through { s =>
@@ -48,11 +48,11 @@ object CsvFileOps {
         .map(_.source)
         .through(encodeUsingFirstHeaders(fullRows = true))
         .through(fs2.text.utf8.encode)
-        .through(Files[IO].writeAll(Fs2Path.fromNioPath(filePath)))
+        .through(Files[IOConfig].writeAll(Fs2Path.fromNioPath(filePath)))
         .as(())
         .drain
 
-  private val unixEol: fs2.Pipe[IO, String, String] =
+  private val unixEol: fs2.Pipe[IOConfig, String, String] =
     _.map(_.replace("\r\n", "\n"))
 
 }

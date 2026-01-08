@@ -20,3 +20,17 @@ final case class Config(
   bufferPoints: Int,
   minRetainedPoints: Double,
 )
+
+object Config {
+
+  val default: Config =
+    Config(
+      input = Path.of("."),
+      output = None,
+      processLimit = None,
+      dryRun = false,
+      bufferPoints = 500,
+      minRetainedPoints = 0.1,
+    )
+
+}

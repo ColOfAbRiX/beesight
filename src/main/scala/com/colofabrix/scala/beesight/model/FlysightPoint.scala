@@ -45,6 +45,20 @@ final case class FlysightPoint(
 
 object FlysightPoint {
 
+  given flysightPointInput: FlightInfo[FlysightPoint] with {
+
+    def toInputFlightPoint(point: FlysightPoint): InputFlightPoint[FlysightPoint] =
+      InputFlightPoint(
+        time = point.time.toInstant,
+        altitude = point.hMSL,
+        northSpeed = point.velN,
+        eastSpeed = point.velE,
+        verticalSpeed = point.velD,
+        source = point,
+      )
+
+  }
+
   given csvRowDecoder: CsvRowDecoder[FlysightPoint, String] with {
 
     def apply(row: CsvRow[String]): DecoderResult[FlysightPoint] =
