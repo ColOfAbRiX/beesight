@@ -1,5 +1,7 @@
 package com.colofabrix.scala.beesight.debug
 
+import cats.syntax.all.*
+import cats.effect.implicits.given
 import com.colofabrix.scala.beesight.*
 import com.colofabrix.scala.beesight.files.FileOps
 import com.colofabrix.scala.beesight.IOConfig
@@ -15,14 +17,14 @@ object ChartGenerator {
   /**
    * Returns a pipe that generates an HTML chart from the stream of OutputFlightPoints
    */
-  def chartPipe[A: FlightInfo](outputFile: Path): fs2.Pipe[IOConfig, OutputFlightPoint[A], Nothing] =
+  def chartPipe[A: FlightInfo](outputCsvFile: Path): fs2.Pipe[IOConfig, OutputFlightPoint[A], Nothing] =
     _.zipWithIndex
       .fold(ChartState[A]()) {
         case (state, (point, idx)) => updateChartState(state, point, idx)
       }
       .evalMap { state =>
         for
-          outputPath <- computeChartPath(outputFile)
+          outputPath <- computeChartPath(outputCsvFile)
           html        = createHtmlFromState(state)
           _          <- writeHtmlFile(html, outputPath)
         yield ()
@@ -69,16 +71,22 @@ object ChartGenerator {
       isValid = point.isValid,
     )
 
-  private def computeChartPath(outputFile: Path): IOConfig[Path] =
+  private def computeChartPath(outputCsvFile: Path): IOConfig[Path] =
     val baseName =
-      outputFile
+      outputCsvFile
         .getFileName
         .toString
         .replaceFirst("\\.[^.]+$", "")
 
-    val chartInputPath = outputFile.resolveSibling(s"$baseName.html")
+    val chartFilePath =
+      outputCsvFile
+        .resolveSibling(s"$baseName.html")
+        .toAbsolutePath
+        .normalize
 
-    FileOps.createOutputDirectory(chartInputPath)
+    IOConfig
+      .blocking(Files.createDirectories(chartFilePath.getParent))
+      .as(chartFilePath)
 
   private def writeHtmlFile(html: String, outputPath: Path): IOConfig[Unit] =
     IOConfig.blocking {

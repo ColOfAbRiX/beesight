@@ -40,7 +40,7 @@ object Main extends IODeclineReaderApp[Config] {
 
   private def processFile(inputFile: Path): IOConfig[(Path, Option[OutputFlightPoint[FlysightPoint]])] =
     for
-      outputFile <- FileOps.createOutputDirectory(inputFile)
+      outputFile <- FileOps.createProcessedDirectory(inputFile)
       _          <- s"Processing: $inputFile -> $outputFile".stdout
       dataCutter <- DataCutter()
       csvStream   = CsvFileOps.readCsv[FlysightPoint](inputFile)

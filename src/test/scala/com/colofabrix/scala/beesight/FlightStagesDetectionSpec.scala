@@ -61,8 +61,7 @@ class FlightStagesDetectionSpec extends AnyWordSpec with Matchers with IOConfigV
 
   private def detectPoints(data: fs2.Stream[IOConfig, FlysightPoint]): IOConfig[FlightStagesPoints] =
     data
-      .map(InputFlightPoint.fromFlysightPoint)
-      .through(FlightStagesDetection.streamDetect)
+      .through(FlightStagesDetection.streamDetectA)
       .compile
       .last
       .map { optOutput =>

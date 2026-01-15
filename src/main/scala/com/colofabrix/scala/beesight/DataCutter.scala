@@ -2,13 +2,11 @@ package com.colofabrix.scala.beesight
 
 import cats.effect.IO
 import cats.implicits.*
-import cats.Show
 import com.colofabrix.scala.beesight.config.*
 import com.colofabrix.scala.beesight.DataCutter.*
 import com.colofabrix.scala.beesight.model.*
 import fs2.*
 import scala.collection.immutable.Queue
-import scala.io.AnsiColor.*
 
 final class DataCutter private (config: Config) {
 

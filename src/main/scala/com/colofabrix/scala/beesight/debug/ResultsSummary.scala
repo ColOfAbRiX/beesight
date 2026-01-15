@@ -36,7 +36,7 @@ object ResultsSummary {
         val content = (header.mkString(",") :: csvRows).mkString("\n")
 
         FileOps
-          .createOutputDirectory(config.input.resolve("summary.csv"))
+          .createProcessedDirectory(config.input.resolve("summary.csv"))
           .flatMap { summaryPath =>
             IOConfig.blocking(JFiles.writeString(summaryPath, content): Unit)
           }

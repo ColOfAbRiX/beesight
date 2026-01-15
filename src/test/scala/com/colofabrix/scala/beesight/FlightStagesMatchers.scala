@@ -46,7 +46,7 @@ trait FlightStagesMatchers {
     val error =
       (obtained, expected) match {
         case (Some(o), Some(e)) if Math.abs(o - e) > tolerance =>
-          Some(s"expected $e ± $tolerance, got $o (diff: ${Math.abs(o - e)})")
+          Some(s"expected $e ± $tolerance, got $o (diff: ${o - e})")
         case (None, Some(e)) =>
           Some(s"expected $e ± $tolerance, got None")
         case (Some(o), None) =>

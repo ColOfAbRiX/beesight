@@ -31,16 +31,16 @@ object FileOps {
   /**
    * Computes the output path and creates parent directories
    */
-  def createOutputDirectory(inputFile: Path): IOConfig[Path] =
+  def createProcessedDirectory(inputFile: Path): IOConfig[Path] =
     for
-      outputPath <- computeOutputPath(inputFile)
+      outputPath <- computeProcessedPath(inputFile)
       _          <- IOConfig.blocking(Files.createDirectories(outputPath.getParent))
     yield outputPath
 
   /**
    * Computes the output path for a given input file
    */
-  def computeOutputPath(inputFile: Path): IOConfig[Path] =
+  def computeProcessedPath(inputFile: Path): IOConfig[Path] =
     IOConfig.ask.map { config =>
       val (inputBaseDir, _) = parseInputAsGlob(config.input)
       val parent            = Option(inputBaseDir.getParent).getOrElse(Paths.get("."))
@@ -52,6 +52,8 @@ object FileOps {
         .getOrElse(parent.resolve("processed"))
         .resolve(inputDirName)
         .resolve(relativePath)
+        .toAbsolutePath
+        .normalize
     }
 
   private def parseInputAsGlob(input: Path): (Path, String) =

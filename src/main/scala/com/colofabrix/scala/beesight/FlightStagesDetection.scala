@@ -18,19 +18,23 @@ object FlightStagesDetection {
   private val TakeoffSpeedThreshold          = 25.0  // m/s - horizontal speed above this indicates takeoff
   private val TakeoffClimbRate               = -1.0  // m/s - verticalSpeed below this indicates climbing (negative = up)
   private val TakeoffMaxAltitude             = 600.0 // m - takeoff cannot happen above this altitude
+  private val FreefallWindow                 = 25
   private val FreefallVerticalSpeedThreshold = 25.0  // m/s - verticalSpeed above this indicates freefall
   private val FreefallAccelThreshold         = 3.0   // m/s per sample - rapid verticalSpeed increase indicates exit
   private val FreefallAccelMinVelocity       = 10.0  // m/s - minimum verticalSpeed for accel-based detection
   private val FreefallMinAltitudeAbove       = 600.0 // m - freefall must be at least this high above takeoff
   private val FreefallMinAltitudeAbsolute    = 600.0 // m - freefall min altitude when takeoff missed
+  private val CanopyWindow                   = 25
   private val CanopyVerticalSpeedMax         = 12.0  // m/s - verticalSpeed below this after freefall indicates canopy
   private val LandingSpeedMax                = 3.0   // m/s - total speed below this indicates landing
+  private val LandingStabilityThreshold      = 0.5   // m/s - stddev of vertical speed must be below this
+  private val LandingMeanVerticalSpeedMax    = 1.0   // m/s - mean vertical speed must be below this
   private val LandingAltitudeTolerance       = 500.0 // m - landing must be within ±this of takeoff altitude
   private val MedianFilterWindow             = 5     // points - window size for median filter
   private val BacknumberWindow               = 10    // points - how far back to look for true exit point
 
-  private val freefallCusum = CusumDetector.withMedian(25, 0.5, 15.0)
-  private val canopyCusum   = CusumDetector.withMedian(25, 0.5, 15.0)
+  private val freefallCusum = CusumDetector.withMedian(FreefallWindow, 0.5, 15.0)
+  private val canopyCusum   = CusumDetector.withMedian(CanopyWindow, 0.5, 15.0)
 
   /**
    * Streaming detection - emits an OutputFlightPoint for each input
@@ -124,7 +128,9 @@ object FlightStagesDetection {
       FlightPhase.Landing
     else if state.detectedPhase == FlightPhase.Canopy then
       // In canopy - can only transition to landing
-      if metrics.totalSpeed < LandingSpeedMax then
+      // Landing requires: low total speed AND stable window (low stddev and mean near zero)
+      val windowStable = isWindowStable(state.verticalSpeedHistory)
+      if metrics.totalSpeed < LandingSpeedMax && windowStable then
         FlightPhase.Landing
       else
         FlightPhase.Canopy
@@ -264,10 +270,15 @@ object FlightStagesDetection {
             case None       => true
           }
 
+        val belowCanopy =
+          canopy
+            .map(_.altitude)
+            .forall(cAlt => state.height < cAlt)
+
         val afterCanopy = canopy isAfter state.dataPointIndex
 
-        if altitudeOk && afterCanopy then
-          Some(currentPoint)
+        if altitudeOk && belowCanopy && afterCanopy then
+          Some(findInflectionPoint(state.verticalSpeedHistory, currentPoint, isRising = false))
         else
           None
     }
@@ -278,6 +289,16 @@ object FlightStagesDetection {
     private infix def isAfter(currentIndex: Long): Boolean =
       self.map(_.lineIndex).forall(currentIndex > _)
   }
+
+  private def isWindowStable(history: Vector[VerticalSpeedSample]): Boolean =
+    if history.size < BacknumberWindow then
+      false
+    else
+      val speeds   = history.map(_.verticalSpeed)
+      val mean     = speeds.sum / speeds.size
+      val variance = speeds.map(v => Math.pow(v - mean, 2)).sum / speeds.size
+      val stdDev   = Math.sqrt(variance)
+      stdDev < LandingStabilityThreshold && Math.abs(mean) < LandingMeanVerticalSpeedMax
 
   private def findInflectionPoint(
     history: Vector[VerticalSpeedSample],
