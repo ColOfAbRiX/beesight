@@ -47,7 +47,7 @@ object ChartGenerator {
 
     // Detect phase transition
     val transition =
-      if state.prevPhase != point.phase && point.phase != FlightPhase.Unknown then
+      if state.prevPhase != point.phase && point.phase != FlightPhase.BeforeTakeoff then
         Some(PhaseTransition(point.phase, idx, A.altitude(point.source)))
       else
         None
@@ -176,7 +176,7 @@ object ChartGenerator {
       FlightPhase.Freefall -> "rgb(214, 39, 40)",
       FlightPhase.Canopy   -> "rgb(148, 103, 189)",
       FlightPhase.Landing  -> "rgb(140, 86, 75)",
-      FlightPhase.Unknown  -> "rgb(128, 128, 128)",
+      FlightPhase.BeforeTakeoff  -> "rgb(128, 128, 128)",
     )
 
     val jsMarkers =
@@ -211,7 +211,7 @@ object ChartGenerator {
     altitudes: StringBuilder = StringBuilder(),
     velDs: StringBuilder = StringBuilder(),
     transitions: List[PhaseTransition] = Nil,
-    prevPhase: FlightPhase = FlightPhase.Unknown,
+    prevPhase: FlightPhase = FlightPhase.BeforeTakeoff,
     lastStages: FlightStagesPoints = FlightStagesPoints.empty,
   )
 

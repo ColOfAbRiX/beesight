@@ -4,7 +4,7 @@ package com.colofabrix.scala.beesight.model
  * Represents the phases of a skydiving jump
  */
 enum FlightPhase {
-  case Unknown, Takeoff, Freefall, Canopy, Landing
+  case BeforeTakeoff, Takeoff, Freefall, Canopy, Landing
 }
 
 /**

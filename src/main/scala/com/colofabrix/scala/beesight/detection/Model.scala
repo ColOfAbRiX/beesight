@@ -34,7 +34,7 @@ final private[detection] case class StreamState[A](
   vertSpeedHistory: Vector[VerticalSpeedSample] = Vector.empty,
   freefallCusum: CusumState = CusumState.Empty,
   canopyCusum: CusumState = CusumState.Empty,
-  detectedPhase: FlightPhase = FlightPhase.Unknown,
+  detectedPhase: FlightPhase = FlightPhase.BeforeTakeoff,
   wasInFreefall: Boolean = false,
   assumedTakeoffMissed: Boolean = false,
 )
