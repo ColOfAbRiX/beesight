@@ -1,8 +1,9 @@
-package com.colofabrix.scala.beesight
+package com.colofabrix.scala.beesight.detection
 
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import com.colofabrix.scala.beesight.config.Config
+import com.colofabrix.scala.beesight.*
 import com.colofabrix.scala.beesight.files.CsvFileOps
 import com.colofabrix.scala.beesight.model.*
 import java.nio.file.Paths

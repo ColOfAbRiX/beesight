@@ -1,7 +1,7 @@
 package com.colofabrix.scala.beesight
 
 import com.colofabrix.scala.beesight.model.*
-import org.scalatest.matchers.{Matcher, MatchResult}
+import org.scalatest.matchers.{ Matcher, MatchResult }
 
 /**
  * Custom ScalaTest matchers for FlightStagesPoints comparison with tolerances
@@ -10,10 +10,10 @@ trait FlightStagesMatchers {
 
   private val tolerances: Map[String, Long] =
     Map(
-      "takeoff" -> 50,
+      "takeoff"  -> 50,
       "freefall" -> 5,
-      "canopy" -> 10,
-      "landing" -> 50,
+      "canopy"   -> 10,
+      "landing"  -> 50,
     )
 
   /**

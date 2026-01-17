@@ -5,6 +5,7 @@ import cats.effect.implicits.given
 import cats.implicits.given
 import com.colofabrix.scala.beesight.config.*
 import com.colofabrix.scala.beesight.debug.*
+import com.colofabrix.scala.beesight.detection.*
 import com.colofabrix.scala.beesight.files.*
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.declinio.*

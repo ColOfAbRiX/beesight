@@ -1,23 +1,28 @@
 package com.colofabrix.scala.beesight.config
 
 final case class DetectionConfig(
-  TakeoffSpeedThreshold: Double,          // m/s - horizontal speed above this indicates takeoff
-  TakeoffClimbRate: Double,               // m/s - verticalSpeed below this indicates climbing (negative)
-  TakeoffMaxAltitude: Double,             // m - takeoff cannot happen above this altitude
+  //  Takeoff parameters  //
+  TakeoffSpeedThreshold: Double, // m/s - Horizontal speed above this indicates takeoff
+  TakeoffClimbRate: Double,      // m/s - VerticalSpeed below this indicates climbing (negative means climbing)
+  TakeoffMaxAltitude: Double,    // m - Takeoff cannot happen above this altitude
+  //  Freefall parameters  //
   FreefallWindow: Int,                    // Data Points - Size of the CUSUM Freefall detection window
-  FreefallVerticalSpeedThreshold: Double, // m/s - verticalSpeed above this indicates freefall
-  FreefallAccelThreshold: Double,         // m/s per sample - rapid verticalSpeed increase indicates exit
-  FreefallAccelMinVelocity: Double,       // m/s - minimum verticalSpeed for accel-based detection
-  FreefallMinAltitudeAbove: Double,       // m - freefall must be at least this high above takeoff
-  FreefallMinAltitudeAbsolute: Double,    // m - freefall min altitude when takeoff missed
-  CanopyWindow: Int,                      // Data Points - Size of the CUSUM Canopy detection window
-  CanopyVerticalSpeedMax: Double,         // m/s - verticalSpeed below this after freefall indicates canopy
-  LandingSpeedMax: Double,                // m/s - total speed below this indicates landing
-  LandingStabilityThreshold: Double,      // m/s - stddev of vertical speed must be below this
-  LandingMeanVerticalSpeedMax: Double,    // m/s - mean vertical speed must be below this
-  LandingAltitudeTolerance: Double,       // m - landing must be within ±this of takeoff altitude
-  MedianFilterWindow: Int,                // points - window size for median filter
-  BacknumberWindow: Int,                  // points - how far back to look for true exit point
+  FreefallVerticalSpeedThreshold: Double, // m/s - VerticalSpeed above this indicates freefall
+  FreefallAccelThreshold: Double,         // m/s per sample - Rapid verticalSpeed increase indicates exit
+  FreefallAccelMinVelocity: Double,       // m/s - Minimum verticalSpeed for accel-based detection
+  FreefallMinAltitudeAbove: Double,       // m - Freefall must be at least this high above takeoff
+  FreefallMinAltitudeAbsolute: Double,    // m - Freefall min altitude when takeoff missed
+  //  Canopy parameters  //
+  CanopyWindow: Int,              // Data Points - Size of the CUSUM Canopy detection window
+  CanopyVerticalSpeedMax: Double, // m/s - VerticalSpeed below this after freefall indicates canopy
+  //  Landing parameters  //
+  LandingSpeedMax: Double,             // m/s - Total speed below this indicates landing
+  LandingStabilityThreshold: Double,   // m/s - Stddev of vertical speed must be below this
+  LandingMeanVerticalSpeedMax: Double, // m/s - Mean vertical speed must be below this
+  LandingAltitudeTolerance: Double,    // m - Landing must be within ±this of takeoff altitude
+  //  Global parameters  //
+  MedianFilterWindow: Int, // points - Window size for median filter
+  BacknumberWindow: Int,   // points - How far back to look for true exit point
 )
 
 object DetectionConfig {

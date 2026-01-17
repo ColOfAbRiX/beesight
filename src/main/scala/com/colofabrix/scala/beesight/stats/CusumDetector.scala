@@ -27,18 +27,18 @@ final class CusumDetector private (
   stdDevFn: WinStat,
 ) {
 
-  def checkNextValue(state: DetectorState, value: Double): DetectorState =
+  def checkNextValue(state: CusumState, value: Double): CusumState =
     state match {
-      case DetectorState.Empty =>
-        DetectorState.Filling(Queue(value))
+      case CusumState.Empty =>
+        CusumState.Filling(Queue(value))
 
-      case DetectorState.Filling(window) if window.length < windowSize =>
-        DetectorState.Filling(window.enqueue(value))
+      case CusumState.Filling(window) if window.length < windowSize =>
+        CusumState.Filling(window.enqueue(value))
 
-      case DetectorState.Filling(window) =>
-        calculateStats(value, window, 0.0, 0.0)
+      case CusumState.Filling(window) =>
+        calculateStats(value, window, 0.0 , 0.0)
 
-      case DetectorState.Detection(_, window, _, _, positiveSum, negativeSum, _) =>
+      case CusumState.Detection(_, window, _, _, positiveSum, negativeSum, _) =>
         calculateStats(value, window, positiveSum, negativeSum)
     }
 
@@ -47,7 +47,7 @@ final class CusumDetector private (
     queue: Queue[Double],
     prevPositiveSum: Double,
     prevNegativeSum: Double,
-  ): DetectorState =
+  ): CusumState =
     val pStat     = meanFn(queue, value)
     val pStdDev   = stdDevFn(queue, value)
     val deviation = value - pStat
@@ -68,7 +68,7 @@ final class CusumDetector private (
         ._2
         .enqueue(value)
 
-    DetectorState.Detection(
+    CusumState.Detection(
       currentValue = value,
       window = nextWindow,
       windowAverage = pStat,
@@ -169,11 +169,11 @@ object CusumDetector {
     case PositivePeak, Stable, NegativePeak
   }
 
-  enum DetectorState {
+  enum CusumState {
 
-    case Empty extends DetectorState
+    case Empty extends CusumState
 
-    case Filling(window: Queue[Double]) extends DetectorState
+    case Filling(window: Queue[Double]) extends CusumState
 
     case Detection(
       currentValue: Double,
@@ -183,7 +183,7 @@ object CusumDetector {
       positiveSum: Double = 0.0,
       negativeSum: Double = 0.0,
       peakResult: Peak,
-    ) extends DetectorState
+    ) extends CusumState
 
   }
 
