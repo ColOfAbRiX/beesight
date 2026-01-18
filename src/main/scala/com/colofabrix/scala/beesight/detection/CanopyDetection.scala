@@ -4,7 +4,7 @@ import cats.data.Reader
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.config.DetectionConfig
 
-object CanopyDetection {
+private[detection] object CanopyDetection {
 
   def tryDetectCanopy(
     takeoff: Option[FlightStagePoint],

@@ -30,7 +30,7 @@ final private[detection] case class StreamState[A](
   verticalAccel: Double = 0.0,
   horizontalSpeed: Double = 0.0,
   totalSpeed: Double = 0.0,
-  vertSpeedWindow: Queue[Double] = Queue.empty,
+  vertSpeedWindow: FixedSizeQueue[Double] = FixedSizeQueue.empty,
   vertSpeedHistory: Vector[VerticalSpeedSample] = Vector.empty,
   freefallCusum: CusumState = CusumState.Empty,
   canopyCusum: CusumState = CusumState.Empty,
@@ -38,10 +38,3 @@ final private[detection] case class StreamState[A](
   wasInFreefall: Boolean = false,
   assumedTakeoffMissed: Boolean = false,
 )
-
-private[detection] object StreamState {
-
-  def empty[A](point: InputFlightPoint[A]): StreamState[A] =
-    StreamState(inputPoint = point)
-
-}

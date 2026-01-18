@@ -3,11 +3,10 @@ package com.colofabrix.scala.beesight.detection
 import breeze.linalg.DenseVector
 import breeze.stats.median
 import com.colofabrix.scala.beesight.model.*
-import scala.collection.immutable.Queue
 
 object Calculations {
 
-  def computeMetrics(point: InputFlightPoint[?], verticalSpeedWindow: Queue[Double]): FlightMetrics =
+  def computeFlightMetrics[A]( point: InputFlightPoint[?], verticalSpeedWindow: FixedSizeQueue[Double]): FlightMetrics =
     import point.*
 
     val horizontalSpeed = Math.sqrt(northSpeed * northSpeed + eastSpeed * eastSpeed)

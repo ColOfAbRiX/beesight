@@ -4,7 +4,7 @@ import cats.data.Reader
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.config.DetectionConfig
 
-object TakeoffDetection {
+private[detection] object TakeoffDetection {
 
   def tryDetectTakeoff(): TryDetect[Option[FlightStagePoint]] =
     Reader { (config, result, state, currentPoint) =>

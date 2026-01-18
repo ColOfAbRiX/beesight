@@ -1,8 +1,8 @@
 package com.colofabrix.scala.beesight.detection
 
 import cats.data.Reader
-import com.colofabrix.scala.beesight.config.DetectionConfig.default.*
 import com.colofabrix.scala.beesight.config.DetectionConfig
+import com.colofabrix.scala.beesight.config.DetectionConfig.default.*
 import com.colofabrix.scala.beesight.detection.FlightStagesDetection.*
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.stats.*
@@ -26,9 +26,20 @@ object FlightStagesDetection {
       .map(A.toInputFlightPoint)
       .zipWithIndex
       .scan((Option.empty[StreamState[A]], FlightStagesPoints.empty)) {
-        case ((stateOpt, result), (point, i)) =>
-          val newState  = processInputPoint(stateOpt, point, i)
-          val newResult = updateResults(result, newState)
+        case ((None, result), (point, i)) =>
+          // First data row, initialize the state
+          val initialState =
+            StreamState(
+              inputPoint = point,
+              vertSpeedWindow = FixedSizeQueue(MedianFilterWindow),
+            )
+          val newState  = updateState(initialState, point, i)
+          val newResult = updateDetectedPoints(result, newState)
+          (Some(newState), newResult)
+        case ((Some(state), result), (point, i)) =>
+          // Process each data row
+          val newState  = updateState(state, point, i)
+          val newResult = updateDetectedPoints(result, newState)
           (Some(newState), newResult)
       }
       .collect {
@@ -45,34 +56,35 @@ object FlightStagesDetection {
           )
       }
 
-  private def processInputPoint[A](
-    stateOpt: Option[StreamState[A]],
-    point: InputFlightPoint[A],
-    index: Long,
-  ): StreamState[A] =
-    val prevState       = stateOpt.getOrElse(StreamState.empty(point))
-    val vertSpeedWindow = updateWindow(prevState.vertSpeedWindow, point.verticalSpeed, MedianFilterWindow)
-    val metrics         = Calculations.computeMetrics(point, vertSpeedWindow)
+  private def updateState[A](prevState: StreamState[A], point: InputFlightPoint[A], index: Long): StreamState[A] =
+    // Push current value in the window
+    val vertSpeedWindow = prevState.vertSpeedWindow.enqueue(point.verticalSpeed)
 
-    val detectedPhase = detectPhase(prevState, metrics)
+    // Calculate speeds and other metrics
+    val metrics = Calculations.computeFlightMetrics(point, vertSpeedWindow)
 
-    val wasInFreefall      = prevState.wasInFreefall || detectedPhase == FlightPhase.Freefall
+    // Smoothed vertical acceleration
+    val verticalAccel = metrics.filteredVertSpeed - prevState.filteredVertSpeed
+
+    // Detect flight phase based on current conditions
+    val detectedPhase = guessFlightPhase(prevState, metrics, verticalAccel)
+
+    // Peak detection with CUSUM for frefall and canopy points
     val freefallCusumState = freefallCusum.checkNextValue(prevState.freefallCusum, metrics.filteredVertSpeed)
     val canopyCusumState   = canopyCusum.checkNextValue(prevState.canopyCusum, metrics.filteredVertSpeed)
 
+    // Push VerticalSpeedSample in the speed history
     val updatedHistory =
       if prevState.vertSpeedHistory.size >= BacknumberWindow then
         prevState.vertSpeedHistory.tail :+ VerticalSpeedSample(index, metrics.filteredVertSpeed, point.altitude)
       else
         prevState.vertSpeedHistory :+ VerticalSpeedSample(index, metrics.filteredVertSpeed, point.altitude)
 
-    val assumedTakeoffMissed =
-      if index == 0 then
-        point.altitude > TakeoffMaxAltitude && point.verticalSpeed < 0
-      else
-        prevState.assumedTakeoffMissed
+    // Check if we missed takeoff
+    val assumedTakeoffMissed = detectMissedTakeoff(prevState, point, index)
 
-    val verticalAccel = metrics.filteredVertSpeed - prevState.filteredVertSpeed
+    // Check if freefall happeend
+    val wasInFreefall = prevState.wasInFreefall || detectedPhase == FlightPhase.Freefall
 
     StreamState(
       inputPoint = point,
@@ -93,9 +105,13 @@ object FlightStagesDetection {
       assumedTakeoffMissed = assumedTakeoffMissed,
     )
 
-  private def detectPhase[A](state: StreamState[A], metrics: FlightMetrics): FlightPhase =
-    val accDown = metrics.filteredVertSpeed - state.filteredVertSpeed
+  private def detectMissedTakeoff[A](prevState: StreamState[A], point: InputFlightPoint[A], index: Long): Boolean =
+    if index == 0 then
+      point.altitude > TakeoffMaxAltitude && point.verticalSpeed < 0
+    else
+      prevState.assumedTakeoffMissed
 
+  private def guessFlightPhase[A](state: StreamState[A], metrics: FlightMetrics, accDown: Double): FlightPhase =
     state.detectedPhase match {
       case FlightPhase.Takeoff =>
         val isFreefallByThreshold = metrics.filteredVertSpeed > FreefallVerticalSpeedThreshold
@@ -118,12 +134,16 @@ object FlightStagesDetection {
         FlightPhase.Landing
 
       case _ if state.wasInFreefall =>
+        // BeforeTakeoff or Freefall
+
         if metrics.filteredVertSpeed > 0 && metrics.filteredVertSpeed < CanopyVerticalSpeedMax then
           FlightPhase.Canopy
         else
           FlightPhase.Freefall
 
       case _ =>
+        // BeforeTakeoff or Freefall
+
         val isFreefallByThreshold = metrics.filteredVertSpeed > FreefallVerticalSpeedThreshold
         val isFreefallByAccel     =
           accDown > FreefallAccelThreshold && metrics.filteredVertSpeed > FreefallAccelMinVelocity
@@ -136,7 +156,7 @@ object FlightStagesDetection {
           FlightPhase.BeforeTakeoff
     }
 
-  private def updateResults[A](result: FlightStagesPoints, state: StreamState[A]): FlightStagesPoints =
+  private def updateDetectedPoints[A](result: FlightStagesPoints, state: StreamState[A]): FlightStagesPoints =
     val currentPoint = FlightStagePoint(state.dataPointIndex, state.height)
 
     val updatedPoints =
@@ -165,12 +185,5 @@ object FlightStagesDetection {
       val variance = speeds.map(v => Math.pow(v - mean, 2)).sum / speeds.size
       val stdDev   = Math.sqrt(variance)
       stdDev < LandingStabilityThreshold && Math.abs(mean) < LandingMeanVerticalSpeedMax
-
-  private def updateWindow(window: Queue[Double], value: Double, maxSize: Int): Queue[Double] =
-    val updated = window.enqueue(value)
-    if updated.size > maxSize then
-      updated.dequeue._2
-    else
-      updated
 
 }
