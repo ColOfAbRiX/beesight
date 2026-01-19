@@ -33,7 +33,7 @@ private[detection] object LandingDetection {
         val afterCanopy = canopy isAfter state.dataPointIndex
 
         if altitudeOk && belowCanopy && afterCanopy then
-          Some(Calculations.findInflectionPoint(state.vertSpeedHistory, currentPoint, isRising = false))
+          Some(Calculations.findInflectionPoint(state.backtrackVertSpeedWindow.toVector, currentPoint, isRising = false))
         else
           None
     }

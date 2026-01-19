@@ -13,8 +13,8 @@ private[detection] final class FixedSizeQueue[+A] private (queue: Queue[A], size
     val updated = queue.drop(Math.max(0, queue.size - size))
     new FixedSizeQueue[A](updated, Math.max(0, size))
 
-  def toSeq: Seq[A] =
-    queue.toSeq
+  def toVector: Vector[A] =
+    queue.toVector
 
   def isEmpty: Boolean =
     queue.isEmpty

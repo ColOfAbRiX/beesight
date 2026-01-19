@@ -16,7 +16,7 @@ object Calculations {
       if verticalSpeedWindow.isEmpty then
         verticalSpeed
       else
-        median(DenseVector((verticalSpeedWindow.toSeq :+ verticalSpeed).toArray))
+        median(DenseVector((verticalSpeedWindow.toVector :+ verticalSpeed).toArray))
 
     FlightMetrics(
       altitude = altitude,

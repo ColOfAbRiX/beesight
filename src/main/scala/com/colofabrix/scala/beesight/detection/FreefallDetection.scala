@@ -22,7 +22,7 @@ private[detection] object FreefallDetection {
         val afterTakeoff = takeoff isAfter state.dataPointIndex
 
         if altitudeOk && afterTakeoff then
-          Some(Calculations.findInflectionPoint(state.vertSpeedHistory, currentPoint, isRising = true))
+          Some(Calculations.findInflectionPoint(state.backtrackVertSpeedWindow.toVector, currentPoint, isRising = false))
         else
           None
     }

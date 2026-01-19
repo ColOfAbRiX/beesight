@@ -31,7 +31,7 @@ private[detection] object CanopyDetection {
         val afterFreefall = freefall isAfter state.dataPointIndex
 
         if aboveTakeoff && belowFreefall && afterFreefall then
-          Some(Calculations.findInflectionPoint(state.vertSpeedHistory, currentPoint, isRising = false))
+          Some(Calculations.findInflectionPoint(state.backtrackVertSpeedWindow.toVector, currentPoint, isRising = false))
         else
           None
     }

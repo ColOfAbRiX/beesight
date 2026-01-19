@@ -16,12 +16,19 @@ final class DataCutter private (config: Config) {
   def cutPipe[F[_], A]: fs2.Pipe[F, OutputFlightPoint[A], OutputFlightPoint[A]] =
     stream =>
       stream
+        .zipWithNext
         .zipWithIndex
         .mapAccumulate(CutState[A]()) {
-          case (state, (point, index)) => processPoint(state, point, index)
+          case (state, ((point, Some(_)), index)) =>
+            // Process each element
+            processPoint(state, point, index)
+          case (state, ((point, None), index)) =>
+            // Emit potential buffer before the last element
+            val (newState, toEmit) = processPoint(state, point, index)
+            (newState, newState.preBuffer.toVector ++ toEmit)
         }
         .flatMap {
-          case (_, toEmit) => Stream.emits(toEmit)
+          case (state, pointsToEmit) => Stream.emits(pointsToEmit)
         }
 
   private def processPoint[A](state: CutState[A], point: OutputFlightPoint[A], index: Long): StreamState[A] =
@@ -29,70 +36,72 @@ final class DataCutter private (config: Config) {
       case CutPhase.BeforeTakeoff => handleBeforeTakeoff(state, point, index)
       case CutPhase.InFlight      => handleInFlight(state, point, index)
       case CutPhase.AfterLanding  => handleAfterLanding(state, point)
-      case CutPhase.Done          => (state, Nil)
+      case CutPhase.InvalidFile   => (state, Vector(point))
+      case CutPhase.Done          => (state, Vector.empty)
     }
 
   private def handleBeforeTakeoff[A](state: CutState[A], point: OutputFlightPoint[A], index: Long): StreamState[A] =
-    val startEmitting =
+    val takeoffDetected =
       point
         .takeoff
         .map(_.lineIndex)
-        .exists(t => index >= keepFrom(t))
+        .exists(t => index >= Math.max(t - config.bufferPoints, 0))
 
-    if startEmitting then
+    if !point.isValid then
+      // Transition to Invalid: emit buffered elements + current
+      val newState = CutState[A](phase = CutPhase.InvalidFile, preBuffer = Queue.empty)
+      (newState, state.preBuffer.toVector :+ point)
+    else if takeoffDetected then
       // Transition to InFlight: emit buffered elements + current
-      val newState = CutState[A](phase = CutPhase.InFlight, preBuffer = Queue.empty, afterCount = 0)
-      (newState, state.preBuffer.toList :+ point)
+      val newState   = CutState[A](phase = CutPhase.InFlight, preBuffer = Queue.empty, afterLandingCount = 0)
+      val emitPoints = state.preBuffer.take(config.bufferPoints).toVector :+ point
+      (newState, state.preBuffer.toVector :+ point)
     else
-      // Keep buffering (ring buffer of last bufferPoints elements)
-      val updatedBuffer =
-        if state.preBuffer.size >= config.bufferPoints then
-          state.preBuffer.tail.enqueue(point)
-        else
-          state.preBuffer.enqueue(point)
-
-      val newState = state.copy(preBuffer = updatedBuffer)
-      (newState, Nil)
+      // Keep buffering
+      val updatedBuffer = state.preBuffer.enqueue(point)
+      val newState      = state.copy(preBuffer = updatedBuffer)
+      (newState, Vector.empty)
 
   private def handleInFlight[A](state: CutState[A], point: OutputFlightPoint[A], index: Long): StreamState[A] =
-    val landingIndex   = point.landing.map(_.lineIndex)
-    val isAfterLanding = landingIndex.exists(l => index > l)
+    val isAfterLanding =
+      point
+        .landing
+        .map(_.lineIndex)
+        .exists(l => index > l)
 
     if isAfterLanding then
       // Transition to AfterLanding
-      val newState = CutState[A](phase = CutPhase.AfterLanding, preBuffer = Queue.empty, afterCount = 1)
-      (newState, List(point))
+      val newState = CutState[A](phase = CutPhase.AfterLanding, preBuffer = Queue.empty, afterLandingCount = 1)
+      (newState, Vector(point))
     else
       // Still in flight - emit
-      (state, List(point))
+      (state, Vector(point))
 
   private def handleAfterLanding[A](state: CutState[A], point: OutputFlightPoint[A]): StreamState[A] =
-    if state.afterCount >= config.bufferPoints then
+    if state.afterLandingCount >= config.bufferPoints then
       // Done - stop emitting
       val newState = state.copy(phase = CutPhase.Done)
-      (newState, Nil)
+      (newState, Vector.empty)
     else
       // Still emitting post-landing buffer
-      val newState = state.copy(afterCount = state.afterCount + 1)
-      (newState, List(point))
-
-  private def keepFrom(index: Long): Long =
-    Math.max(index - config.bufferPoints, 0)
+      val newState = state.copy(afterLandingCount = state.afterLandingCount + 1)
+      (newState, Vector(point))
 
 }
 
 object DataCutter {
 
-  private type StreamState[A] = (CutState[A], List[OutputFlightPoint[A]])
+  private type StreamState[A] =
+    (CutState[A], Vector[OutputFlightPoint[A]])
 
   private enum CutPhase {
-    case BeforeTakeoff, InFlight, AfterLanding, Done
+    case BeforeTakeoff, InFlight, AfterLanding, Done, InvalidFile
   }
 
   final private case class CutState[A](
     phase: CutPhase = CutPhase.BeforeTakeoff,
     preBuffer: Queue[OutputFlightPoint[A]] = Queue.empty[OutputFlightPoint[A]],
-    afterCount: Long = 0,
+    afterLandingCount: Long = 0,
   )
 
   def apply(): IOConfig[DataCutter] =

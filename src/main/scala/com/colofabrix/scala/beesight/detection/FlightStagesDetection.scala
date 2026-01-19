@@ -26,16 +26,19 @@ object FlightStagesDetection {
       .map(A.toInputFlightPoint)
       .zipWithIndex
       .scan((Option.empty[StreamState[A]], FlightStagesPoints.empty)) {
-        case ((None, result), (point, i)) =>
+        case ((None, result), (firstPoint, i)) =>
           // First data row, initialize the state
           val initialState =
-            StreamState(
-              inputPoint = point,
-              vertSpeedWindow = FixedSizeQueue(MedianFilterWindow),
+            StreamState.createDefault(
+              firstPoint,
+              SmoothingVertSpeedWindowSize,
+              PhaseDetectionVertSpeedWindowSize,
+              BacktrackVertSpeedWindowSize,
             )
-          val newState  = updateState(initialState, point, i)
+          val newState  = updateState(initialState, firstPoint, i)
           val newResult = updateDetectedPoints(result, newState)
           (Some(newState), newResult)
+
         case ((Some(state), result), (point, i)) =>
           // Process each data row
           val newState  = updateState(state, point, i)
@@ -57,33 +60,33 @@ object FlightStagesDetection {
       }
 
   private def updateState[A](prevState: StreamState[A], point: InputFlightPoint[A], index: Long): StreamState[A] =
-    // Push current value in the window
-    val vertSpeedWindow = prevState.vertSpeedWindow.enqueue(point.verticalSpeed)
+    // Push current value into smoothing window for filtered vertical speed
+    val smoothingWindow = prevState.smoothingVertSpeedWindow.enqueue(point.verticalSpeed)
 
-    // Calculate speeds and other metrics
-    val metrics = Calculations.computeFlightMetrics(point, vertSpeedWindow)
+    // Compute filtered vertical speed and other metrics
+    val metrics = Calculations.computeFlightMetrics(point, smoothingWindow)
 
     // Smoothed vertical acceleration
     val verticalAccel = metrics.filteredVertSpeed - prevState.filteredVertSpeed
 
+    // Update phase detection window
+    val phaseWindow = prevState.phaseDetectionVertSpeedWindow.enqueue(metrics.filteredVertSpeed)
+
+    // Push VerticalSpeedSample in backtracking window
+    val verticalSpeedSample = VerticalSpeedSample(index, metrics.filteredVertSpeed, point.altitude)
+    val backtrackWindow     = prevState.backtrackVertSpeedWindow.enqueue(verticalSpeedSample)
+
     // Detect flight phase based on current conditions
     val detectedPhase = guessFlightPhase(prevState, metrics, verticalAccel)
 
-    // Peak detection with CUSUM for frefall and canopy points
+    // Peak detection with CUSUM for freefall and canopy points
     val freefallCusumState = freefallCusum.checkNextValue(prevState.freefallCusum, metrics.filteredVertSpeed)
     val canopyCusumState   = canopyCusum.checkNextValue(prevState.canopyCusum, metrics.filteredVertSpeed)
-
-    // Push VerticalSpeedSample in the speed history
-    val updatedHistory =
-      if prevState.vertSpeedHistory.size >= BacknumberWindow then
-        prevState.vertSpeedHistory.tail :+ VerticalSpeedSample(index, metrics.filteredVertSpeed, point.altitude)
-      else
-        prevState.vertSpeedHistory :+ VerticalSpeedSample(index, metrics.filteredVertSpeed, point.altitude)
 
     // Check if we missed takeoff
     val assumedTakeoffMissed = detectMissedTakeoff(prevState, point, index)
 
-    // Check if freefall happeend
+    // Check if freefall happened
     val wasInFreefall = prevState.wasInFreefall || detectedPhase == FlightPhase.Freefall
 
     StreamState(
@@ -96,8 +99,9 @@ object FlightStagesDetection {
       verticalAccel = verticalAccel,
       horizontalSpeed = metrics.horizontalSpeed,
       totalSpeed = metrics.totalSpeed,
-      vertSpeedWindow = vertSpeedWindow,
-      vertSpeedHistory = updatedHistory,
+      smoothingVertSpeedWindow = smoothingWindow,
+      phaseDetectionVertSpeedWindow = phaseWindow,
+      backtrackVertSpeedWindow = backtrackWindow,
       freefallCusum = freefallCusumState,
       canopyCusum = canopyCusumState,
       detectedPhase = detectedPhase,
@@ -124,7 +128,7 @@ object FlightStagesDetection {
           FlightPhase.Takeoff
 
       case FlightPhase.Canopy =>
-        val windowStable = isWindowStable(state.vertSpeedHistory)
+        val windowStable = isWindowStable(state.phaseDetectionVertSpeedWindow.toVector)
         if metrics.totalSpeed < LandingSpeedMax && windowStable then
           FlightPhase.Landing
         else
@@ -176,14 +180,13 @@ object FlightStagesDetection {
 
     updatedPoints.run(DetectionConfig.default, result, state, currentPoint)
 
-  private def isWindowStable(history: Vector[VerticalSpeedSample]): Boolean =
+  private def isWindowStable(history: Vector[Double]): Boolean =
     if history.size < BacknumberWindow then
       false
     else
-      val speeds   = history.map(_.verticalSpeed)
-      val mean     = speeds.sum / speeds.size
-      val variance = speeds.map(v => Math.pow(v - mean, 2)).sum / speeds.size
-      val stdDev   = Math.sqrt(variance)
+      val mean = history.sum / history.size
+      val variance = history.map(v => Math.pow(v - mean, 2)).sum / history.size
+      val stdDev = Math.sqrt(variance)
       stdDev < LandingStabilityThreshold && Math.abs(mean) < LandingMeanVerticalSpeedMax
 
 }
