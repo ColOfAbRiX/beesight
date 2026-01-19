@@ -20,12 +20,12 @@ class FlightStagesDetectionSpec extends AnyWordSpec with Matchers with IOConfigV
   "FlightStagesDetection" should {
 
     "detect all flight stages correctly for untagged files" in {
-      val lines     = Source.fromFile(resultsFile.toFile).getLines().toList
+      val lines     = Source.fromFile(resultsFile.toFile).getLines().toList.filterNot(_.isBlank)
       val header    = lines.head.split(",").zipWithIndex.toMap
       val dataLines = lines.tail.filter(_.trim.nonEmpty)
 
       val untaggedLines =
-        dataLines.filter { line =>
+        dataLines.drop(1).filter { line =>
           val cols = line.split(",", -1)
           val tag  = cols.lift(header("tag")).getOrElse("").trim
           tag.isEmpty

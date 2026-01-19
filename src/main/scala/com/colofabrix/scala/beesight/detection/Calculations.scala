@@ -6,24 +6,31 @@ import com.colofabrix.scala.beesight.model.*
 
 object Calculations {
 
-  def computeFlightMetrics[A]( point: InputFlightPoint[?], verticalSpeedWindow: FixedSizeQueue[Double]): FlightMetrics =
+  def computeFlightMetricsSnapshot(
+    point: InputFlightPoint[?],
+    smoothingVertSpeedWindow: FixedSizeQueue[Double],
+    prevFilteredVerticalSpeed: Double,
+  ): FlightMetricsSnapshot =
     import point.*
 
     val horizontalSpeed = Math.sqrt(northSpeed * northSpeed + eastSpeed * eastSpeed)
     val totalSpeed      = Math.sqrt(northSpeed * northSpeed + eastSpeed * eastSpeed + verticalSpeed * verticalSpeed)
 
-    val filteredVertSpeed =
-      if verticalSpeedWindow.isEmpty then
+    val filteredVerticalSpeed =
+      if smoothingVertSpeedWindow.isEmpty then
         verticalSpeed
       else
-        median(DenseVector((verticalSpeedWindow.toVector :+ verticalSpeed).toArray))
+        median(DenseVector((smoothingVertSpeedWindow.toVector :+ verticalSpeed).toArray))
 
-    FlightMetrics(
+    val verticalAcceleration = filteredVerticalSpeed - prevFilteredVerticalSpeed
+
+    FlightMetricsSnapshot(
       altitude = altitude,
-      vertSpeed = verticalSpeed,
+      verticalSpeed = verticalSpeed,
       horizontalSpeed = horizontalSpeed,
       totalSpeed = totalSpeed,
-      filteredVertSpeed = filteredVertSpeed,
+      smoothedVerticalSpeed = filteredVerticalSpeed,
+      verticalAcceleration = verticalAcceleration,
     )
 
   def findInflectionPoint(

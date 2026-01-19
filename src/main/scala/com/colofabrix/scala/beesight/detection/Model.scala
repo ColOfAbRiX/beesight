@@ -2,15 +2,15 @@ package com.colofabrix.scala.beesight.detection
 
 import com.colofabrix.scala.beesight.model.FlightPhase
 import com.colofabrix.scala.beesight.model.InputFlightPoint
-import com.colofabrix.scala.beesight.stats.CusumDetector.CusumState
 import java.time.Instant
 
-final private[detection] case class FlightMetrics(
+final private[detection] case class FlightMetricsSnapshot(
   altitude: Double,
-  vertSpeed: Double,
+  verticalSpeed: Double,
   horizontalSpeed: Double,
   totalSpeed: Double,
-  filteredVertSpeed: Double,
+  smoothedVerticalSpeed: Double,
+  verticalAcceleration: Double,
 )
 
 final private[detection] case class VerticalSpeedSample(
@@ -25,18 +25,15 @@ final private[detection] case class StreamState[A](
   time: Instant = Instant.EPOCH,
   height: Double = 0.0,
   verticalSpeed: Double = 0.0,
-  filteredVertSpeed: Double = 0.0,
+  filteredVerticalSpeed: Double = 0.0,
   verticalAccel: Double = 0.0,
   horizontalSpeed: Double = 0.0,
   totalSpeed: Double = 0.0,
-  smoothingVertSpeedWindow: FixedSizeQueue[Double] = FixedSizeQueue.empty,
-  phaseDetectionVertSpeedWindow: FixedSizeQueue[Double] = FixedSizeQueue.empty,
-  backtrackVertSpeedWindow: FixedSizeQueue[VerticalSpeedSample] = FixedSizeQueue.empty,
-  freefallCusum: CusumState = CusumState.Empty,
-  canopyCusum: CusumState = CusumState.Empty,
+  smoothingVerticalSpeedWindow: FixedSizeQueue[Double] = FixedSizeQueue.empty,
+  landingStabilityWindow: FixedSizeQueue[Double] = FixedSizeQueue.empty,
+  backtrackVerticalSpeedWindow: FixedSizeQueue[VerticalSpeedSample] = FixedSizeQueue.empty,
   detectedPhase: FlightPhase = FlightPhase.BeforeTakeoff,
-  wasInFreefall: Boolean = false,
-  assumedTakeoffMissed: Boolean = false,
+  takeoffMissing: Boolean = false,
 )
 
 private[detection] object StreamState {
@@ -44,14 +41,14 @@ private[detection] object StreamState {
   def createDefault[A](
     point: InputFlightPoint[A],
     smoothingWindowSize: Int,
-    phaseDetectionWindowSize: Int,
+    landingStabilityWindowSize: Int,
     backtrackWindowSize: Int,
   ): StreamState[A] =
     StreamState(
       inputPoint = point,
-      smoothingVertSpeedWindow = FixedSizeQueue(smoothingWindowSize),
-      phaseDetectionVertSpeedWindow = FixedSizeQueue(phaseDetectionWindowSize),
-      backtrackVertSpeedWindow = FixedSizeQueue(backtrackWindowSize),
+      smoothingVerticalSpeedWindow = FixedSizeQueue(smoothingWindowSize),
+      landingStabilityWindow = FixedSizeQueue(landingStabilityWindowSize),
+      backtrackVerticalSpeedWindow = FixedSizeQueue(backtrackWindowSize),
     )
 
 }

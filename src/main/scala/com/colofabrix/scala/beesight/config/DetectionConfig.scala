@@ -7,7 +7,6 @@ final case class DetectionConfig(
   TakeoffMaxAltitude: Double,    // m - Takeoff cannot happen above this altitude
 
   //  Freefall parameters  //
-  FreefallWindow: Int,                    // Data Points - Size of the CUSUM Freefall detection window
   FreefallVerticalSpeedThreshold: Double, // m/s - VerticalSpeed above this indicates freefall
   FreefallAccelThreshold: Double,         // m/s per sample - Rapid verticalSpeed increase indicates exit
   FreefallAccelMinVelocity: Double,       // m/s - Minimum verticalSpeed for accel-based detection
@@ -15,7 +14,6 @@ final case class DetectionConfig(
   FreefallMinAltitudeAbsolute: Double,    // m - Freefall min altitude when takeoff missed
 
   //  Canopy parameters  //
-  CanopyWindow: Int,              // Data Points - Size of the CUSUM Canopy detection window
   CanopyVerticalSpeedMax: Double, // m/s - VerticalSpeed below this after freefall indicates canopy
 
   //  Landing parameters  //
@@ -23,13 +21,11 @@ final case class DetectionConfig(
   LandingStabilityThreshold: Double,   // m/s - Stddev of vertical speed must be below this
   LandingMeanVerticalSpeedMax: Double, // m/s - Mean vertical speed must be below this
   LandingAltitudeTolerance: Double,    // m - Landing must be within ±this of takeoff altitude
+  LandingStabilityWindowSize: Int,         // points - Size of landing stability detection window
 
   //  Global parameters  //
-  SmoothingVertSpeedWindowSize: Int,      // points - size of smoothing vertical speed window
-  PhaseDetectionVertSpeedWindowSize: Int, // points - size of phase detection vertical speed window
-  BacktrackVertSpeedWindowSize: Int,      // points - size of backtracking vertical speed window
-  MedianFilterWindow: Int,                // points - Window size for median filter
-  BacknumberWindow: Int,                  // points - How far back to look for true exit point
+  SmoothingVerticalSpeedWindowSize: Int,   // points - Size of smoothing vertical speed window
+  BacktrackVerticalSpeedWindowSize: Int,   // points - Size of backtracking window for finding true transition points
 )
 
 object DetectionConfig {
@@ -39,22 +35,18 @@ object DetectionConfig {
       TakeoffSpeedThreshold = 25.0,
       TakeoffClimbRate = -1.0,
       TakeoffMaxAltitude = 600.0,
-      FreefallWindow = 25,
       FreefallVerticalSpeedThreshold = 25.0,
       FreefallAccelThreshold = 3.0,
       FreefallAccelMinVelocity = 10.0,
       FreefallMinAltitudeAbove = 600.0,
       FreefallMinAltitudeAbsolute = 600.0,
-      CanopyWindow = 25,
       CanopyVerticalSpeedMax = 12.0,
       LandingSpeedMax = 3.0,
       LandingStabilityThreshold = 0.5,
       LandingMeanVerticalSpeedMax = 1.0,
       LandingAltitudeTolerance = 500.0,
-      SmoothingVertSpeedWindowSize = 5,
-      PhaseDetectionVertSpeedWindowSize = 10,
-      BacktrackVertSpeedWindowSize = 10,
-      MedianFilterWindow = 5,
-      BacknumberWindow = 10,
+      SmoothingVerticalSpeedWindowSize = 5,
+      LandingStabilityWindowSize = 10,
+      BacktrackVerticalSpeedWindowSize = 10,
     )
 }

@@ -7,7 +7,7 @@ import com.colofabrix.scala.beesight.config.DetectionConfig
 package object detection {
 
   private[detection] type TryDetect[B] =
-    Reader[(DetectionConfig, FlightStagesPoints, StreamState[?], FlightStagePoint), B]
+    Reader[(DetectionConfig, StreamState[?], FlightStagesPoints, FlightStagePoint), B]
 
   extension (self: Option[FlightStagePoint]) {
     private[detection] infix def isAfter(currentIndex: Long): Boolean =

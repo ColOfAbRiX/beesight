@@ -3,26 +3,40 @@ package com.colofabrix.scala.beesight.detection
 import cats.data.Reader
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.config.DetectionConfig
+import com.colofabrix.scala.beesight.config.DetectionConfig.default.*
 
 private[detection] object FreefallDetection {
 
+  def isFreefallCondition(snapshot: FlightMetricsSnapshot): Boolean =
+    val byThreshold = snapshot.smoothedVerticalSpeed > FreefallVerticalSpeedThreshold
+
+    val byAccel =
+      snapshot.verticalAcceleration > FreefallAccelThreshold &&
+      snapshot.smoothedVerticalSpeed > FreefallAccelMinVelocity
+
+    byThreshold || byAccel
+
   def tryDetectFreefall(takeoff: Option[FlightStagePoint]): TryDetect[Option[FlightStagePoint]] =
-    Reader { (config, result, state, currentPoint) =>
-      if result.freefall.isDefined then
-        result.freefall
-      else if state.detectedPhase != FlightPhase.Freefall then
+    Reader { (config, streamState, detectedStages, currentPoint) =>
+      if detectedStages.freefall.isDefined then
+        detectedStages.freefall
+      else if streamState.detectedPhase != FlightPhase.Freefall then
         None
       else
-        val altitudeOk =
+        val altitudeValid =
           takeoff.map(_.altitude) match {
-            case Some(tAlt) => state.height > tAlt + config.FreefallMinAltitudeAbove
-            case None       => state.height > config.FreefallMinAltitudeAbsolute
+            case Some(tAlt) => streamState.height > tAlt + config.FreefallMinAltitudeAbove
+            case None       => streamState.height > config.FreefallMinAltitudeAbsolute
           }
 
-        val afterTakeoff = takeoff isAfter state.dataPointIndex
+        val afterTakeoff = takeoff isAfter streamState.dataPointIndex
 
-        if altitudeOk && afterTakeoff then
-          Some(Calculations.findInflectionPoint(state.backtrackVertSpeedWindow.toVector, currentPoint, isRising = false))
+        if altitudeValid && afterTakeoff then
+          Some(Calculations.findInflectionPoint(
+            streamState.backtrackVerticalSpeedWindow.toVector,
+            currentPoint,
+            isRising = true,
+          ))
         else
           None
     }
