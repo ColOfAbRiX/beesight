@@ -21,7 +21,7 @@ object FlightStagesDetection {
       .zipWithIndex
       .scan((Option.empty[StreamState[A]], FlightStagesPoints.empty)) {
         case ((None, detectedStages), (firstPoint, i)) =>
-          // First data row, initialize the state
+          // First data row - no preprocessing, initialize the state
           val initialState =
             StreamState.createDefault(
               firstPoint,
@@ -33,8 +33,8 @@ object FlightStagesDetection {
           val newFlightStagesPoint = updateFlightStagesPoints(detectedStages, newStreamState)
           (Some(newStreamState), newFlightStagesPoint)
 
-        case ((Some(state), detectedStages), (point, i)) =>
-          // Process each data row individually
+        case ((Some(state), detectedStages), (rawPoint, i)) =>
+          val point                = Preprocessing.preprocessData(rawPoint, state)
           val newStreamState       = updateState(state, point, i)
           val newFlightStagesPoint = updateFlightStagesPoints(detectedStages, newStreamState)
           (Some(newStreamState), newFlightStagesPoint)
@@ -58,7 +58,7 @@ object FlightStagesDetection {
     val smoothingWindow = prevState.smoothingVerticalSpeedWindow.enqueue(point.verticalSpeed)
 
     // Compute all flight metrics including acceleration
-    val snapshot = Calculations.computeFlightMetricsSnapshot(point, smoothingWindow, prevState.filteredVerticalSpeed)
+    val snapshot = Calculations.computeFlightMetricsSnapshot(point, smoothingWindow, prevState.smoothedVerticalSpeed)
 
     // Update landing stability window
     val landingWindow = prevState.landingStabilityWindow.enqueue(snapshot.smoothedVerticalSpeed)
@@ -79,7 +79,7 @@ object FlightStagesDetection {
       time = point.time,
       height = point.altitude,
       verticalSpeed = point.verticalSpeed,
-      filteredVerticalSpeed = snapshot.smoothedVerticalSpeed,
+      smoothedVerticalSpeed = snapshot.smoothedVerticalSpeed,
       verticalAccel = snapshot.verticalAcceleration,
       horizontalSpeed = snapshot.horizontalSpeed,
       totalSpeed = snapshot.totalSpeed,

@@ -49,7 +49,7 @@ class FlightStagesDetectionSpec extends AnyWordSpec with Matchers with IOConfigV
         val points   = CsvFileOps.readCsv[FlysightPoint](filePath)
         val result   = detectPoints(points).result()
 
-        withClue(s"File: $filename\n") {
+        withClue(s"INSPECTING FILE: $filename\n") {
           result.should(matchStages(expected))
         }
       }
@@ -65,19 +65,17 @@ class FlightStagesDetectionSpec extends AnyWordSpec with Matchers with IOConfigV
       .through(FlightStagesDetection.streamDetectA)
       .compile
       .last
-      .map { optOutput =>
-        optOutput
-          .map { output =>
-            FlightStagesPoints(
-              takeoff = output.takeoff,
-              freefall = output.freefall,
-              canopy = output.canopy,
-              landing = output.landing,
-              lastPoint = output.lastPoint,
-              isValid = output.isValid,
-            )
-          }
-          .getOrElse(FlightStagesPoints.empty)
+      .map {
+        _.fold(FlightStagesPoints.empty) { output =>
+          FlightStagesPoints(
+            takeoff = output.takeoff,
+            freefall = output.freefall,
+            canopy = output.canopy,
+            landing = output.landing,
+            lastPoint = output.lastPoint,
+            isValid = output.isValid,
+          )
+        }
       }
 
 }

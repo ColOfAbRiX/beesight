@@ -19,6 +19,9 @@ private[detection] final class FixedSizeQueue[+A] private (queue: Queue[A], size
   def isEmpty: Boolean =
     queue.isEmpty
 
+  def isFull: Boolean =
+    queue.sizeIs == size
+
 }
 
 object FixedSizeQueue {

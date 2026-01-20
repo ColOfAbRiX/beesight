@@ -25,7 +25,7 @@ final private[detection] case class StreamState[A](
   time: Instant = Instant.EPOCH,
   height: Double = 0.0,
   verticalSpeed: Double = 0.0,
-  filteredVerticalSpeed: Double = 0.0,
+  smoothedVerticalSpeed: Double = 0.0,
   verticalAccel: Double = 0.0,
   horizontalSpeed: Double = 0.0,
   totalSpeed: Double = 0.0,

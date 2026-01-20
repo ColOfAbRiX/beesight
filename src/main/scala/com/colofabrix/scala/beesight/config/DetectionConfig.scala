@@ -23,6 +23,9 @@ final case class DetectionConfig(
   LandingAltitudeTolerance: Double,    // m - Landing must be within ±this of takeoff altitude
   LandingStabilityWindowSize: Int,         // points - Size of landing stability detection window
 
+  //  Preprocessing parameters  //
+  MaxAcceleration: Double, // m/s² - Maximum allowed acceleration for clipping implausible values
+
   //  Global parameters  //
   SmoothingVerticalSpeedWindowSize: Int,   // points - Size of smoothing vertical speed window
   BacktrackVerticalSpeedWindowSize: Int,   // points - Size of backtracking window for finding true transition points
@@ -45,6 +48,7 @@ object DetectionConfig {
       LandingStabilityThreshold = 0.5,
       LandingMeanVerticalSpeedMax = 1.0,
       LandingAltitudeTolerance = 500.0,
+      MaxAcceleration = 10.0,
       SmoothingVerticalSpeedWindowSize = 5,
       LandingStabilityWindowSize = 10,
       BacktrackVerticalSpeedWindowSize = 10,
