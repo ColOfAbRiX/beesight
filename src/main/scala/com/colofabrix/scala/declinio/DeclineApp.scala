@@ -1,7 +1,7 @@
 package com.colofabrix.scala.declinio
 
-import cats.effect.*
 import cats.data.ReaderT
+import cats.effect.*
 
 /**
  * Decline application for any effect F[_] and configuration A that uses a run method to pass the configuration

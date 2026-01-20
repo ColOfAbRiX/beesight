@@ -1,11 +1,11 @@
 package com.colofabrix.scala.declinio
 
-import cats.~>
+import cats.data.ReaderT
 import cats.effect.*
 import cats.effect.std.Console
 import cats.implicits.given
+import cats.~>
 import com.monovore.decline.*
-import cats.data.ReaderT
 
 /**
  * Decline application for any effect F[_] and configuration A that uses a ReaderT to pass the configuration
@@ -63,7 +63,7 @@ transparent trait DeclineReaderApp[F[_], A] extends IOApp:
       exitCode    <- parseResult.fold(printHelp, identity)
     } yield exitCode
 
-  final def run(args: List[String]): IO[ExitCode] =
+  final override def run(args: List[String]): IO[ExitCode] =
     runDeclineApp(args)
 
   private def printHelp(help: Help): IO[ExitCode] =

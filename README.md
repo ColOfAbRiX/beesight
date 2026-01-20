@@ -20,6 +20,22 @@ parsing of Decline with the powerful effect management of Cats Effect.
 - **Effect-Aware** - Full support for Cats Effect's resource management and error handling
 - **Custom Effect Types** - Use any effect type with a natural transformation to IO
 
+## Motivation
+
+[Decline](https://ben.kirw.in/decline/) is a powerful and well written library but I personally
+find the `CommandApp` way of defining your application of placing the configuration and your main
+function in the constructor very awkward:
+
+```scala
+object TailApp extends CommandApp(
+  name = "tail",
+  header = "Print the last few lines of one or more files.",
+  main = (linesOrDefault, fileList).mapN { (n, files) =>
+    println(s"LOG: Printing the last $n lines from each file in $files!")
+  }
+)
+```
+
 ## Installation
 
 Add the following dependencies to your `build.sbt`:
@@ -49,7 +65,7 @@ import com.monovore.decline.*
 // Define your configuration case class
 case class Config(name: String, count: Int, verbose: Boolean)
 
-object MyApp extends IODeclineApp[Config]:
+object MyApp extends IODeclineApp[Config] {
 
   override def name: String =
     "my-app"
@@ -72,6 +88,8 @@ object MyApp extends IODeclineApp[Config]:
       _ <- if (config.verbose) IO.println(s"Greeting you ${config.count} times...") else IO.unit
       _ <- (1 until config.count).toList.traverse_(_ => IO.println(s"Hello ${config.name}!"))
     yield ExitCode.Success
+
+}
 ```
 
 Run with:
@@ -87,7 +105,7 @@ For applications that don't need command-line arguments, use `IOUnitDeclineApp`:
 import cats.effect.*
 import com.colofabrix.scala.declinio.*
 
-object SimpleApp extends IOUnitDeclineApp:
+object SimpleApp extends IOUnitDeclineApp {
 
   override def name: String =
     "simple-app"
@@ -100,6 +118,8 @@ object SimpleApp extends IOUnitDeclineApp:
 
   override def runNoConfig: IO[ExitCode] =
     IO.println("Hello, World!").as(ExitCode.Success)
+
+}
 ```
 
 ### Application with ReaderT
@@ -115,7 +135,7 @@ import com.monovore.decline.*
 
 case class AppConfig(apiUrl: String, timeout: Int)
 
-object ReaderApp extends IODeclineReaderApp[AppConfig]:
+object ReaderApp extends IODeclineReaderApp[AppConfig] {
 
   override def name: String =
     "reader-app"
@@ -138,6 +158,8 @@ object ReaderApp extends IODeclineReaderApp[AppConfig]:
         _ <- IO.println(s"Timeout: ${config.timeout}s")
       yield ExitCode.Success
     }
+
+}
 ```
 
 ### Custom Effect Type
@@ -158,7 +180,7 @@ type AppIO[A] = ReaderT[IO, AppEnv, A]
 case class AppEnv(logger: String => IO[Unit])
 case class Config(debug: Boolean)
 
-object CustomEffectApp extends DeclineReaderApp[AppIO, Config]:
+object CustomEffectApp extends DeclineReaderApp[AppIO, Config] {
 
   override def name: String =
     "custom-app"
@@ -190,6 +212,8 @@ object CustomEffectApp extends DeclineReaderApp[AppIO, Config]:
         yield ExitCode.Success
       }
     }
+
+}
 ```
 
 ## Trait Hierarchy

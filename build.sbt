@@ -78,4 +78,22 @@ lazy val publishSettings =
       "-encoding",
       "UTF-8",
     ),
+
+    // External API mappings for Scaladoc links (required because we use Provided)
+    apiMappings ++= {
+      val cp = (Compile / fullClasspath).value.map(_.data)
+
+      def findJar(nameContains: String): Option[java.io.File] =
+        cp.find(_.getName.contains(nameContains))
+
+      val mappings = Map(
+        findJar("cats-effect_3")        -> url("https://typelevel.org/cats-effect/api/3.x/"),
+        findJar("cats-effect-kernel_3") -> url("https://typelevel.org/cats-effect/api/3.x/"),
+        findJar("cats-effect-std_3")    -> url("https://typelevel.org/cats-effect/api/3.x/"),
+        findJar("decline_3")            -> url("https://ben.kirw.in/decline/"),
+        findJar("cats-core_3")          -> url("https://typelevel.org/cats/api/"),
+      )
+
+      mappings.collect { case (Some(jar), docUrl) => jar -> docUrl }
+    },
   )
