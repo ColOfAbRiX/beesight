@@ -12,9 +12,9 @@ import java.nio.file.{ Files as JFiles, Path }
 object ResultsSummary {
 
   /**
-   * Writes summary rows to a CSV file using OutputFlightPoint directly
+   * Writes summary rows to a CSV file using OutputFlightRow directly
    */
-  def writeSummaryCsv[A](rows: List[(Path, Option[OutputFlightPoint[A]])]): IOConfig[Unit] =
+  def writeSummaryCsv[A](rows: List[(Path, Option[OutputFlightRow[A]])]): IOConfig[Unit] =
     IOConfig.ask.flatMap { config =>
       if config.dryRun then
         IOConfig.pure(())
@@ -42,7 +42,7 @@ object ResultsSummary {
           }
     }
 
-  private def rowToCsv[A](row: (Path, Option[OutputFlightPoint[A]])): String =
+  private def rowToCsv[A](row: (Path, Option[OutputFlightRow[A]])): String =
     val (inputFile, pointOpt) = row
     val filename              = inputFile.getFileName.toString
 

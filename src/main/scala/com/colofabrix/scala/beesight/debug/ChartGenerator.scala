@@ -15,9 +15,9 @@ import java.nio.file.*
 object ChartGenerator {
 
   /**
-   * Returns a pipe that generates an HTML chart from the stream of OutputFlightPoints
+   * Returns a pipe that generates an HTML chart from the stream of OutputFlightRows
    */
-  def chartPipe[A: FlightInfo](outputCsvFile: Path): fs2.Pipe[IOConfig, OutputFlightPoint[A], Nothing] =
+  def chartPipe[A: FileFormatAdapter](outputCsvFile: Path): fs2.Pipe[IOConfig, OutputFlightRow[A], Nothing] =
     _.zipWithIndex
       .fold(ChartState[A]()) {
         case (state, (point, idx)) => updateChartState(state, point, idx)
@@ -33,10 +33,10 @@ object ChartGenerator {
 
   private def updateChartState[A](
     state: ChartState[A],
-    point: OutputFlightPoint[A],
+    point: OutputFlightRow[A],
     idx: Long,
   )(using
-    A: FlightInfo[A],
+    A: FileFormatAdapter[A],
   ): ChartState[A] =
     val sep = if idx == 0 then "" else ","
 
@@ -61,8 +61,8 @@ object ChartGenerator {
       lastStages = extractStages(point),
     )
 
-  private def extractStages[A](point: OutputFlightPoint[A]): FlightStagesPoints =
-    FlightStagesPoints(
+  private def extractStages[A](point: OutputFlightRow[A]): FlightEvents =
+    FlightEvents(
       takeoff = point.takeoff,
       freefall = point.freefall,
       canopy = point.canopy,
@@ -194,9 +194,9 @@ object ChartGenerator {
 
     s"var transitionMarkers = [${jsMarkers.mkString(",\n")}];"
 
-  private def formatStage(point: Option[FlightStagePoint]): String =
+  private def formatStage(point: Option[FlightPoint]): String =
     point match {
-      case Some(FlightStagePoint(idx, alt)) => f"Point $idx at altitude $alt%.2fm"
+      case Some(FlightPoint(idx, alt)) => f"Point $idx at altitude $alt%.2fm"
       case None                             => "Not detected"
     }
 
@@ -212,7 +212,7 @@ object ChartGenerator {
     velDs: StringBuilder = StringBuilder(),
     transitions: List[PhaseTransition] = Nil,
     prevPhase: FlightPhase = FlightPhase.BeforeTakeoff,
-    lastStages: FlightStagesPoints = FlightStagesPoints.empty,
+    lastStages: FlightEvents = FlightEvents.empty,
   )
 
 }

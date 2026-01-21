@@ -1,11 +1,12 @@
-package com.colofabrix.scala.beesight.model
+package com.colofabrix.scala.beesight.model.formats
 
 import cats.data.NonEmptyList
 import cats.implicits.*
+import com.colofabrix.scala.beesight.model.*
+import com.colofabrix.scala.beesight.model.derivation.given
 import fs2.data.csv.*
 import fs2.data.csv.generic.semiauto.*
 import java.time.*
-import scala.util.Try
 
 /**
  * Flysight Data Point, see https://flysight.ca/wiki/index.php/File_format
@@ -27,28 +28,28 @@ import scala.util.Try
  */
 final case class FlysightPoint(
   time: OffsetDateTime,
-  lat: Double = 0.0,
-  lon: Double = 0.0,
-  hMSL: Double = 0.0,
-  velN: Double = 0.0,
-  velE: Double = 0.0,
-  velD: Double = 0.0,
-  hAcc: Double = 0.0,
-  vAcc: Double = 0.0,
-  sAcc: Double = 0.0,
-  heading: Double = 0.0,
-  cAcc: Double = 0.0,
-  gpsFix: Int = 0,
-  numSV: Int = 0,
-  extra: List[(String, String)] = List.empty,
+  lat: Double,
+  lon: Double,
+  hMSL: Double,
+  velN: Double,
+  velE: Double,
+  velD: Double,
+  hAcc: Double,
+  vAcc: Double,
+  sAcc: Double,
+  heading: Double,
+  cAcc: Double,
+  gpsFix: Int,
+  numSV: Int,
+  extra: List[(String, String)],
 )
 
 object FlysightPoint {
 
-  given flysightPointInput: FlightInfo[FlysightPoint] with {
+  given flysightFormatAdapter: FileFormatAdapter[FlysightPoint] with {
 
-    def toInputFlightPoint(point: FlysightPoint): InputFlightPoint[FlysightPoint] =
-      InputFlightPoint(
+    def toInputFlightPoint(point: FlysightPoint): InputFlightRow[FlysightPoint] =
+      InputFlightRow(
         time = point.time.toInstant,
         altitude = point.hMSL,
         northSpeed = point.velN,
@@ -63,8 +64,7 @@ object FlysightPoint {
 
     def apply(row: CsvRow[String]): DecoderResult[FlysightPoint] =
       for
-        time     <- row.as[String]("time")
-        javaTime <- decodeOffsetDateTime(time)
+        javaTime <- row.as[OffsetDateTime]("time")
         lat      <- row.as[Double]("lat")
         lon      <- row.as[Double]("lon")
         hMSL     <- row.as[Double]("hMSL")
@@ -78,7 +78,23 @@ object FlysightPoint {
         cAcc     <- row.as[Double]("cAcc")
         gpsFix   <- row.as[Int]("gpsFix")
         numSV    <- row.as[Int]("numSV")
-      yield FlysightPoint(javaTime, lat, lon, hMSL, velN, velE, velD, hAcc, vAcc, sAcc, heading, cAcc, gpsFix, numSV)
+      yield FlysightPoint(
+        time = javaTime,
+        lat = lat,
+        lon = lon,
+        hMSL = hMSL,
+        velN = velN,
+        velE = velE,
+        velD = velD,
+        hAcc = hAcc,
+        vAcc = vAcc,
+        sAcc = sAcc,
+        heading = heading,
+        cAcc = cAcc,
+        gpsFix = gpsFix,
+        numSV = numSV,
+        extra = List.empty,
+      )
 
   }
 
@@ -109,11 +125,6 @@ object FlysightPoint {
       )
 
   }
-
-  private def decodeOffsetDateTime(value: String): DecoderResult[OffsetDateTime] =
-    Try(OffsetDateTime.parse(value))
-      .toEither
-      .leftMap(t => new DecoderError(t.getMessage()))
 
   private def formatDouble(value: Double, precision: Int): String =
     BigDecimal(value)

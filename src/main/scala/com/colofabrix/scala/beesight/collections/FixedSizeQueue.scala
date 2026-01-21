@@ -1,10 +1,11 @@
-package com.colofabrix.scala.beesight.detection
+package com.colofabrix.scala.beesight.collections
 
 import scala.collection.immutable.Queue
+import scala.reflect.ClassTag
 
-private[detection] final class FixedSizeQueue[+A] private (queue: Queue[A], size: Int) {
+final class FixedSizeQueue[+A: ClassTag] private (queue: Queue[A], size: Int) {
 
-  def enqueue[B >: A](a: B): FixedSizeQueue[B] =
+  def enqueue[B >: A: ClassTag](a: B): FixedSizeQueue[B] =
     val updated = queue.enqueue(a)
     if updated.size > size then new FixedSizeQueue(updated.dequeue._2, size)
     else new FixedSizeQueue(updated, size)
@@ -12,6 +13,9 @@ private[detection] final class FixedSizeQueue[+A] private (queue: Queue[A], size
   def setSize(size: Int): FixedSizeQueue[A] =
     val updated = queue.drop(Math.max(0, queue.size - size))
     new FixedSizeQueue[A](updated, Math.max(0, size))
+
+  def toArray[B >: A: ClassTag]: Array[B] =
+    queue.toArray[B]
 
   def toVector: Vector[A] =
     queue.toVector
@@ -26,10 +30,10 @@ private[detection] final class FixedSizeQueue[+A] private (queue: Queue[A], size
 
 object FixedSizeQueue {
 
-  def apply[A](size: Int): FixedSizeQueue[A] =
+  def apply[A: ClassTag](size: Int): FixedSizeQueue[A] =
     new FixedSizeQueue(Queue.empty[A], size)
 
-  def empty[A]: FixedSizeQueue[A] =
+  def empty[A: ClassTag]: FixedSizeQueue[A] =
     new FixedSizeQueue(Queue.empty[A], 1)
 
 }

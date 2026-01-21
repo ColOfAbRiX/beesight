@@ -19,8 +19,8 @@ trait FlightStagesMatchers {
   /**
    * Matches FlightStagesPoints against expected values with per-field tolerances
    */
-  def matchStages(expected: FlightStagesPoints): Matcher[FlightStagesPoints] =
-    (obtained: FlightStagesPoints) => {
+  def matchStages(expected: FlightEvents): Matcher[FlightEvents] =
+    (obtained: FlightEvents) => {
       val fieldResults =
         List(
           checkField("takeoff", obtained.takeoff.map(_.lineIndex), expected.takeoff.map(_.lineIndex)),

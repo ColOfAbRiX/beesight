@@ -11,6 +11,7 @@ import org.scalatest.Inspectors.forEvery
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import scala.io.Source
+import com.colofabrix.scala.beesight.model.formats.FlysightPoint
 
 class FlightStagesDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues with FlightStagesMatchers {
 
@@ -36,7 +37,7 @@ class FlightStagesDetectionSpec extends AnyWordSpec with Matchers with IOConfigV
         val filename = cols(header("filename"))
 
         val expected =
-          FlightStagesPoints(
+          FlightEvents(
             takeoff = parseOptLong(cols.lift(header("takeoff_pt"))).map(FlightStagePoint(_, 0.0)),
             freefall = parseOptLong(cols.lift(header("freefall_pt"))).map(FlightStagePoint(_, 0.0)),
             canopy = parseOptLong(cols.lift(header("canopy_pt"))).map(FlightStagePoint(_, 0.0)),
@@ -60,14 +61,14 @@ class FlightStagesDetectionSpec extends AnyWordSpec with Matchers with IOConfigV
   private def parseOptLong(value: Option[String]): Option[Long] =
     value.filter(_.trim.nonEmpty).map(_.trim.toLong)
 
-  private def detectPoints(data: fs2.Stream[IOConfig, FlysightPoint]): IOConfig[FlightStagesPoints] =
+  private def detectPoints(data: fs2.Stream[IOConfig, FlysightPoint]): IOConfig[FlightEvents] =
     data
       .through(FlightStagesDetection.streamDetectA)
       .compile
       .last
       .map {
-        _.fold(FlightStagesPoints.empty) { output =>
-          FlightStagesPoints(
+        _.fold(FlightEvents.empty) { output =>
+          FlightEvents(
             takeoff = output.takeoff,
             freefall = output.freefall,
             canopy = output.canopy,

@@ -2,12 +2,12 @@ package com.colofabrix.scala.beesight.files
 
 import cats.effect.IO
 import com.colofabrix.scala.beesight.IOConfig
-import com.colofabrix.scala.beesight.model.FlightStagesPoints
-import com.colofabrix.scala.beesight.model.FlysightPoint
+import com.colofabrix.scala.beesight.model.FlightEvents
+import com.colofabrix.scala.beesight.model.formats.FlysightPoint
 import fs2.data.csv.*
 import fs2.io.file.{ Files, Flags, Path as Fs2Path }
 import java.nio.file.Path
-import com.colofabrix.scala.beesight.model.OutputFlightPoint
+import com.colofabrix.scala.beesight.model.OutputFlightRow
 
 /**
  * Aggregations of operations on files using fs2
@@ -39,7 +39,7 @@ object CsvFileOps {
     filePath: Path,
     dryRun: Boolean,
   )(using CsvRowEncoder[A, String],
-  ): fs2.Pipe[IOConfig, OutputFlightPoint[A], Nothing] =
+  ): fs2.Pipe[IOConfig, OutputFlightRow[A], Nothing] =
     stream =>
       stream
         .through { s =>

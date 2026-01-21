@@ -6,13 +6,14 @@ import cats.Show
 import com.colofabrix.scala.beesight.*
 import com.colofabrix.scala.beesight.model.*
 import scala.io.AnsiColor.*
+import com.colofabrix.scala.beesight.model.formats.FlysightPoint
 
 object ResultPrinter {
 
-  def printStagesPipe: fs2.Pipe[IOConfig, OutputFlightPoint[FlysightPoint], Nothing] =
+  def printStagesPipe: fs2.Pipe[IOConfig, OutputFlightRow[FlysightPoint], Nothing] =
     data =>
       data
-        .fold(Option.empty[FlightStagesPoints]) { (_, point) =>
+        .fold(Option.empty[FlightEvents]) { (_, point) =>
           Some(extractStages(point))
         }
         .evalMap {
@@ -21,8 +22,8 @@ object ResultPrinter {
         }
         .drain
 
-  private def extractStages(point: OutputFlightPoint[FlysightPoint]): FlightStagesPoints =
-    FlightStagesPoints(
+  private def extractStages(point: OutputFlightRow[FlysightPoint]): FlightEvents =
+    FlightEvents(
       takeoff = point.takeoff,
       freefall = point.freefall,
       canopy = point.canopy,
@@ -39,10 +40,10 @@ object ResultPrinter {
   given niceDouble: Show[Double] =
     value => f"${value}%.2f"
 
-  given nicePoint: Show[FlightStagePoint] =
+  given nicePoint: Show[FlightPoint] =
     point => s"point ${point.lineIndex.show} at altitude ${point.altitude.show}"
 
-  given niceFlightPoints: Show[FlightStagesPoints] =
+  given niceFlightPoints: Show[FlightEvents] =
     flightPoints =>
       s"""Flight stages detected:
          |    Takeoff:  ${flightPoints.takeoff.show}

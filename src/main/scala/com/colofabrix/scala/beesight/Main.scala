@@ -11,6 +11,7 @@ import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.declinio.*
 import com.monovore.decline.Opts
 import java.nio.file.*
+import com.colofabrix.scala.beesight.model.formats.FlysightPoint
 
 object Main extends IODeclineReaderApp[Config] {
 
@@ -39,7 +40,7 @@ object Main extends IODeclineReaderApp[Config] {
         .fold(files)(limit => files.take(limit))
     }
 
-  private def processFile(inputFile: Path): IOConfig[(Path, Option[OutputFlightPoint[FlysightPoint]])] =
+  private def processFile(inputFile: Path): IOConfig[(Path, Option[OutputFlightRow[FlysightPoint]])] =
     for
       outputFile <- FileOps.createProcessedDirectory(inputFile)
       _          <- s"Processing: $inputFile -> $outputFile".stdout
@@ -54,7 +55,7 @@ object Main extends IODeclineReaderApp[Config] {
     csvStream: fs2.Stream[IOConfig, FlysightPoint],
     dataCutter: DataCutter,
     outputCsvFile: Path,
-  ): IOConfig[fs2.Stream[IOConfig, OutputFlightPoint[FlysightPoint]]] =
+  ): IOConfig[fs2.Stream[IOConfig, OutputFlightRow[FlysightPoint]]] =
     IOConfig
       .ask
       .map { config =>

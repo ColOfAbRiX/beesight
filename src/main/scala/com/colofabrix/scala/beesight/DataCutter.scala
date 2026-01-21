@@ -13,7 +13,7 @@ final class DataCutter private (config: Config) {
   /**
    * Streaming pipe that cuts data to retain only flight-relevant points
    */
-  def cutPipe[F[_], A]: fs2.Pipe[F, OutputFlightPoint[A], OutputFlightPoint[A]] =
+  def cutPipe[F[_], A]: fs2.Pipe[F, OutputFlightRow[A], OutputFlightRow[A]] =
     stream =>
       stream
         .zipWithNext
@@ -31,7 +31,7 @@ final class DataCutter private (config: Config) {
           case (state, pointsToEmit) => Stream.emits(pointsToEmit)
         }
 
-  private def processPoint[A](state: CutState[A], point: OutputFlightPoint[A], index: Long): StreamState[A] =
+  private def processPoint[A](state: CutState[A], point: OutputFlightRow[A], index: Long): StreamState[A] =
     state.phase match {
       case CutPhase.BeforeTakeoff => handleBeforeTakeoff(state, point, index)
       case CutPhase.InFlight      => handleInFlight(state, point, index)
@@ -40,7 +40,7 @@ final class DataCutter private (config: Config) {
       case CutPhase.Done          => (state, Vector.empty)
     }
 
-  private def handleBeforeTakeoff[A](state: CutState[A], point: OutputFlightPoint[A], index: Long): StreamState[A] =
+  private def handleBeforeTakeoff[A](state: CutState[A], point: OutputFlightRow[A], index: Long): StreamState[A] =
     val takeoffDetected =
       point
         .takeoff
@@ -62,7 +62,7 @@ final class DataCutter private (config: Config) {
       val newState      = state.copy(preBuffer = updatedBuffer)
       (newState, Vector.empty)
 
-  private def handleInFlight[A](state: CutState[A], point: OutputFlightPoint[A], index: Long): StreamState[A] =
+  private def handleInFlight[A](state: CutState[A], point: OutputFlightRow[A], index: Long): StreamState[A] =
     val isAfterLanding =
       point
         .landing
@@ -77,7 +77,7 @@ final class DataCutter private (config: Config) {
       // Still in flight - emit
       (state, Vector(point))
 
-  private def handleAfterLanding[A](state: CutState[A], point: OutputFlightPoint[A]): StreamState[A] =
+  private def handleAfterLanding[A](state: CutState[A], point: OutputFlightRow[A]): StreamState[A] =
     if state.afterLandingCount >= config.bufferPoints then
       // Done - stop emitting
       val newState = state.copy(phase = CutPhase.Done)
@@ -92,7 +92,7 @@ final class DataCutter private (config: Config) {
 object DataCutter {
 
   private type StreamState[A] =
-    (CutState[A], Vector[OutputFlightPoint[A]])
+    (CutState[A], Vector[OutputFlightRow[A]])
 
   private enum CutPhase {
     case BeforeTakeoff, InFlight, AfterLanding, Done, InvalidFile
@@ -100,7 +100,7 @@ object DataCutter {
 
   final private case class CutState[A](
     phase: CutPhase = CutPhase.BeforeTakeoff,
-    preBuffer: Queue[OutputFlightPoint[A]] = Queue.empty[OutputFlightPoint[A]],
+    preBuffer: Queue[OutputFlightRow[A]] = Queue.empty[OutputFlightRow[A]],
     afterLandingCount: Long = 0,
   )
 

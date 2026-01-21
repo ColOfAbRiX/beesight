@@ -1,102 +1,13 @@
-package com.colofabrix.scala.beesight.model
+package com.colofabrix.scala.beesight.model.formats
 
 import cats.data.NonEmptyList
 import cats.implicits.*
+import com.colofabrix.scala.beesight.model.*
+import com.colofabrix.scala.beesight.model.derivation.given
 import fs2.data.csv.*
 import fs2.data.csv.generic.semiauto.*
 import java.time.*
 import scala.util.Try
-
-/**
- * Coordinates (latitude and longitude)
- *
- * @param lat Latitude (degrees)
- * @param lon Longitude (degrees)
- */
-final case class Coordinates(
-  lat: Double = 0.0,
-  lon: Double = 0.0,
-)
-
-/**
- * Altitude measurements
- *
- * @param barometric Barometric altitude (m)
- * @param gps GPS altitude (m)
- */
-final case class Altitude(
-  barometric: Double = 0.0,
-  gps: Double = 0.0,
-)
-
-/**
- * Motion data
- *
- * @param speed Horizontal speed (likely km/h)
- * @param sink Vertical speed (likely m/s, negative during descent)
- * @param heading Direction of travel in degrees (0-360, where 0/360 is North)
- * @param backupSink Backup vertical speed calculation (likely m/s)
- */
-final case class Motion(
-  speed: Double = 0.0,
-  sink: Double = 0.0,
-  heading: Double = 0.0,
-  backupSink: Double = 0.0,
-)
-
-/**
- * Quaternion orientation data
- *
- * @param w Quaternion w component
- * @param x Quaternion x component
- * @param y Quaternion y component
- * @param z Quaternion z component
- */
-final case class Quaternion(
-  w: Double = 0.0,
-  x: Double = 0.0,
-  y: Double = 0.0,
-  z: Double = 0.0,
-)
-
-/**
- * Acceleration data (likely g-force)
- *
- * @param x Acceleration on X axis
- * @param y Acceleration on Y axis
- * @param z Acceleration on Z axis
- */
-final case class Acceleration(
-  x: Double = 0.0,
-  y: Double = 0.0,
-  z: Double = 0.0,
-)
-
-/**
- * Angular velocity data (likely deg/s)
- *
- * @param x Angular velocity on X axis
- * @param y Angular velocity on Y axis
- * @param z Angular velocity on Z axis
- */
-final case class AngularVelocity(
-  x: Double = 0.0,
-  y: Double = 0.0,
-  z: Double = 0.0,
-)
-
-/**
- * Metadata information
- *
- * @param mark Event marker flag
- * @param numSat Number of GPS satellites being tracked
- * @param msg Message counter
- */
-final case class Metadata(
-  mark: Int = 0,
-  numSat: Int = 0,
-  msg: Int = 0,
-)
 
 /**
  * Airlog One Data Point
@@ -112,24 +23,39 @@ final case class Metadata(
  */
 final case class AirlogPoint(
   time: Instant,
-  coordinates: Coordinates = Coordinates(),
-  altitude: Altitude = Altitude(),
-  motion: Motion = Motion(),
-  orientation: Quaternion = Quaternion(),
-  acceleration: Acceleration = Acceleration(),
-  angularVelocity: AngularVelocity = AngularVelocity(),
-  metadata: Metadata = Metadata(),
-  extra: List[(String, String)] = List.empty,
+  coordinates: Coordinates,
+  altitude: Altitude,
+  motion: Motion,
+  orientation: Quaternion,
+  acceleration: Acceleration,
+  angularVelocity: AngularVelocity,
+  metadata: Metadata,
+  extra: List[(String, String)],
 )
 
 object AirlogPoint {
+
+  given airlogFormatAdapter: FileFormatAdapter[AirlogPoint] with {
+
+    def toInputFlightPoint(point: AirlogPoint): InputFlightRow[AirlogPoint] = {
+      val headingRad = Math.toRadians(point.motion.heading)
+      InputFlightRow(
+        time = point.time,
+        altitude = point.altitude.gps,
+        northSpeed = point.motion.speed * Math.cos(headingRad),
+        eastSpeed = point.motion.speed * Math.sin(headingRad),
+        verticalSpeed = point.motion.sink,
+        source = point,
+      )
+    }
+
+  }
 
   given csvRowDecoder: CsvRowDecoder[AirlogPoint, String] with {
 
     def apply(row: CsvRow[String]): DecoderResult[AirlogPoint] =
       for
-        time     <- row.as[String]("time")
-        javaTime <- decodeInstant(time)
+        javaTime <- row.as[Instant]("time")
         lat      <- row.as[Double]("lat")
         lon      <- row.as[Double]("lon")
         alt      <- row.as[Double]("alt")
@@ -160,6 +86,7 @@ object AirlogPoint {
         acceleration = Acceleration(ax, ay, az),
         angularVelocity = AngularVelocity(gx, gy, gz),
         metadata = Metadata(mark, numSat, msg),
+        extra = List.empty,
       )
 
   }
@@ -200,14 +127,100 @@ object AirlogPoint {
 
   }
 
-  private def decodeInstant(value: String): DecoderResult[Instant] =
-    Try(Instant.parse(value))
-      .toEither
-      .leftMap(t => new DecoderError(t.getMessage()))
-
   private def formatDouble(value: Double, precision: Int): String =
     BigDecimal(value)
       .setScale(precision, BigDecimal.RoundingMode.HALF_UP)
       .toString()
 
 }
+
+/**
+ * Coordinates (latitude and longitude)
+ *
+ * @param lat Latitude (degrees)
+ * @param lon Longitude (degrees)
+ */
+final case class Coordinates(
+  lat: Double,
+  lon: Double,
+)
+
+/**
+ * Altitude measurements
+ *
+ * @param barometric Barometric altitude (m)
+ * @param gps GPS altitude (m)
+ */
+final case class Altitude(
+  barometric: Double,
+  gps: Double,
+)
+
+/**
+ * Motion data
+ *
+ * @param speed Horizontal speed (likely km/h)
+ * @param sink Vertical speed (likely m/s, negative during descent)
+ * @param heading Direction of travel in degrees (0-360, where 0/360 is North)
+ * @param backupSink Backup vertical speed calculation (likely m/s)
+ */
+final case class Motion(
+  speed: Double,
+  sink: Double,
+  heading: Double,
+  backupSink: Double,
+)
+
+/**
+ * Quaternion orientation data
+ *
+ * @param w Quaternion w component
+ * @param x Quaternion x component
+ * @param y Quaternion y component
+ * @param z Quaternion z component
+ */
+final case class Quaternion(
+  w: Double,
+  x: Double,
+  y: Double,
+  z: Double,
+)
+
+/**
+ * Acceleration data (likely g-force)
+ *
+ * @param x Acceleration on X axis
+ * @param y Acceleration on Y axis
+ * @param z Acceleration on Z axis
+ */
+final case class Acceleration(
+  x: Double,
+  y: Double,
+  z: Double,
+)
+
+/**
+ * Angular velocity data (likely deg/s)
+ *
+ * @param x Angular velocity on X axis
+ * @param y Angular velocity on Y axis
+ * @param z Angular velocity on Z axis
+ */
+final case class AngularVelocity(
+  x: Double,
+  y: Double,
+  z: Double,
+)
+
+/**
+ * Metadata information
+ *
+ * @param mark Event marker flag
+ * @param numSat Number of GPS satellites being tracked
+ * @param msg Message counter
+ */
+final case class Metadata(
+  mark: Int,
+  numSat: Int,
+  msg: Int,
+)
