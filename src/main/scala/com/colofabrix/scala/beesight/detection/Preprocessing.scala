@@ -19,7 +19,7 @@ object Preprocessing {
     if dt <= 0 then
       rawPoint
     else
-      val maxDeltaSpeed = config.MaxAcceleration * dt
+      val maxDeltaSpeed = config.ClipAcceleration * dt
 
       // Clip vertical speed based on max allowed acceleration
       val clippedVertSpeed =

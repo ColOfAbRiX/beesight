@@ -4,6 +4,7 @@ import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.colofabrix.scala.beesight.model.FlightPhase
 import com.colofabrix.scala.beesight.model.FlightEvents
 import com.colofabrix.scala.beesight.model.InputFlightRow
+import com.colofabrix.scala.beesight.model.OutputFlightRow
 
 /**
  * Complete state of the streaming detection at each point.
@@ -30,6 +31,17 @@ private[detection] object StreamState {
       detectedPhase = FlightPhase.BeforeTakeoff,
       detectedStages = FlightEvents.empty,
       takeoffMissing = false,
+    )
+
+  def toOutputFlightRow[A](state: StreamState[A]): OutputFlightRow[A] =
+    OutputFlightRow(
+      phase = state.detectedPhase,
+      takeoff = state.detectedStages.takeoff,
+      freefall = state.detectedStages.freefall,
+      canopy = state.detectedStages.canopy,
+      landing = state.detectedStages.landing,
+      lastPoint = state.detectedStages.lastPoint,
+      source = state.inputPoint.source,
     )
 
 }

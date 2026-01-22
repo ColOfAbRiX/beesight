@@ -8,7 +8,6 @@ package com.colofabrix.scala.beesight.model
  * @param canopy The detected canopy deployment point (if found)
  * @param landing The detected landing point (if found)
  * @param lastPoint Index of the last processed data point
- * @param isValid True if this appears to be a valid skydiving jump (freefall detected)
  */
 final case class FlightEvents(
   takeoff: Option[FlightPoint],
@@ -16,7 +15,6 @@ final case class FlightEvents(
   canopy: Option[FlightPoint],
   landing: Option[FlightPoint],
   lastPoint: Long,
-  isValid: Boolean,
 )
 
 object FlightEvents {
@@ -31,7 +29,6 @@ object FlightEvents {
       canopy = None,
       landing = None,
       lastPoint = -1,
-      isValid = false,
     )
 
 }

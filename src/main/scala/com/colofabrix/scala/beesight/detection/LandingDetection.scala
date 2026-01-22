@@ -13,34 +13,41 @@ private[detection] object LandingDetection {
    * Detect landing phase and record the landing point if conditions are met.
    */
   def detect(state: StreamState[?], currentPoint: FlightPoint, config: DetectionConfig): Option[DetectionResult] =
-    if state.detectedStages.landing.isDefined then
-      None
-    else if state.detectedStages.canopy.isEmpty then
-      None
-    else if isLandingCondition(state, config) then
-      val altitudeOk =
-        state.detectedStages.takeoff match {
-          case Some(takeoff) => Math.abs(state.kinematics.altitude - takeoff.altitude) < config.LandingAltitudeTolerance
-          case None          => true
-        }
+    val detectLanding =
+      !state.detectedStages.landing.isDefined &&
+      !state.detectedStages.canopy.isEmpty &&
+      isLandingCondition(state, config)
 
-      val belowCanopy =
-        state
-          .detectedStages
-          .canopy
-          .map(_.altitude)
-          .forall(cAlt => state.kinematics.altitude < cAlt)
+    lazy val altitudeOk =
+      state.detectedStages.takeoff match {
+        case Some(takeoff) => Math.abs(state.kinematics.altitude - takeoff.altitude) < config.LandingAltitudeTolerance
+        case None          => true
+      }
 
-      val afterCanopy =
-        state
-          .detectedStages
-          .canopy
-          .map(_.index)
-          .forall(state.dataPointIndex > _)
+    lazy val belowCanopy =
+      state
+        .detectedStages
+        .canopy
+        .map(_.altitude)
+        .forall(cAlt => state.kinematics.altitude < cAlt)
 
-      Option.when(altitudeOk && belowCanopy && afterCanopy)(buildResult(currentPoint))
-    else
-      None
+    lazy val afterCanopy =
+      state
+        .detectedStages
+        .canopy
+        .map(_.index)
+        .forall(state.dataPointIndex > _)
+
+    lazy val shouldRecord = altitudeOk && belowCanopy && afterCanopy
+
+    lazy val inflectionPoint =
+      Calculations.findInflectionPoint(
+        state.windows.backtrackVerticalSpeed.toVector,
+        currentPoint,
+        isRising = false,
+      )
+
+    Option.when(detectLanding && shouldRecord)(buildResult(inflectionPoint))
 
   private def isLandingCondition(state: StreamState[?], config: DetectionConfig): Boolean =
     lazy val windowStable =
@@ -72,7 +79,6 @@ private[detection] object LandingDetection {
         canopy = None,
         landing = Some(point),
         lastPoint = point.index,
-        isValid = true,
       ),
       missedTakeoff = false,
     )

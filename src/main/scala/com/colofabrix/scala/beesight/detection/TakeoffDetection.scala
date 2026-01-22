@@ -14,16 +14,22 @@ private[detection] object TakeoffDetection {
    * Detect takeoff phase and record the takeoff point if conditions are met.
    */
   def detect(state: StreamState[?], currentPoint: FlightPoint, config: DetectionConfig): Option[DetectionResult] =
-    if state.detectedStages.takeoff.isDefined then
-      None
-    else if isTakeoffCondition(state.kinematics, config) then
-      val shouldRecord =
-        !state.takeoffMissing &&
-        state.kinematics.altitude < config.TakeoffMaxAltitude
+    val detectTakeoff =
+      !state.detectedStages.takeoff.isDefined &&
+      isTakeoffCondition(state.kinematics, config)
 
-      Option.when(shouldRecord)(buildResult(currentPoint))
-    else
-      None
+    lazy val shouldRecord =
+      !state.takeoffMissing &&
+      state.kinematics.altitude < config.TakeoffMaxAltitude
+
+    lazy val inflectionPoint =
+      Calculations.findInflectionPoint(
+        state.windows.backtrackVerticalSpeed.toVector,
+        currentPoint,
+        isRising = true,
+      )
+
+    Option.when(detectTakeoff && shouldRecord)(buildResult(inflectionPoint))
 
   private def isTakeoffCondition(kinematics: Kinematics, config: DetectionConfig): Boolean =
     kinematics.horizontalSpeed > config.TakeoffSpeedThreshold &&
@@ -38,7 +44,6 @@ private[detection] object TakeoffDetection {
         canopy = None,
         landing = None,
         lastPoint = point.index,
-        isValid = true,
       ),
       missedTakeoff = false,
     )

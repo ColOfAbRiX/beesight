@@ -43,7 +43,6 @@ class FlightStagesDetectionSpec extends AnyWordSpec with Matchers with IOConfigV
             canopy = parseOptLong(cols.lift(header("canopy_pt"))).map(FlightPoint(_, 0.0)),
             landing = parseOptLong(cols.lift(header("landing_pt"))).map(FlightPoint(_, 0.0)),
             lastPoint = 0,
-            isValid = true,
           )
 
         val filePath = flysightDir.resolve(filename)
@@ -74,7 +73,6 @@ class FlightStagesDetectionSpec extends AnyWordSpec with Matchers with IOConfigV
             canopy = output.canopy,
             landing = output.landing,
             lastPoint = output.lastPoint,
-            isValid = output.isValid,
           )
         }
       }

@@ -9,16 +9,14 @@ package com.colofabrix.scala.beesight.model
  * @param canopy The detected canopy deployment point (if found so far)
  * @param landing The detected landing point (if found so far)
  * @param lastPoint Index of the last processed data point
- * @param isValid True if this appears to be a valid skydiving jump (freefall detected)
  * @param source The original source data point
  */
 final case class OutputFlightRow[A](
-  phase: FlightPhase,   // TODO: Remove this, it's useless and the streaming phase can be detected checking the other members
+  phase: FlightPhase,
   takeoff: Option[FlightPoint],
   freefall: Option[FlightPoint],
   canopy: Option[FlightPoint],
   landing: Option[FlightPoint],
   lastPoint: Long,
-  isValid: Boolean,
   source: A,
 )

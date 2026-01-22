@@ -29,7 +29,6 @@ object ResultPrinter {
       canopy = point.canopy,
       landing = point.landing,
       lastPoint = point.lastPoint,
-      isValid = point.isValid,
     )
 
   // ─── Show Instances ────────────────────────────────────────────────────────────
@@ -50,6 +49,6 @@ object ResultPrinter {
          |    Freefall: ${flightPoints.freefall.show}
          |    Canopy:   ${flightPoints.canopy.show}
          |    Landing:  ${flightPoints.landing.show}
-         |    Valid:    ${if flightPoints.isValid then s"${GREEN}Yes${RESET}" else s"${RED}No${RESET}"}""".stripMargin
+         |""".stripMargin
 
 }

@@ -20,10 +20,8 @@ final class DataCutter private (config: Config) {
         .zipWithIndex
         .mapAccumulate(CutState[A]()) {
           case (state, ((point, Some(_)), index)) =>
-            // Process each element
             processPoint(state, point, index)
           case (state, ((point, None), index)) =>
-            // Emit potential buffer before the last element
             val (newState, toEmit) = processPoint(state, point, index)
             (newState, newState.preBuffer.toVector ++ toEmit)
         }
@@ -47,17 +45,14 @@ final class DataCutter private (config: Config) {
         .map(_.index)
         .exists(t => index >= Math.max(t - config.bufferPoints, 0))
 
-    if !point.isValid then
-      // Transition to Invalid: emit buffered elements + current
+    if !point.freefall.isDefined then
       val newState = CutState[A](phase = CutPhase.InvalidFile, preBuffer = Queue.empty)
       (newState, state.preBuffer.toVector :+ point)
     else if takeoffDetected then
-      // Transition to InFlight: emit buffered elements + current
       val newState   = CutState[A](phase = CutPhase.InFlight, preBuffer = Queue.empty, afterLandingCount = 0)
       val emitPoints = state.preBuffer.take(config.bufferPoints).toVector :+ point
       (newState, state.preBuffer.toVector :+ point)
     else
-      // Keep buffering
       val updatedBuffer = state.preBuffer.enqueue(point)
       val newState      = state.copy(preBuffer = updatedBuffer)
       (newState, Vector.empty)
@@ -70,20 +65,16 @@ final class DataCutter private (config: Config) {
         .exists(l => index > l)
 
     if isAfterLanding then
-      // Transition to AfterLanding
       val newState = CutState[A](phase = CutPhase.AfterLanding, preBuffer = Queue.empty, afterLandingCount = 1)
       (newState, Vector(point))
     else
-      // Still in flight - emit
       (state, Vector(point))
 
   private def handleAfterLanding[A](state: CutState[A], point: OutputFlightRow[A]): StreamState[A] =
     if state.afterLandingCount >= config.bufferPoints then
-      // Done - stop emitting
       val newState = state.copy(phase = CutPhase.Done)
       (newState, Vector.empty)
     else
-      // Still emitting post-landing buffer
       val newState = state.copy(afterLandingCount = state.afterLandingCount + 1)
       (newState, Vector(point))
 

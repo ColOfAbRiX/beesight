@@ -7,7 +7,7 @@ import com.colofabrix.scala.beesight.model.*
 /**
  * Result of phase detection for a single point.
  */
-private[detection] final case class DetectionResult(
+final private[detection] case class DetectionResult(
   currentPhase: FlightPhase,
   events: FlightEvents,
   missedTakeoff: Boolean,
@@ -21,8 +21,9 @@ object DetectionResult {
 
     def combine(x: DetectionResult, y: DetectionResult): DetectionResult =
       val (first, second) = if x.events.lastPoint <= y.events.lastPoint then (x, y) else (y, x)
-      val mergedEvents    = first.events |+| second.events
-      val missedNow       = mergedEvents.freefall.isDefined && mergedEvents.takeoff.isEmpty
+
+      val mergedEvents = first.events |+| second.events
+      val missedNow    = mergedEvents.freefall.isDefined && mergedEvents.takeoff.isEmpty
 
       DetectionResult(
         currentPhase = if x.currentPhase.sequence > y.currentPhase.sequence then x.currentPhase else y.currentPhase,
@@ -33,7 +34,7 @@ object DetectionResult {
 
   given Monoid[FlightEvents] with {
     def empty: FlightEvents =
-      FlightEvents(None, None, None, None, 0, true)
+      FlightEvents.empty
 
     def combine(x: FlightEvents, y: FlightEvents): FlightEvents =
       val (first, second) = if x.lastPoint < y.lastPoint then (x, y) else (y, x)
@@ -43,7 +44,6 @@ object DetectionResult {
         canopy = first.canopy orElse second.canopy,
         landing = first.landing orElse second.landing,
         lastPoint = second.lastPoint,
-        isValid = first.isValid && second.isValid,
       )
   }
 

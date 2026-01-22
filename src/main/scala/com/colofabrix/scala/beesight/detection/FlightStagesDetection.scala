@@ -28,23 +28,14 @@ object FlightStagesDetection {
             Some(processPoint(i, dataPoint, prevState))
         }
         .collect {
-          case Some(state) =>
-            OutputFlightRow(
-              phase = state.detectedPhase,
-              takeoff = state.detectedStages.takeoff,
-              freefall = state.detectedStages.freefall,
-              canopy = state.detectedStages.canopy,
-              landing = state.detectedStages.landing,
-              lastPoint = state.detectedStages.lastPoint,
-              isValid = state.detectedStages.isValid,
-              source = state.inputPoint.source,
-            )
+          case Some(state) => StreamState.toOutputFlightRow(state)
         }
 
   private def processPoint[A](i: Long, dataPoint: InputFlightRow[A], prevState: StreamState[A]): StreamState[A] =
     val preprocessedPoint = Preprocessing.process(dataPoint, prevState, config)
-    val kinematics        = Kinematics.compute(preprocessedPoint, prevState)
-    val windows           = Windows.enqueue(prevState.windows, kinematics, i)
+
+    val kinematics = Kinematics.compute(preprocessedPoint, prevState)
+    val windows    = Windows.enqueue(prevState.windows, kinematics, i)
 
     val intermediateState =
       prevState.copy(

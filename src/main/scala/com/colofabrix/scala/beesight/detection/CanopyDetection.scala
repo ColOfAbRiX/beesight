@@ -13,35 +13,42 @@ private[detection] object CanopyDetection {
    * Detect canopy phase and record the deployment point if conditions are met.
    */
   def detect(state: StreamState[?], currentPoint: FlightPoint, config: DetectionConfig): Option[DetectionResult] =
-    if state.detectedStages.canopy.isDefined then
-      None
-    else if state.detectedStages.freefall.isEmpty then
-      None
-    else if isCanopyCondition(state.kinematics, config) then
-      val aboveTakeoff =
-        state
-          .detectedStages
-          .takeoff
-          .map(_.altitude)
-          .forall(tAlt => state.kinematics.altitude > tAlt)
+    val detectCanopy =
+      !state.detectedStages.canopy.isDefined &&
+      !state.detectedStages.freefall.isEmpty &&
+      isCanopyCondition(state.kinematics, config)
 
-      val belowFreefall =
-        state
-          .detectedStages
-          .freefall
-          .map(_.altitude)
-          .forall(fAlt => state.kinematics.altitude < fAlt)
+    lazy val aboveTakeoff =
+      state
+        .detectedStages
+        .takeoff
+        .map(_.altitude)
+        .forall(tAlt => state.kinematics.altitude > tAlt)
 
-      val afterFreefall =
-        state
-          .detectedStages
-          .freefall
-          .map(_.index)
-          .forall(state.dataPointIndex > _)
+    lazy val belowFreefall =
+      state
+        .detectedStages
+        .freefall
+        .map(_.altitude)
+        .forall(fAlt => state.kinematics.altitude < fAlt)
 
-      Option.when(aboveTakeoff && belowFreefall && afterFreefall)(buildResult(currentPoint))
-    else
-      None
+    lazy val afterFreefall =
+      state
+        .detectedStages
+        .freefall
+        .map(_.index)
+        .forall(state.dataPointIndex > _)
+
+    lazy val shouldRecord = aboveTakeoff && belowFreefall && afterFreefall
+
+    lazy val inflectionPoint =
+      Calculations.findInflectionPoint(
+        state.windows.backtrackVerticalSpeed.toVector,
+        currentPoint,
+        isRising = false,
+      )
+
+    Option.when(detectCanopy && shouldRecord)(buildResult(inflectionPoint))
 
   private def isCanopyCondition(kinematics: Kinematics, config: DetectionConfig): Boolean =
     kinematics.smoothedVerticalSpeed > 0 &&
@@ -56,7 +63,6 @@ private[detection] object CanopyDetection {
         canopy = Some(point),
         landing = None,
         lastPoint = point.index,
-        isValid = true,
       ),
       missedTakeoff = false,
     )

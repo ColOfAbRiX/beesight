@@ -13,32 +13,33 @@ private[detection] object FreefallDetection {
    * Detect freefall phase and record the exit point if conditions are met.
    */
   def detect(state: StreamState[?], currentPoint: FlightPoint, config: DetectionConfig): Option[DetectionResult] =
-    if state.detectedStages.freefall.isDefined then
-      None
-    else if isFreefallCondition(state.kinematics, config) then
-      val altitudeValid =
-        state.detectedStages.takeoff match {
-          case Some(takeoff) => state.kinematics.altitude > takeoff.altitude + config.FreefallMinAltitudeAbove
-          case None          => state.kinematics.altitude > config.FreefallMinAltitudeAbsolute
-        }
+    val detectFreefall =
+      !state.detectedStages.freefall.isDefined &&
+      isFreefallCondition(state.kinematics, config)
 
-      val afterTakeoff =
-        state
-          .detectedStages
-          .takeoff
-          .map(_.index)
-          .forall(state.dataPointIndex > _)
+    lazy val altitudeValid =
+      state.detectedStages.takeoff match {
+        case Some(takeoff) => state.kinematics.altitude > takeoff.altitude + config.FreefallMinAltitudeAbove
+        case None          => state.kinematics.altitude > config.FreefallMinAltitudeAbsolute
+      }
 
-      lazy val inflectionPoint =
-        Calculations.findInflectionPoint(
-          state.windows.backtrackVerticalSpeed.toVector,
-          currentPoint,
-          isRising = true,
-        )
+    lazy val afterTakeoff =
+      state
+        .detectedStages
+        .takeoff
+        .map(_.index)
+        .forall(state.dataPointIndex > _)
 
-      Option.when(altitudeValid && afterTakeoff)(buildResult(inflectionPoint))
-    else
-      None
+    lazy val shouldRecord = altitudeValid && afterTakeoff
+
+    lazy val inflectionPoint =
+      Calculations.findInflectionPoint(
+        state.windows.backtrackVerticalSpeed.toVector,
+        currentPoint,
+        isRising = true,
+      )
+
+    Option.when(detectFreefall && shouldRecord)(buildResult(inflectionPoint))
 
   private def isFreefallCondition(kinematics: Kinematics, config: DetectionConfig): Boolean =
     val byThreshold = kinematics.smoothedVerticalSpeed > config.FreefallVerticalSpeedThreshold
@@ -58,7 +59,6 @@ private[detection] object FreefallDetection {
         canopy = None,
         landing = None,
         lastPoint = point.index,
-        isValid = true,
       ),
       missedTakeoff = false,
     )

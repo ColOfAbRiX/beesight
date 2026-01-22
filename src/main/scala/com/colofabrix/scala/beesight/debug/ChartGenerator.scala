@@ -68,7 +68,6 @@ object ChartGenerator {
       canopy = point.canopy,
       landing = point.landing,
       lastPoint = point.lastPoint,
-      isValid = point.isValid,
     )
 
   private def computeChartPath(outputCsvFile: Path): IOConfig[Path] =
@@ -125,7 +124,6 @@ object ChartGenerator {
        |      <li><strong>Canopy:</strong> ${formatStage(stages.canopy)}</li>
        |      <li><strong>Landing:</strong> ${formatStage(stages.landing)}</li>
        |    </ul>
-       |    <p><strong>Valid Jump:</strong> ${if stages.isValid then "Yes" else "No"}</p>
        |  </div>
        |  <script>
        |    var altitudeTrace = {
