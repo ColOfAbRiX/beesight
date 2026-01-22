@@ -2,16 +2,16 @@ package com.colofabrix.scala.beesight.detection
 
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
-import com.colofabrix.scala.beesight.config.Config
 import com.colofabrix.scala.beesight.*
+import com.colofabrix.scala.beesight.config.Config
 import com.colofabrix.scala.beesight.files.CsvFileOps
 import com.colofabrix.scala.beesight.model.*
+import com.colofabrix.scala.beesight.model.formats.FlysightPoint
 import java.nio.file.Paths
 import org.scalatest.Inspectors.forEvery
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import scala.io.Source
-import com.colofabrix.scala.beesight.model.formats.FlysightPoint
 
 class FlightStagesDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues with FlightStagesMatchers {
 
@@ -38,10 +38,10 @@ class FlightStagesDetectionSpec extends AnyWordSpec with Matchers with IOConfigV
 
         val expected =
           FlightEvents(
-            takeoff = parseOptLong(cols.lift(header("takeoff_pt"))).map(FlightStagePoint(_, 0.0)),
-            freefall = parseOptLong(cols.lift(header("freefall_pt"))).map(FlightStagePoint(_, 0.0)),
-            canopy = parseOptLong(cols.lift(header("canopy_pt"))).map(FlightStagePoint(_, 0.0)),
-            landing = parseOptLong(cols.lift(header("landing_pt"))).map(FlightStagePoint(_, 0.0)),
+            takeoff = parseOptLong(cols.lift(header("takeoff_pt"))).map(FlightPoint(_, 0.0)),
+            freefall = parseOptLong(cols.lift(header("freefall_pt"))).map(FlightPoint(_, 0.0)),
+            canopy = parseOptLong(cols.lift(header("canopy_pt"))).map(FlightPoint(_, 0.0)),
+            landing = parseOptLong(cols.lift(header("landing_pt"))).map(FlightPoint(_, 0.0)),
             lastPoint = 0,
             isValid = true,
           )

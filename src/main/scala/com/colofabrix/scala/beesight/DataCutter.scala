@@ -44,7 +44,7 @@ final class DataCutter private (config: Config) {
     val takeoffDetected =
       point
         .takeoff
-        .map(_.lineIndex)
+        .map(_.index)
         .exists(t => index >= Math.max(t - config.bufferPoints, 0))
 
     if !point.isValid then
@@ -66,7 +66,7 @@ final class DataCutter private (config: Config) {
     val isAfterLanding =
       point
         .landing
-        .map(_.lineIndex)
+        .map(_.index)
         .exists(l => index > l)
 
     if isAfterLanding then

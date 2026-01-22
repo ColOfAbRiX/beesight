@@ -51,13 +51,13 @@ object ResultsSummary {
         case Some(p) =>
           List(
             filename,
-            p.takeoff.map(_.lineIndex.toString).getOrElse(""),
+            p.takeoff.map(_.index.toString).getOrElse(""),
             p.takeoff.map(s => formatDouble(s.altitude)).getOrElse(""),
-            p.freefall.map(_.lineIndex.toString).getOrElse(""),
+            p.freefall.map(_.index.toString).getOrElse(""),
             p.freefall.map(s => formatDouble(s.altitude)).getOrElse(""),
-            p.canopy.map(_.lineIndex.toString).getOrElse(""),
+            p.canopy.map(_.index.toString).getOrElse(""),
             p.canopy.map(s => formatDouble(s.altitude)).getOrElse(""),
-            p.landing.map(_.lineIndex.toString).getOrElse(""),
+            p.landing.map(_.index.toString).getOrElse(""),
             p.landing.map(s => formatDouble(s.altitude)).getOrElse(""),
           )
         case None =>

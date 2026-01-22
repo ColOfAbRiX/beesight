@@ -3,32 +3,17 @@ package com.colofabrix.scala.beesight.detection
 import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.colofabrix.scala.beesight.model.InputFlightRow
 import java.time.Duration
+import com.colofabrix.scala.beesight.detection.model.StreamState
 
 /**
  * Preprocessing functions to clean and validate input data before detection.
- * Clips implausible values based on physical limits (max acceleration).
- *
- * Has access to the full previous StreamState which includes:
- * - Previous raw values (kinematics.verticalSpeed, etc.)
- * - Previous smoothed values (kinematics.smoothedVerticalSpeed)
- * - Windows for potential stateful processing
  */
 object Preprocessing {
 
   /**
    * Preprocess raw input data to remove spikes and anomalies.
-   * Uses previous state to detect implausible changes based on max acceleration.
-   *
-   * @param rawPoint The current raw input point
-   * @param prevState The previous StreamState containing all previous values and windows
-   * @param config Detection configuration with preprocessing parameters
-   * @return A new InputFlightPoint with cleaned values
    */
-  def preprocess[A](
-    rawPoint: InputFlightRow[A],
-    prevState: StreamState[A],
-    config: DetectionConfig,
-  ): InputFlightRow[A] =
+  def process[A](rawPoint: InputFlightRow[A], prevState: StreamState[A], config: DetectionConfig): InputFlightRow[A] =
     val dt = durationSeconds(prevState.kinematics.time, rawPoint.time)
 
     if dt <= 0 then
@@ -73,9 +58,6 @@ object Preprocessing {
         altitude = clippedAltitude,
       )
 
-  /**
-   * Clips a value to within maxDelta of the previous value.
-   */
   private def clipValue(current: Double, previous: Double, maxDelta: Double): Double =
     val delta = current - previous
 
@@ -84,9 +66,6 @@ object Preprocessing {
     else
       current
 
-  /**
-   * Calculates duration between two instants in seconds.
-   */
   private def durationSeconds(from: java.time.Instant, to: java.time.Instant): Double =
     Duration.between(from, to).toMillis / 1000.0
 

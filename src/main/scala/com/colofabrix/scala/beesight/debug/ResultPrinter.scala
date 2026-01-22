@@ -41,7 +41,7 @@ object ResultPrinter {
     value => f"${value}%.2f"
 
   given nicePoint: Show[FlightPoint] =
-    point => s"point ${point.lineIndex.show} at altitude ${point.altitude.show}"
+    point => s"point ${point.index.show} at altitude ${point.altitude.show}"
 
   given niceFlightPoints: Show[FlightEvents] =
     flightPoints =>

@@ -1,6 +1,7 @@
 package com.colofabrix.scala.beesight.detection
 
 import com.colofabrix.scala.beesight.config.DetectionConfig
+import com.colofabrix.scala.beesight.detection.model.*
 import com.colofabrix.scala.beesight.model.*
 
 /**
@@ -10,56 +11,36 @@ import com.colofabrix.scala.beesight.model.*
 private[detection] object TakeoffDetection {
 
   /**
-   * Result of takeoff detection for a single point.
-   *
-   * @param phase The detected flight phase after this point
-   * @param point The takeoff point if detected during this transition
-   */
-  case class DetectionResult(
-    phase: FlightPhase,
-    point: Option[FlightPoint],
-  )
-
-  /**
    * Detect takeoff phase and record the takeoff point if conditions are met.
-   * Note: Freefall takes priority over takeoff - if freefall conditions are met, skip takeoff.
    */
-  def detect(state: StreamState[?], currentPoint: FlightPoint, config: DetectionConfig): DetectionResult =
+  def detect(state: StreamState[?], currentPoint: FlightPoint, config: DetectionConfig): Option[DetectionResult] =
     if state.detectedStages.takeoff.isDefined then
-      DetectionResult(state.detectedPhase, state.detectedStages.takeoff)
-
-    else if state.detectedPhase.ordinal > FlightPhase.Takeoff.ordinal then
-      DetectionResult(state.detectedPhase, None)
-
-    // Freefall takes priority over takeoff (as in original detectFlightPhase)
-    else if FreefallDetection.isFreefallCondition(state.kinematics, config) then
-      DetectionResult(state.detectedPhase, None)
-
+      None
     else if isTakeoffCondition(state.kinematics, config) then
       val shouldRecord =
         !state.takeoffMissing &&
         state.kinematics.altitude < config.TakeoffMaxAltitude
 
-      val recordedPoint = if shouldRecord then Some(currentPoint) else None
-
-      DetectionResult(FlightPhase.Takeoff, recordedPoint)
-
+      Option.when(shouldRecord)(buildResult(currentPoint))
     else
-      DetectionResult(state.detectedPhase, None)
+      None
 
   private def isTakeoffCondition(kinematics: Kinematics, config: DetectionConfig): Boolean =
     kinematics.horizontalSpeed > config.TakeoffSpeedThreshold &&
     kinematics.smoothedVerticalSpeed < config.TakeoffClimbRate
 
-  def checkMissedTakeoff[A](
-    prevState: StreamState[A],
-    point: InputFlightRow[A],
-    index: Long,
-    config: DetectionConfig,
-  ): Boolean =
-    if index == 0 then
-      point.altitude > config.TakeoffMaxAltitude && point.verticalSpeed < 0
-    else
-      prevState.takeoffMissing
+  private def buildResult(point: FlightPoint): DetectionResult =
+    DetectionResult(
+      currentPhase = FlightPhase.Takeoff,
+      events = FlightEvents(
+        takeoff = Some(point),
+        freefall = None,
+        canopy = None,
+        landing = None,
+        lastPoint = point.index,
+        isValid = true,
+      ),
+      missedTakeoff = false,
+    )
 
 }

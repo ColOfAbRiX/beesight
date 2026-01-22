@@ -23,10 +23,10 @@ trait FlightStagesMatchers {
     (obtained: FlightEvents) => {
       val fieldResults =
         List(
-          checkField("takeoff", obtained.takeoff.map(_.lineIndex), expected.takeoff.map(_.lineIndex)),
-          checkField("freefall", obtained.freefall.map(_.lineIndex), expected.freefall.map(_.lineIndex)),
-          checkField("canopy", obtained.canopy.map(_.lineIndex), expected.canopy.map(_.lineIndex)),
-          checkField("landing", obtained.landing.map(_.lineIndex), expected.landing.map(_.lineIndex)),
+          checkField("takeoff", obtained.takeoff.map(_.index), expected.takeoff.map(_.index)),
+          checkField("freefall", obtained.freefall.map(_.index), expected.freefall.map(_.index)),
+          checkField("canopy", obtained.canopy.map(_.index), expected.canopy.map(_.index)),
+          checkField("landing", obtained.landing.map(_.index), expected.landing.map(_.index)),
         )
 
       val failures = fieldResults.collect { case (name, Some(error)) => s"  $name: $error" }

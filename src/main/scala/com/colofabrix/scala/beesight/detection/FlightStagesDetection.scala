@@ -3,16 +3,10 @@ package com.colofabrix.scala.beesight.detection
 import cats.implicits.given
 import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.colofabrix.scala.beesight.model.*
+import com.colofabrix.scala.beesight.detection.model.*
 
 /**
  * Detects and analyses different stages of a flight based on time-series data.
- *
- * The detection pipeline follows these stages:
- * 1. Preprocessing: Clean raw data (clip implausible spikes)
- * 2. Kinematics computation: Calculate derived values (smoothed speed, acceleration)
- * 3. Windows update: Update sliding windows for various calculations
- * 4. Phase detection: Detect flight phase and record stage points
- * 5. State assembly: Build new stream state
  */
 object FlightStagesDetection {
 
@@ -31,7 +25,7 @@ object FlightStagesDetection {
           case (None, (firstDataPoint, i)) =>
             Some(StreamState.create(firstDataPoint, config))
           case (Some(prevState), (dataPoint, i)) =>
-            Some(detect(i, dataPoint, prevState))
+            Some(processPoint(i, dataPoint, prevState))
         }
         .collect {
           case Some(state) =>
@@ -47,20 +41,11 @@ object FlightStagesDetection {
             )
         }
 
-  private def detect[A](i: Long, dataPoint: InputFlightRow[A], prevState: StreamState[A]): StreamState[A] =
-    //  Stage 1: Preprocessing  //
-    val preprocessedPoint = Preprocessing.preprocess(dataPoint, prevState, config)
+  private def processPoint[A](i: Long, dataPoint: InputFlightRow[A], prevState: StreamState[A]): StreamState[A] =
+    val preprocessedPoint = Preprocessing.process(dataPoint, prevState, config)
+    val kinematics        = Kinematics.compute(preprocessedPoint, prevState)
+    val windows           = Windows.enqueue(prevState.windows, kinematics, i)
 
-    //  Stage 2: Compute kinematics //
-    val kinematics = Kinematics.compute(preprocessedPoint, prevState)
-
-    //  Stage 3: Update windows  //
-    val windows = Windows.update(prevState.windows, kinematics, i)
-
-    //  Stage 5: Phase detection  //
-    val currentPoint = FlightPoint(i, preprocessedPoint.altitude)
-
-    // Create intermediate state with updated kinematics and windows for detection
     val intermediateState =
       prevState.copy(
         inputPoint = preprocessedPoint,
@@ -69,19 +54,47 @@ object FlightStagesDetection {
         windows = windows,
       )
 
-    val detectionResult = PhaseDetection.detectAll(intermediateState, currentPoint, config)
-
-    //  Stage 6: Build new state  //
-    val takeoffMissing = TakeoffDetection.checkMissedTakeoff(prevState, preprocessedPoint, i, config)
+    val currentPoint    = FlightPoint(i, preprocessedPoint.altitude)
+    val detectionResult = detect(intermediateState, currentPoint)
 
     StreamState(
-      inputPoint = preprocessedPoint,
+      inputPoint = dataPoint,
       dataPointIndex = i,
       kinematics = kinematics,
       windows = windows,
-      detectedPhase = detectionResult.phase,
-      detectedStages = detectionResult.stages,
-      takeoffMissing = takeoffMissing,
+      detectedPhase = detectionResult.currentPhase,
+      detectedStages = detectionResult.events,
+      takeoffMissing = detectionResult.missedTakeoff,
     )
+
+  private def detect(state: StreamState[?], currentPoint: FlightPoint): DetectionResult =
+    val detectionResult =
+      state.detectedPhase match {
+        case FlightPhase.BeforeTakeoff =>
+          val tryFreefall = FreefallDetection.detect(state, currentPoint, config)
+          val tryTakeoff  = TakeoffDetection.detect(state, currentPoint, config)
+          tryFreefall orElse tryTakeoff
+
+        case FlightPhase.Takeoff =>
+          FreefallDetection.detect(state, currentPoint, config)
+
+        case FlightPhase.Freefall =>
+          CanopyDetection.detect(state, currentPoint, config)
+
+        case FlightPhase.Canopy =>
+          LandingDetection.detect(state, currentPoint, config)
+
+        case FlightPhase.Landing =>
+          None
+      }
+
+    val currentState =
+      DetectionResult(
+        currentPhase = state.detectedPhase,
+        events = state.detectedStages.copy(lastPoint = state.dataPointIndex),
+        missedTakeoff = state.takeoffMissing,
+      )
+
+    detectionResult.fold(currentState)(currentState |+| _)
 
 }

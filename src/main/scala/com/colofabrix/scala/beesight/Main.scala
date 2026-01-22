@@ -8,10 +8,10 @@ import com.colofabrix.scala.beesight.debug.*
 import com.colofabrix.scala.beesight.detection.*
 import com.colofabrix.scala.beesight.files.*
 import com.colofabrix.scala.beesight.model.*
+import com.colofabrix.scala.beesight.model.formats.FlysightPoint
 import com.colofabrix.scala.declinio.*
 import com.monovore.decline.Opts
 import java.nio.file.*
-import com.colofabrix.scala.beesight.model.formats.FlysightPoint
 
 object Main extends IODeclineReaderApp[Config] {
 
