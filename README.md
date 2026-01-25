@@ -22,12 +22,12 @@ parsing of Decline with the powerful effect management of Cats Effect.
 
 ## Motivation
 
-[Decline](https://ben.kirw.in/decline/) is a powerful and well written library but I personally
-find the `CommandApp` way of defining your application of placing the configuration and your main
-function in the constructor very awkward:
+[Decline](https://ben.kirw.in/decline/) is a powerful and well written library but, personally, I
+find the `CommandApp` way of defining your application, with the configuration and main function as
+constructor arguments, very awkward:
 
 ```scala
-object TailApp extends CommandApp(
+object SampleApp extends CommandApp(
   name = "tail",
   header = "Print the last few lines of one or more files.",
   main = (linesOrDefault, fileList).mapN { (n, files) =>
@@ -43,8 +43,8 @@ Add the following dependencies to your `build.sbt`:
 ```scala
 libraryDependencies ++= Seq(
   "com.colofabrix.scala" %% "declinio"    % "1.0.0",
-  "com.monovore"         %% "decline"     % <version>,  // Required peer dependency
-  "org.typelevel"        %% "cats-effect" % <version>,  // Required peer dependency
+  "com.monovore"         %% "decline"     % <version>,  // Required dependency
+  "org.typelevel"        %% "cats-effect" % <version>,  // Required dependency
 )
 ```
 
@@ -63,7 +63,11 @@ import com.colofabrix.scala.declinio.*
 import com.monovore.decline.*
 
 // Define your configuration case class
-case class Config(name: String, count: Int, verbose: Boolean)
+case class Config(
+  name: String,
+  count: Int,
+  verbose: Boolean
+)
 
 object MyApp extends IODeclineApp[Config] {
 
@@ -133,7 +137,10 @@ import cats.data.ReaderT
 import com.colofabrix.scala.declinio.*
 import com.monovore.decline.*
 
-case class AppConfig(apiUrl: String, timeout: Int)
+case class AppConfig(
+  apiUrl: String,
+  timeout: Int
+)
 
 object ReaderApp extends IODeclineReaderApp[AppConfig] {
 
@@ -271,68 +278,6 @@ A convenience trait for applications that don't need command-line arguments. Ext
 | Member        | Type           | Description                        |
 |---------------|----------------|------------------------------------|
 | `runNoConfig` | `IO[ExitCode]` | Main application logic (required)  |
-
-## Advanced Usage
-
-### Environment Variables
-
-Declinio supports environment variables through Decline's native functionality:
-
-```scala
-override def options: Opts[Config] =
-  val apiKey = Opts.env[String]("API_KEY", help = "API key for authentication")
-  val debug  = Opts.flag("debug", "Enable debug mode").orFalse
-  (apiKey, debug).mapN(Config.apply)
-```
-
-### Subcommands
-
-Use Decline's subcommand support:
-
-```scala
-sealed trait Command
-case class Add(item: String) extends Command
-case class Remove(id: Int) extends Command
-
-override def options: Opts[Command] =
-  val add =
-    Opts.subcommand("add", "Add a new item") {
-      Opts.argument[String]("item").map(Add.apply)
-    }
-
-  val remove =
-    Opts.subcommand("remove", "Remove an item") {
-      Opts.argument[Int]("id").map(Remove.apply)
-    }
-
-  add orElse remove
-```
-
-### Error Handling
-
-Leverage Cats Effect's error handling:
-
-```scala
-override def runWithConfig(config: Config): IO[ExitCode] =
-  myProgram(config).handleErrorWith { error =>
-    IO.errorln(s"Error: ${error.getMessage}").as(ExitCode.Error)
-  }
-```
-
-### Resource Management
-
-Use Cats Effect's resource management:
-
-```scala
-override def runWithConfig(config: Config): IO[ExitCode] =
-  Resource
-    .make(IO.println("Acquiring resource...") *> IO.pure("resource"))(
-      _ => IO.println("Releasing resource...")
-    )
-    .use { resource =>
-      IO.println(s"Using $resource").as(ExitCode.Success)
-    }
-```
 
 ## Contributing
 

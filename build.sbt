@@ -1,5 +1,4 @@
 import org.typelevel.scalacoptions.ScalacOptions
-import xerial.sbt.Sonatype._
 
 // Project Information
 
@@ -13,6 +12,12 @@ Global / run / fork              := true
 Global / onChangedBuildSource    := ReloadOnSourceChanges
 Global / tpolecatExcludeOptions ++= Set(ScalacOptions.warnUnusedLocals)
 Test / tpolecatScalacOptions     := Set.empty
+
+ThisBuild / publishTo := {
+  val centralSnapshots = "https://central.sonatype.com/repository/maven-snapshots/"
+  if (isSnapshot.value) Some("central-snapshots" at centralSnapshots)
+  else localStaging.value
+}
 
 lazy val root =
   project
@@ -59,15 +64,6 @@ lazy val publishSettings =
     ),
     pomIncludeRepository := { _ => false },
     publishMavenStyle    := true,
-    sonatypeProjectHosting := Some(
-      GitHubHosting("ColOfAbRiX", "declinio", "colofabrix@tin.it"),
-    ),
-    publishTo := {
-      if (isSnapshot.value)
-        Some(Opts.resolver.sonatypeOssSnapshots.head)
-      else
-        Some(Opts.resolver.sonatypeStaging)
-    },
 
     // Scaladoc settings
     Compile / doc / scalacOptions ++= Seq(
