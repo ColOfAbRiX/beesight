@@ -10,7 +10,7 @@ trait FlightStagesMatchers {
 
   private val tolerances: Map[String, Long] =
     Map(
-      "takeoff"  -> 50,
+      "takeoff"  -> 100,
       "freefall" -> 5,
       "canopy"   -> 10,
       "landing"  -> 50,

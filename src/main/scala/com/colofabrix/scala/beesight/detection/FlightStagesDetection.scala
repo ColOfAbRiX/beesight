@@ -27,8 +27,13 @@ object FlightStagesDetection {
           case (Some(prevState), (dataPoint, i)) =>
             Some(processPoint(i, dataPoint, prevState))
         }
-        .collect {
-          case Some(state) => StreamState.toOutputFlightRow(state)
+        .flatMap {
+          case Some(state) =>
+            val pendingOutputs = state.pendingStates.map(StreamState.toOutputFlightRow)
+            val currentOutput  = StreamState.toOutputFlightRow(state)
+            fs2.Stream.emits(pendingOutputs :+ currentOutput)
+          case None =>
+            fs2.Stream.empty
         }
 
   private def processPoint[A](i: Long, dataPoint: InputFlightRow[A], prevState: StreamState[A]): StreamState[A] =
@@ -38,11 +43,16 @@ object FlightStagesDetection {
     val windows    = Windows.enqueue(prevState.windows, kinematics, i)
 
     val intermediateState =
-      prevState.copy(
+      StreamState(
         inputPoint = preprocessedPoint,
         dataPointIndex = i,
         kinematics = kinematics,
         windows = windows,
+        detectedPhase = prevState.detectedPhase,
+        detectedStages = prevState.detectedStages,
+        takeoffMissing = prevState.takeoffMissing,
+        pendingStates = Vector.empty,
+        streamPhase = prevState.streamPhase,
       )
 
     val currentPoint    = FlightPoint(i, preprocessedPoint.altitude)
@@ -56,6 +66,8 @@ object FlightStagesDetection {
       detectedPhase = detectionResult.currentPhase,
       detectedStages = detectionResult.events,
       takeoffMissing = detectionResult.missedTakeoff,
+      pendingStates = Vector.empty,
+      streamPhase = prevState.streamPhase,
     )
 
   private def detect(state: StreamState[?], currentPoint: FlightPoint): DetectionResult =

@@ -49,7 +49,7 @@ class FlightStagesDetectionSpec extends AnyWordSpec with Matchers with IOConfigV
         val points   = CsvFileOps.readCsv[FlysightPoint](filePath)
         val result   = detectPoints(points).result()
 
-        withClue(s"INSPECTING FILE: $filename\n") {
+        withClue(s"\nInspecting file: $filename\n") {
           result.should(matchStages(expected))
         }
       }
