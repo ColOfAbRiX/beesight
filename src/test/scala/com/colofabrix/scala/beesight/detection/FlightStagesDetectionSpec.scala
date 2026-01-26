@@ -7,6 +7,7 @@ import com.colofabrix.scala.beesight.config.Config
 import com.colofabrix.scala.beesight.files.CsvFileOps
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.model.formats.FlysightPoint
+import java.io.File
 import java.nio.file.Paths
 import org.scalatest.Inspectors.forEvery
 import org.scalatest.matchers.should.Matchers
@@ -21,41 +22,65 @@ class FlightStagesDetectionSpec extends AnyWordSpec with Matchers with IOConfigV
   "FlightStagesDetection" should {
 
     "detect all flight stages correctly for untagged files" in {
-      val lines     = Source.fromFile(resultsFile.toFile).getLines().toList.filterNot(_.isBlank)
-      val header    = lines.head.split(",").zipWithIndex.toMap
-      val dataLines = lines.tail.filter(_.trim.nonEmpty)
+      val untaggedLines = loadSummary(resultsFile.toFile).filter(_.tag.isEmpty)
 
-      val untaggedLines =
-        dataLines.drop(1).filter { line =>
-          val cols = line.split(",", -1)
-          val tag  = cols.lift(header("tag")).getOrElse("").trim
-          tag.isEmpty
-        }
-
-      forEvery(untaggedLines) { line =>
-        val cols     = line.split(",", -1)
-        val filename = cols(header("filename"))
-
-        val expected =
-          FlightEvents(
-            takeoff = parseOptLong(cols.lift(header("takeoff_pt"))).map(FlightPoint(_, 0.0)),
-            freefall = parseOptLong(cols.lift(header("freefall_pt"))).map(FlightPoint(_, 0.0)),
-            canopy = parseOptLong(cols.lift(header("canopy_pt"))).map(FlightPoint(_, 0.0)),
-            landing = parseOptLong(cols.lift(header("landing_pt"))).map(FlightPoint(_, 0.0)),
-            lastPoint = 0,
-          )
-
+      forEvery(untaggedLines) { expected =>
+        val filename = expected.file.getName()
         val filePath = flysightDir.resolve(filename)
         val points   = CsvFileOps.readCsv[FlysightPoint](filePath)
         val result   = detectPoints(points).result()
 
         withClue(s"\nInspecting file: $filename\n") {
-          result.should(matchStages(expected))
+          result.should(matchStages(expected.toFlightEvents))
         }
       }
     }
 
   }
+
+  private final case class TestFileRow(
+    file: File,
+    takeoff: Option[FlightPoint],
+    freefall: Option[FlightPoint],
+    canopy: Option[FlightPoint],
+    landing: Option[FlightPoint],
+    tag: Option[String],
+  ) {
+    def toFlightEvents: FlightEvents =
+      FlightEvents(takeoff, freefall, canopy, landing, lastPoint = -1)
+  }
+
+  private def loadSummary(file: File): List[TestFileRow] =
+    val lines =
+      Source
+        .fromFile(resultsFile.toFile)
+        .getLines()
+        .toList
+        .filterNot(_.isBlank)
+
+    val header =
+      lines
+        .head
+        .split(",")
+        .zipWithIndex
+        .toMap
+
+    lines
+      .tail
+      .filter(_.trim.nonEmpty)
+      .map { line =>
+        val cols     = line.split(",", -1)
+        val filename = cols(header("filename"))
+
+        TestFileRow(
+          file = file,
+          takeoff = parseOptLong(cols.lift(header("takeoff_pt"))).map(FlightPoint(_, 0.0)),
+          freefall = parseOptLong(cols.lift(header("freefall_pt"))).map(FlightPoint(_, 0.0)),
+          canopy = parseOptLong(cols.lift(header("canopy_pt"))).map(FlightPoint(_, 0.0)),
+          landing = parseOptLong(cols.lift(header("landing_pt"))).map(FlightPoint(_, 0.0)),
+          tag = cols.lift(header("tag")),
+        )
+      }
 
   private def parseOptLong(value: Option[String]): Option[Long] =
     value.filter(_.trim.nonEmpty).map(_.trim.toLong)
