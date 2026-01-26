@@ -28,7 +28,6 @@ object ResultPrinter {
       freefall = point.freefall,
       canopy = point.canopy,
       landing = point.landing,
-      lastPoint = point.lastPoint,
     )
 
   // ─── Show Instances ────────────────────────────────────────────────────────────

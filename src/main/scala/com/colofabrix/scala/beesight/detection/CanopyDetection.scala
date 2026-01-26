@@ -1,70 +1,45 @@
 package com.colofabrix.scala.beesight.detection
 
-import com.colofabrix.scala.beesight.config.DetectionConfig
-import com.colofabrix.scala.beesight.model.*
-import com.colofabrix.scala.beesight.detection.model.*
+import com.colofabrix.scala.beesight.config.CanopyConfig
+import com.colofabrix.scala.beesight.detection.model.{ DetectedEvents, EventState, PointKinematics }
+import algebra.lattice.Bool
 
-/**
- * Detection logic for the canopy phase.
- */
-private[detection] object CanopyDetection {
+object CanopyDetection {
 
-  /**
-   * Detect canopy phase and record the deployment point if conditions are met.
-   */
-  def detect(state: StreamState[?], currentPoint: FlightPoint, config: DetectionConfig): Option[DetectionResult] =
-    val detectCanopy =
-      !state.detectedStages.canopy.isDefined &&
-      !state.detectedStages.freefall.isEmpty &&
-      isCanopyCondition(state.kinematics, config)
+  def checkTrigger(state: EventState, config: CanopyConfig): Boolean = {
+    val smoothedVerticalSpeed = Smoothing.median(state.smoothingWindow)
+    smoothedVerticalSpeed > 0 &&
+    smoothedVerticalSpeed < config.verticalSpeedMax
+  }
 
-    lazy val aboveTakeoff =
-      state
-        .detectedStages
-        .takeoff
-        .map(_.altitude)
-        .forall(tAlt => state.kinematics.altitude > tAlt)
+  def checkConstraints(events: DetectedEvents, kinematics: PointKinematics, index: Long): Boolean = {
+    val freefallDetected = events.freefall.isDefined
 
-    lazy val belowFreefall =
-      state
-        .detectedStages
-        .freefall
-        .map(_.altitude)
-        .forall(fAlt => state.kinematics.altitude < fAlt)
+    val afterFreefall =
+      events.freefall.getOrFalse { freefallPoint =>
+        index > freefallPoint.index
+      }
 
-    lazy val afterFreefall =
-      state
-        .detectedStages
-        .freefall
-        .map(_.index)
-        .forall(state.dataPointIndex > _)
+    val belowFreefallAltitude =
+      events.freefall.getOrFalse { freefallPoint =>
+        kinematics.correctedAltitude < freefallPoint.altitude
+      }
 
-    lazy val shouldRecord = aboveTakeoff && belowFreefall && afterFreefall
+    val aboveTakeoffAltitude =
+      events.takeoff.getOrTrue { takeoffPoint =>
+        kinematics.correctedAltitude > takeoffPoint.altitude
+      }
 
-    lazy val inflectionPoint =
-      Calculations.findInflectionPoint(
-        state.windows.backtrackVerticalSpeed.toVector,
-        currentPoint,
-        isRising = false,
-      )
+    freefallDetected &&
+    afterFreefall &&
+    belowFreefallAltitude &&
+    aboveTakeoffAltitude
+  }
 
-    Option.when(detectCanopy && shouldRecord)(buildResult(inflectionPoint))
-
-  private def isCanopyCondition(kinematics: Kinematics, config: DetectionConfig): Boolean =
-    kinematics.smoothedVerticalSpeed > 0 &&
-    kinematics.smoothedVerticalSpeed < config.CanopyVerticalSpeedMax
-
-  private def buildResult(point: FlightPoint): DetectionResult =
-    DetectionResult(
-      currentPhase = FlightPhase.Canopy,
-      events = FlightEvents(
-        takeoff = None,
-        freefall = None,
-        canopy = Some(point),
-        landing = None,
-        lastPoint = point.index,
-      ),
-      missedTakeoff = false,
-    )
+  def checkValidation(state: EventState, config: CanopyConfig): Boolean = {
+    val smoothedVerticalSpeed = Smoothing.median(state.smoothingWindow)
+    smoothedVerticalSpeed > 0 &&
+    smoothedVerticalSpeed < config.verticalSpeedMax * 1.5
+  }
 
 }

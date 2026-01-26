@@ -1,51 +1,25 @@
 package com.colofabrix.scala.beesight.detection
 
-import com.colofabrix.scala.beesight.config.DetectionConfig
-import com.colofabrix.scala.beesight.detection.model.*
-import com.colofabrix.scala.beesight.model.*
+import com.colofabrix.scala.beesight.config.TakeoffConfig
+import com.colofabrix.scala.beesight.detection.model.{ DetectedEvents, EventState, PointKinematics }
 
-/**
- * Detection logic for the takeoff phase.
- * Takeoff is detected when the aircraft starts moving horizontally (plane taking off).
- */
-private[detection] object TakeoffDetection {
+object TakeoffDetection {
 
-  /**
-   * Detect takeoff phase and record the takeoff point if conditions are met.
-   */
-  def detect(state: StreamState[?], currentPoint: FlightPoint, config: DetectionConfig): Option[DetectionResult] =
-    val detectTakeoff =
-      !state.detectedStages.takeoff.isDefined &&
-      isTakeoffCondition(state.kinematics, config)
+  def checkTrigger(state: EventState, kinematics: PointKinematics, config: TakeoffConfig): Boolean = {
+    val smoothedVerticalSpeed = Smoothing.median(state.smoothingWindow)
+    kinematics.horizontalSpeed > config.speedThreshold &&
+    smoothedVerticalSpeed < config.climbRate
+  }
 
-    lazy val shouldRecord =
-      !state.takeoffMissing &&
-      state.kinematics.altitude < config.TakeoffMaxAltitude
+  def checkConstraints(events: DetectedEvents, kinematics: PointKinematics, config: TakeoffConfig): Boolean = {
+    val notAlreadyDetected = events.takeoff.isEmpty
+    val belowMaxAltitude   = kinematics.correctedAltitude < config.maxAltitude
+    notAlreadyDetected && belowMaxAltitude
+  }
 
-    lazy val inflectionPoint =
-      Calculations.findInflectionPoint(
-        state.windows.backtrackVerticalSpeed.toVector,
-        currentPoint,
-        isRising = true,
-      )
-
-    Option.when(detectTakeoff && shouldRecord)(buildResult(inflectionPoint))
-
-  private def isTakeoffCondition(kinematics: Kinematics, config: DetectionConfig): Boolean =
-    kinematics.horizontalSpeed > config.TakeoffSpeedThreshold &&
-    kinematics.smoothedVerticalSpeed < config.TakeoffClimbRate
-
-  private def buildResult(point: FlightPoint): DetectionResult =
-    DetectionResult(
-      currentPhase = FlightPhase.Takeoff,
-      events = FlightEvents(
-        takeoff = Some(point),
-        freefall = None,
-        canopy = None,
-        landing = None,
-        lastPoint = point.index,
-      ),
-      missedTakeoff = false,
-    )
+  def checkValidation(state: EventState, config: TakeoffConfig): Boolean = {
+    val smoothedVerticalSpeed = Smoothing.median(state.smoothingWindow)
+    smoothedVerticalSpeed < config.climbRate
+  }
 
 }

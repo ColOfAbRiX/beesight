@@ -1,86 +1,47 @@
 package com.colofabrix.scala.beesight.detection
 
-import com.colofabrix.scala.beesight.config.DetectionConfig
-import com.colofabrix.scala.beesight.detection.model.*
-import com.colofabrix.scala.beesight.model.*
+import com.colofabrix.scala.beesight.collections.FixedSizeQueue
+import com.colofabrix.scala.beesight.config.LandingConfig
+import com.colofabrix.scala.beesight.detection.model.{ DetectedEvents, EventState, PointKinematics }
 
-/**
- * Detection logic for the landing phase.
- */
-private[detection] object LandingDetection {
+object LandingDetection {
 
-  /**
-   * Detect landing phase and record the landing point if conditions are met.
-   */
-  def detect(state: StreamState[?], currentPoint: FlightPoint, config: DetectionConfig): Option[DetectionResult] =
-    val detectLanding =
-      !state.detectedStages.landing.isDefined &&
-      !state.detectedStages.canopy.isEmpty &&
-      isLandingCondition(state, config)
+  def checkTrigger(state: EventState, kinematics: PointKinematics, config: LandingConfig): Boolean = {
+    val lowSpeed = kinematics.totalSpeed < config.speedMax
+    val isStable = checkWindowStability(state.stabilityWindow, config)
+    lowSpeed && isStable
+  }
 
-    lazy val altitudeOk =
-      state.detectedStages.takeoff match {
-        case Some(takeoff) => Math.abs(state.kinematics.altitude - takeoff.altitude) < config.LandingAltitudeTolerance
-        case None          => true
+  def checkConstraints(events: DetectedEvents, kinematics: PointKinematics, index: Long): Boolean = {
+    val notAlreadyDetected = events.landing.isEmpty
+    val hasPrerequisite    = events.canopy.isDefined || events.takeoff.isDefined
+
+    val afterCanopy =
+      events.canopy.getOrTrue { canopyPoint =>
+        index > canopyPoint.index
       }
 
-    lazy val belowCanopy =
-      state
-        .detectedStages
-        .canopy
-        .map(_.altitude)
-        .forall(cAlt => state.kinematics.altitude < cAlt)
+    val belowCanopyAltitude =
+      events.canopy.getOrTrue { canopyPoint =>
+        kinematics.correctedAltitude < canopyPoint.altitude
+      }
 
-    lazy val afterCanopy =
-      state
-        .detectedStages
-        .canopy
-        .map(_.index)
-        .forall(state.dataPointIndex > _)
+    notAlreadyDetected && hasPrerequisite && afterCanopy && belowCanopyAltitude
+  }
 
-    lazy val shouldRecord = altitudeOk && belowCanopy && afterCanopy
+  def checkValidation(state: EventState, kinematics: PointKinematics, config: LandingConfig): Boolean =
+    kinematics.totalSpeed < config.speedMax * 2.0 &&
+    checkWindowStability(state.stabilityWindow, config)
 
-    lazy val inflectionPoint =
-      Calculations.findInflectionPoint(
-        state.windows.backtrackVerticalSpeed.toVector,
-        currentPoint,
-        isRising = false,
-      )
+  private def checkWindowStability(window: FixedSizeQueue[Double], config: LandingConfig): Boolean =
+    if (!window.isFull)
+      false
+    else {
+      val mean   = Smoothing.mean(window)
+      val stdDev = Smoothing.stdDev(window)
 
-    Option.when(detectLanding && shouldRecord)(buildResult(inflectionPoint))
-
-  private def isLandingCondition(state: StreamState[?], config: DetectionConfig): Boolean =
-    lazy val windowStable =
-      isWindowStable(
-        state.windows.landingStability.toVector,
-        config.LandingStabilityWindowSize,
-        config,
-      )
-
-    state.kinematics.totalSpeed < config.LandingSpeedMax &&
-    windowStable
-
-  private def isWindowStable(history: Vector[Double], windowSize: Int, config: DetectionConfig): Boolean =
-    if history.size < windowSize then false
-    else
-      val mean     = history.sum / history.size
-      val variance = history.map(v => Math.pow(v - mean, 2)).sum / history.size
-      val stdDev   = Math.sqrt(variance)
-
-      stdDev < config.LandingStabilityThreshold &&
-      Math.abs(mean) < config.LandingMeanVerticalSpeedMax
-
-  private def buildResult(point: FlightPoint): DetectionResult =
-    DetectionResult(
-      currentPhase = FlightPhase.Landing,
-      events = FlightEvents(
-        takeoff = None,
-        freefall = None,
-        canopy = None,
-        landing = Some(point),
-        lastPoint = point.index,
-      ),
-      missedTakeoff = false,
-    )
+      stdDev < config.stabilityThreshold &&
+      math.abs(mean) < config.meanVerticalSpeedMax
+    }
 
 }

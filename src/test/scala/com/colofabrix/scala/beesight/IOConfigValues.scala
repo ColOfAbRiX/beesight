@@ -20,6 +20,10 @@ trait IOConfigValues {
   extension [A](self: IOConfig[A]) {
 
     /** The success value contained in the monad */
+    def runToIO(config: Config = Config.default): IO[A] =
+      self.run(config)
+
+    /** The success value contained in the monad */
     def result(config: Config = Config.default, timeout: FiniteDuration = 30.seconds): A =
       self
         .run(config)

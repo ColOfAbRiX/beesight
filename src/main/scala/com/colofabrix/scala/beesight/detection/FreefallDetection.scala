@@ -1,66 +1,56 @@
 package com.colofabrix.scala.beesight.detection
 
-import com.colofabrix.scala.beesight.config.DetectionConfig
-import com.colofabrix.scala.beesight.detection.model.*
-import com.colofabrix.scala.beesight.model.*
+import com.colofabrix.scala.beesight.config.FreefallConfig
+import com.colofabrix.scala.beesight.detection.model.{ DetectedEvents, EventState, PointKinematics }
 
-/**
- * Detection logic for the freefall phase.
- */
-private[detection] object FreefallDetection {
+object FreefallDetection {
 
-  /**
-   * Detect freefall phase and record the exit point if conditions are met.
-   */
-  def detect(state: StreamState[?], currentPoint: FlightPoint, config: DetectionConfig): Option[DetectionResult] =
-    val detectFreefall =
-      !state.detectedStages.freefall.isDefined &&
-      isFreefallCondition(state.kinematics, config)
+  def checkTrigger(
+    state: EventState,
+    kinematics: PointKinematics,
+    previousSmoothedSpeed: Double,
+    config: FreefallConfig,
+  ): Boolean = {
+    val smoothedVerticalSpeed = Smoothing.median(state.smoothingWindow)
+    val acceleration          = Smoothing.computeAcceleration(smoothedVerticalSpeed, previousSmoothedSpeed, kinematics.deltaTime)
 
-    lazy val altitudeValid =
-      state.detectedStages.takeoff match {
-        case Some(takeoff) => state.kinematics.altitude > takeoff.altitude + config.FreefallMinAltitudeAbove
-        case None          => state.kinematics.altitude > config.FreefallMinAltitudeAbsolute
+    val speedTriggered = smoothedVerticalSpeed > config.verticalSpeedThreshold
+
+    val accelTriggered =
+      acceleration > config.accelerationThreshold &&
+      smoothedVerticalSpeed > config.accelerationMinVelocity
+
+    speedTriggered || accelTriggered
+  }
+
+  def checkConstraints(
+    events: DetectedEvents,
+    kinematics: PointKinematics,
+    index: Long,
+    config: FreefallConfig,
+  ): Boolean = {
+    val notAlreadyDetected = events.freefall.isEmpty
+
+    val afterTakeoff =
+      events.takeoff.getOrTrue { takeoffPoint =>
+        index > takeoffPoint.index
       }
 
-    lazy val afterTakeoff =
-      state
-        .detectedStages
-        .takeoff
-        .map(_.index)
-        .forall(state.dataPointIndex > _)
+    val aboveMinAltitude =
+      events.takeoff match {
+        case Some(takeoffPoint) =>
+          kinematics.correctedAltitude > takeoffPoint.altitude + config.minAltitudeAbove ||
+          kinematics.correctedAltitude > config.minAltitudeAbsolute
+        case None =>
+          kinematics.correctedAltitude > config.minAltitudeAbsolute
+      }
 
-    lazy val shouldRecord = altitudeValid && afterTakeoff
+    notAlreadyDetected && afterTakeoff && aboveMinAltitude
+  }
 
-    lazy val inflectionPoint =
-      Calculations.findInflectionPoint(
-        state.windows.backtrackVerticalSpeed.toVector,
-        currentPoint,
-        isRising = true,
-      )
-
-    Option.when(detectFreefall && shouldRecord)(buildResult(inflectionPoint))
-
-  private def isFreefallCondition(kinematics: Kinematics, config: DetectionConfig): Boolean =
-    val byThreshold = kinematics.smoothedVerticalSpeed > config.FreefallVerticalSpeedThreshold
-
-    val byAccel =
-      kinematics.smoothedVerticalAcceleration > config.FreefallAccelThreshold &&
-      kinematics.smoothedVerticalSpeed > config.FreefallAccelMinVelocity
-
-    byThreshold || byAccel
-
-  private def buildResult(point: FlightPoint): DetectionResult =
-    DetectionResult(
-      currentPhase = FlightPhase.Freefall,
-      events = FlightEvents(
-        takeoff = None,
-        freefall = Some(point),
-        canopy = None,
-        landing = None,
-        lastPoint = point.index,
-      ),
-      missedTakeoff = false,
-    )
+  def checkValidation(state: EventState, config: FreefallConfig): Boolean = {
+    val smoothedVerticalSpeed = Smoothing.median(state.smoothingWindow)
+    smoothedVerticalSpeed > config.verticalSpeedThreshold * 0.8
+  }
 
 }

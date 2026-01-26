@@ -7,14 +7,12 @@ package com.colofabrix.scala.beesight.model
  * @param freefall The detected freefall/exit point (if found)
  * @param canopy The detected canopy deployment point (if found)
  * @param landing The detected landing point (if found)
- * @param lastPoint Index of the last processed data point
  */
 final case class FlightEvents(
   takeoff: Option[FlightPoint],
   freefall: Option[FlightPoint],
   canopy: Option[FlightPoint],
   landing: Option[FlightPoint],
-  lastPoint: Long,
 )
 
 object FlightEvents {
@@ -28,7 +26,6 @@ object FlightEvents {
       freefall = None,
       canopy = None,
       landing = None,
-      lastPoint = -1,
     )
 
 }

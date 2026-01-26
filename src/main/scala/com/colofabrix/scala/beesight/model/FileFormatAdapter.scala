@@ -11,3 +11,9 @@ trait FileFormatAdapter[A] {
     toInputFlightPoint(a).verticalSpeed
 
 }
+
+object FileFormatAdapter {
+
+  def apply[A](using ev: FileFormatAdapter[A]): FileFormatAdapter[A] = ev
+
+}

@@ -67,7 +67,6 @@ object ChartGenerator {
       freefall = point.freefall,
       canopy = point.canopy,
       landing = point.landing,
-      lastPoint = point.lastPoint,
     )
 
   private def computeChartPath(outputCsvFile: Path): IOConfig[Path] =
@@ -170,11 +169,11 @@ object ChartGenerator {
 
   private def createTransitionMarkersJs(transitions: List[PhaseTransition]): String =
     val colorMap = Map(
-      FlightPhase.Takeoff  -> "rgb(44, 160, 44)",
-      FlightPhase.Freefall -> "rgb(214, 39, 40)",
-      FlightPhase.Canopy   -> "rgb(148, 103, 189)",
-      FlightPhase.Landing  -> "rgb(140, 86, 75)",
-      FlightPhase.BeforeTakeoff  -> "rgb(128, 128, 128)",
+      FlightPhase.Climbing     -> "rgb(44, 160, 44)",
+      FlightPhase.Freefall     -> "rgb(214, 39, 40)",
+      FlightPhase.UnderCanopy  -> "rgb(148, 103, 189)",
+      FlightPhase.Landed       -> "rgb(140, 86, 75)",
+      FlightPhase.BeforeTakeoff -> "rgb(128, 128, 128)",
     )
 
     val jsMarkers =

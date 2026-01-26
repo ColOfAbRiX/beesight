@@ -29,12 +29,12 @@ trait FlightStagesMatchers {
           checkField("landing", obtained.landing.map(_.index), expected.landing.map(_.index)),
         )
 
-      val failures = fieldResults.collect { case (name, Some(error)) => s"  $name: $error" }
+      val failures = fieldResults.collect { case (name, Some(error)) => s"      $name: $error" }
       val passes   = fieldResults.collect { case (name, None) => name }
 
       MatchResult(
         matches = failures.isEmpty,
-        rawFailureMessage = s"FlightStagesPoints did not match:\n${failures.mkString("\n")}",
+        rawFailureMessage = s"\n    FlightStagesPoints did not match:\n${failures.mkString("\n")}",
         rawNegatedFailureMessage =
           s"FlightStagesPoints matched when it should not have. Matched: ${passes.mkString(", ")}",
       )

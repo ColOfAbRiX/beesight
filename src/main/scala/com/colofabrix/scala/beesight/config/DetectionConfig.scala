@@ -1,61 +1,96 @@
 package com.colofabrix.scala.beesight.config
 
+final case class GlobalConfig(
+  accelerationClip: Double,
+)
+
+final case class TakeoffConfig(
+  speedThreshold: Double,
+  climbRate: Double,
+  maxAltitude: Double,
+  smoothingWindowSize: Int,
+  backtrackWindowSize: Int,
+  validationWindowSize: Int,
+)
+
+final case class FreefallConfig(
+  verticalSpeedThreshold: Double,
+  accelerationThreshold: Double,
+  accelerationMinVelocity: Double,
+  minAltitudeAbove: Double,
+  minAltitudeAbsolute: Double,
+  smoothingWindowSize: Int,
+  backtrackWindowSize: Int,
+  validationWindowSize: Int,
+)
+
+final case class CanopyConfig(
+  verticalSpeedMax: Double,
+  smoothingWindowSize: Int,
+  backtrackWindowSize: Int,
+  validationWindowSize: Int,
+)
+
+final case class LandingConfig(
+  speedMax: Double,
+  stabilityThreshold: Double,
+  meanVerticalSpeedMax: Double,
+  altitudeTolerance: Double,
+  stabilityWindowSize: Int,
+  smoothingWindowSize: Int,
+  backtrackWindowSize: Int,
+  validationWindowSize: Int,
+)
+
 final case class DetectionConfig(
-  TakeoffSpeedThreshold: Double,
-  TakeoffClimbRate: Double,
-  TakeoffMaxAltitude: Double,
-  TakeoffBacktrackWindow: Int,
-  TakeoffValidationWindow: Int,
-  FreefallVerticalSpeedThreshold: Double,
-  FreefallAccelThreshold: Double,
-  FreefallAccelMinVelocity: Double,
-  FreefallMinAltitudeAbove: Double,
-  FreefallMinAltitudeAbsolute: Double,
-  FreefallBacktrackWindow: Int,
-  FreefallValidationWindow: Int,
-  CanopyVerticalSpeedMax: Double,
-  CanopyBacktrackWindow: Int,
-  CanopyValidationWindow: Int,
-  LandingSpeedMax: Double,
-  LandingStabilityThreshold: Double,
-  LandingMeanVerticalSpeedMax: Double,
-  LandingAltitudeTolerance: Double,
-  LandingStabilityWindowSize: Int,
-  LandingBacktrackWindow: Int,
-  LandingValidationWindow: Int,
-  ClipAcceleration: Double,
-  SmoothingVerticalSpeedWindowSize: Int,
-  BacktrackVerticalSpeedWindowSize: Int,
+  global: GlobalConfig,
+  takeoff: TakeoffConfig,
+  freefall: FreefallConfig,
+  canopy: CanopyConfig,
+  landing: LandingConfig,
 )
 
 object DetectionConfig {
 
   val default: DetectionConfig =
     DetectionConfig(
-      TakeoffSpeedThreshold = 25.0,
-      TakeoffClimbRate = -1.0,
-      TakeoffMaxAltitude = 600.0,
-      TakeoffBacktrackWindow = 10,
-      TakeoffValidationWindow = 40,
-      FreefallVerticalSpeedThreshold = 25.0,
-      FreefallAccelThreshold = 3.0,
-      FreefallAccelMinVelocity = 10.0,
-      FreefallMinAltitudeAbove = 600.0,
-      FreefallMinAltitudeAbsolute = 600.0,
-      FreefallBacktrackWindow = 10,
-      FreefallValidationWindow = 40,
-      CanopyVerticalSpeedMax = 12.0,
-      CanopyBacktrackWindow = 10,
-      CanopyValidationWindow = 40,
-      LandingSpeedMax = 3.0,
-      LandingStabilityThreshold = 0.5,
-      LandingMeanVerticalSpeedMax = 1.0,
-      LandingAltitudeTolerance = 500.0,
-      LandingStabilityWindowSize = 10,
-      LandingBacktrackWindow = 10,
-      LandingValidationWindow = 40,
-      ClipAcceleration = 20.0,
-      SmoothingVerticalSpeedWindowSize = 5,
-      BacktrackVerticalSpeedWindowSize = 10,
+      global = GlobalConfig(
+        accelerationClip = 20.0,
+      ),
+      takeoff = TakeoffConfig(
+        speedThreshold = 25.0,
+        climbRate = -1.0,
+        maxAltitude = 600.0,
+        smoothingWindowSize = 5,
+        backtrackWindowSize = 10,
+        validationWindowSize = 40,
+      ),
+      freefall = FreefallConfig(
+        verticalSpeedThreshold = 25.0,
+        accelerationThreshold = 3.0,
+        accelerationMinVelocity = 10.0,
+        minAltitudeAbove = 600.0,
+        minAltitudeAbsolute = 600.0,
+        smoothingWindowSize = 5,
+        backtrackWindowSize = 10,
+        validationWindowSize = 40,
+      ),
+      canopy = CanopyConfig(
+        verticalSpeedMax = 12.0,
+        smoothingWindowSize = 5,
+        backtrackWindowSize = 10,
+        validationWindowSize = 40,
+      ),
+      landing = LandingConfig(
+        speedMax = 3.0,
+        stabilityThreshold = 0.5,
+        meanVerticalSpeedMax = 1.0,
+        altitudeTolerance = 500.0,
+        stabilityWindowSize = 10,
+        smoothingWindowSize = 5,
+        backtrackWindowSize = 10,
+        validationWindowSize = 40,
+      ),
     )
+
 }

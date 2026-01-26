@@ -276,27 +276,45 @@ enum StreamPhase {
 
 **State Machine:**
 ```
-                      Detection triggers
+                      Detection triggers (T)
 Streaming ────────────────────────────────────► Validation(40, Freefall)
     ▲                                                      │
     │                                                      │
-    │              Validated OR Rejected                   │
+    │       Success: resume from I+1     Fail: resume from T+1
     └──────────────────────────────────────────────────────┘
 ```
 
+**Key Principle: "As If Validation Never Happened"**
+
+When validation completes, the algorithm must resume from an earlier point using the buffered state snapshot:
+- **On Trigger (T):** Freeze the current Streaming state by buffering it. Continue buffering each subsequent point with its own state snapshot.
+- **On Validation Success:** Find inflection point (I) in backtrack window, mark event at I, resume from state at I+1 with updated `detectedEvents`
+- **On Validation Failure:** Resume from state at T+1 (first point after trigger), no event marked
+
+This "time travel" is possible because `pendingBuffer` contains complete `ProcessingState` snapshots at each index.
+
 **Example flow:**
 ```scala
-// Point 14: Freefall threshold crossed
+// Point T=100: Freefall threshold crossed, buffer contains state at T=100
 StreamPhase.Streaming → StreamPhase.Validation(40, EventType.Freefall)
 
-// Points 15-53: Counting down
+// Points 101-139: Buffer states at each point, counting down
 Validation(39, ...) → Validation(38, ...) → ... → Validation(1, ...)
 
-// Point 54: remainingPoints == 0, check if still valid
-if (stillValid) → Release buffer with corrected events
-else → Release buffer unchanged
+// Point 140: remainingPoints == 0, check validation
+if (stillValid) {
+  // Find inflection at I=98 (within backtrack window of state at T=100)
+  // Resume from pendingBuffer state where index > 98 (e.g., state at 99)
+  // Mark freefall event at FlightPoint(98, altitude)
+  // Output all buffered points with correct phases
+} else {
+  // Resume from pendingBuffer(1) = state at T+1 = 101
+  // Output all buffered points with original phases
+}
 → StreamPhase.Streaming
 ```
+
+**Why success doesn't re-trigger:** After marking freefall, the algorithm looks for Canopy (different phase). Even if we pass point T=100 again when outputting, the detection logic now checks for Canopy conditions, not Freefall.
 
 #### 2.2.4 DetectedEvents
 
@@ -406,18 +424,45 @@ final case class BufferedState[A](
 
 **Purpose:** Complete state for the streaming algorithm.
 
-**Why `BufferedState` is separate:** When buffering for validation, we need to store the output-relevant data for each buffered point without the full processing machinery (windows, stream phase).
+**Key Insight: Buffer Contains Full State Snapshots**
 
-**Buffer Management:**
+The `pendingBuffer` stores complete `ProcessingState[A]` objects, not just raw data points. This means each buffered entry contains:
+- The input point and kinematics at that index
+- **All event state windows** (smoothing, backtrack, stability) as they were at that index
+- The `detectedEvents` at that index
+
+This enables "time travel" - when validation completes, we can resume processing from any buffered point **with the exact state that existed at that point**, including all sliding windows in their correct historical positions.
+
+**Why Full State Snapshots Matter:**
+
+When we resume from inflection+1 (success) or trigger+1 (failure), we don't just need the data point - we need the entire algorithmic state from that moment. The smoothing windows, backtrack windows, and stability windows must be positioned correctly for subsequent detections.
+
+```scala
+// Each buffered state is a complete snapshot:
+pendingBuffer(0) = ProcessingState at T with:
+  - takeoffState.backtrackWindow containing samples up to T
+  - freefallState.smoothingWindow containing speeds up to T
+  - etc.
+
+pendingBuffer(1) = ProcessingState at T+1 with:
+  - all windows updated to include T+1
+
+// On success at I: resume from pendingBuffer.find(_.index > I)
+// On failure: resume from pendingBuffer(1) (T+1)
+```
+
+**Buffer Visualization:**
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  pendingBuffer (max size = backtrackWindowSize + validationWindowSize)   │
+│  pendingBuffer (contains full ProcessingState snapshots)         │
 ├─────────────────────────────────────────────────────────────────┤
-│ [state10] [state11] [state12] ... [state50]                     │
-│     ▲                   ▲              ▲                        │
-│     │                   │              │                        │
-│  Oldest            Inflection       Newest                      │
-│ (emit first)         point       (current)                      │
+│ [stateT] [stateT+1] [stateT+2] ... [stateT+N]                   │
+│     ▲        ▲           ▲              ▲                       │
+│     │        │           │              │                       │
+│  Trigger  Resume on   Inflection     Current                    │
+│  point    failure     point (I)      point                      │
+│           (T+1)       Resume on                                 │
+│                       success (I+1)                             │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -1521,14 +1566,26 @@ object FlightStagesDetection:
     val eventState = getEventState(state, eventType)
     val eventConfig = getEventConfig(config, eventType)
     val isValid = getDetector(eventType).checkValidation(eventState, kinematics, eventConfig)
+    val fullBuffer = state.pendingBuffer :+ state
 
     if isValid then
+      // SUCCESS: Find inflection using TRIGGER state's backtrack window
+      val triggerState = fullBuffer.head
+      val triggerEventState = getEventState(triggerState, eventType)
       val isRising = eventType == EventType.Takeoff || eventType == EventType.Freefall
-      val inflectionPoint = InflectionFinder.find(eventState.backtrackWindow, isRising)
-      val newEvents = updateDetectedEvents(state.detectedEvents, eventType, inflectionPoint)
-      val outputs = releaseBuffer(state.pendingBuffer :+ state, eventType, inflectionPoint)
+      val inflectionPoint = InflectionFinder.find(triggerEventState.backtrackWindow, isRising)
+
+      // Find state to resume from (first state AFTER inflection point)
+      val resumeState = inflectionPoint match
+        case Some(fp) => fullBuffer.find(_.index > fp.index).getOrElse(fullBuffer.last)
+        case None => fullBuffer.last
+
+      val newEvents = updateDetectedEvents(resumeState.detectedEvents, eventType, inflectionPoint)
+      val outputs = releaseBuffer(fullBuffer, eventType, inflectionPoint)
+
+      // Resume from inflection+1 state with updated events
       ProcessingResult(
-        state.copy(
+        resumeState.copy(
           streamPhase = StreamPhase.Streaming,
           detectedEvents = newEvents,
           pendingBuffer = Vector.empty,
@@ -1536,9 +1593,12 @@ object FlightStagesDetection:
         outputs,
       )
     else
-      val outputs = (state.pendingBuffer :+ state).map(toOutputRow)
+      // FAILURE: Resume from T+1 (second state in buffer)
+      val resumeState = fullBuffer.lift(1).getOrElse(fullBuffer.last)
+      val outputs = fullBuffer.map(toOutputRow)
+
       ProcessingResult(
-        state.copy(
+        resumeState.copy(
           streamPhase = StreamPhase.Streaming,
           pendingBuffer = Vector.empty,
         ),
@@ -1751,21 +1811,22 @@ Output Stream: OutputFlightRow[A]
           │                    │                    │
           └────────────────────┼────────────────────┘
                                │
-                    Trigger detected?
+                    Trigger detected at T?
                                │
               ┌────────────────┴────────────────┐
               │ NO                              │ YES
               ▼                                 ▼
     ┌─────────────────┐              ┌─────────────────────────┐
     │ Emit oldest     │              │ VALIDATION(40, Event)   │
-    │ from buffer     │              │ (Buffer, don't emit)    │
-    └─────────────────┘              └───────────┬─────────────┘
+    │ from buffer     │              │ Buffer state at T       │
+    └─────────────────┘              │ (freeze Streaming state)│
+                                     └───────────┬─────────────┘
                                                  │
                                      ┌───────────┴───────────┐
                                      │ remaining > 0?        │
                                      ├───────────────────────┤
                                      │ YES                   │
-                                     │ → Decrement, buffer   │
+                                     │ → Buffer state, dec   │
                                      │ → No emit             │
                                      ├───────────────────────┤
                                      │ NO (remaining == 0)   │
@@ -1779,20 +1840,33 @@ Output Stream: OutputFlightRow[A]
                               │ YES                                 │ NO
                               ▼                                     ▼
                     ┌─────────────────────┐              ┌─────────────────────┐
-                    │ Find inflection     │              │ Release buffer      │
-                    │ Release buffer with │              │ unchanged           │
-                    │ corrected events    │              │ (false positive)    │
-                    │ Update state        │              │                     │
+                    │ 1. Find inflection I│              │ Resume from T+1     │
+                    │    using buffer[0]  │              │ using buffered state│
+                    │    .backtrackWindow │              │ at pendingBuffer[1] │
+                    │ 2. Mark event at I  │              │                     │
+                    │ 3. Resume from I+1  │              │ Output all buffered │
+                    │    using buffered   │              │ points unchanged    │
+                    │    state at I+1     │              │                     │
+                    │ 4. Output buffered  │              │                     │
+                    │    with phases      │              │                     │
                     └─────────┬───────────┘              └─────────┬───────────┘
                               │                                    │
                               └──────────────────┬─────────────────┘
                                                  │
                                                  ▼
-                                    ┌───────────────────────┐
-                                    │ Back to STREAMING     │
-                                    │ (look for next event) │
-                                    └───────────────────────┘
+                                    ┌───────────────────────────────┐
+                                    │ Back to STREAMING             │
+                                    │ Resume from buffered state    │
+                                    │ (as if Validation never       │
+                                    │  happened to that state)      │
+                                    └───────────────────────────────┘
 ```
+
+**Key Points:**
+- **On trigger at T:** Buffer the current `ProcessingState` which includes all windows at that moment
+- **On success:** Use `pendingBuffer[0].backtrackWindow` to find inflection I, then resume from the buffered state at index > I
+- **On failure:** Resume from `pendingBuffer[1]` (state at T+1)
+- **Both cases:** Output all buffered points, then continue with the restored state. Subsequent detections use the windows from the restored state, not the current point.
 
 ---
 
