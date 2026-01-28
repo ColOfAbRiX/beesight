@@ -16,7 +16,7 @@ object ResultsSummary {
    */
   def writeSummaryCsv[A](rows: List[(Path, Option[OutputFlightRow[A]])]): IOConfig[Unit] =
     IOConfig.ask.flatMap { config =>
-      if config.dryRun then
+      if config.dryRun || rows.isEmpty then
         IOConfig.pure(())
       else
         val header =
@@ -35,11 +35,11 @@ object ResultsSummary {
         val csvRows = rows.map(rowToCsv)
         val content = (header.mkString(",") :: csvRows).mkString("\n")
 
-        FileOps
-          .createProcessedDirectory(config.input.resolve("summary.csv"))
-          .flatMap { summaryPath =>
-            IOConfig.blocking(JFiles.writeString(summaryPath, content): Unit)
-          }
+        for
+          inputBaseDir <- FileOps.getInputBaseDir()
+          summaryPath  <- FileOps.createProcessedDirectory(inputBaseDir.resolve("summary.csv"))
+          _            <- IOConfig.blocking(JFiles.writeString(summaryPath, content): Unit)
+        yield ()
     }
 
   private def rowToCsv[A](row: (Path, Option[OutputFlightRow[A]])): String =

@@ -7,6 +7,23 @@ import cats.data.Reader
 
 object FlightStagesDetection {
 
+  // ─── Debug Configuration ───────────────────────────────────────────────────
+
+  private val DEBUG_ENABLED = true
+
+  private def debug(msg: => String): Unit =
+    if (DEBUG_ENABLED) println(s"[DEBUG] $msg")
+
+  private def debugSection(title: String)(body: => Unit): Unit =
+    if (DEBUG_ENABLED) {
+      println(s"\n${"=" * 60}")
+      println(s"  $title")
+      println(s"${"=" * 60}")
+      body
+    }
+
+  // ─── Public API ────────────────────────────────────────────────────────────
+
   def streamDetectA[F[_], A](using A: FileFormatAdapter[A]): fs2.Pipe[F, A, OutputFlightRow[A]] =
     streamDetectWithConfig(DetectionConfig.default)
 
@@ -18,6 +35,7 @@ object FlightStagesDetection {
           val result =
             maybeState match {
               case None =>
+                debug(s"[INIT] Creating initial state at index 0")
                 val initialState = createInitialState(point, config)
                 ProcessingResult(initialState, Vector.empty)
               case Some(state) =>
@@ -35,9 +53,7 @@ object FlightStagesDetection {
     kinematics: PointKinematics,
   )
 
-  // private type StreamReader[A, B] = Reader[StreamData[A], B]
-  // private type StreamResult[A]  = (nextState: ProcessingState[A], outputs: Vector[OutputFlightRow[A]])
-  // private type StreamUpdater[A] = Reader[StreamData[A], StreamResult[A]]
+  // ─── Initialization ────────────────────────────────────────────────────────
 
   private def createInitialState[A](point: InputFlightRow[A], config: DetectionConfig): ProcessingState[A] = {
     val kinematics = Preprocessing.computeKinematics(point, None, None, config.global)
@@ -71,6 +87,8 @@ object FlightStagesDetection {
     )
   }
 
+  // ─── Main Processing ───────────────────────────────────────────────────────
+
   private def processPoint[A](
     state: ProcessingState[A],
     point: InputFlightRow[A],
@@ -82,12 +100,25 @@ object FlightStagesDetection {
 
     val updatedState = updateAllEventStates(state, point, index, kinematics)
 
+    debugSection(s"PROCESSING POINT $index") {
+      debug(s"Altitude: ${kinematics.correctedAltitude}m, VSpeed: ${f"${kinematics.clippedVerticalSpeed}%.2f"}m/s")
+      debug(s"Current Phase: ${updatedState.streamPhase}")
+      debug(s"Detected Events: T=${updatedState.detectedEvents.takeoff.isDefined}, " +
+        s"F=${updatedState.detectedEvents.freefall.isDefined}, " +
+        s"C=${updatedState.detectedEvents.canopy.isDefined}, " +
+        s"L=${updatedState.detectedEvents.landing.isDefined}")
+      debug(s"Buffer Size: ${updatedState.pendingBuffer.size}")
+    }
+
     updatedState.streamPhase match {
       case StreamPhase.Streaming =>
+        debug(s"[PHASE] STREAMING - Looking for events...")
         handleStreaming(updatedState, kinematics, config)
       case StreamPhase.Validation(1, eventType) =>
+        debug(s"[PHASE] VALIDATION FINAL - Finalizing $eventType validation")
         finalizeValidation(updatedState, eventType, kinematics, config)
       case StreamPhase.Validation(remaining, eventType) =>
+        debug(s"[PHASE] VALIDATION - Continuing $eventType, $remaining points remaining")
         continueValidation(updatedState, remaining - 1, eventType)
     }
   }
@@ -101,6 +132,7 @@ object FlightStagesDetection {
       case Some(eventType) =>
         val validationWindow = getValidationWindowSize(config, eventType)
         val bufferedState    = addToBuffer(state)
+        debug(s"[TRIGGER] ✓ Event $eventType TRIGGERED! Starting validation for $validationWindow points")
         ProcessingResult(
           state.copy(
             streamPhase = StreamPhase.Validation(validationWindow, eventType),
@@ -114,11 +146,13 @@ object FlightStagesDetection {
         val newBuffer = addToBuffer(state)
         if (newBuffer.size > maxBuffer) {
           val output = toOutputRow(newBuffer.head)
+          debug(s"[BUFFER] Buffer full ($maxBuffer), releasing oldest point")
           ProcessingResult(
             state.copy(pendingBuffer = newBuffer.tail),
             Vector(output),
           )
         } else {
+          debug(s"[BUFFER] Buffering point (${newBuffer.size}/$maxBuffer)")
           ProcessingResult(
             state.copy(pendingBuffer = newBuffer),
             Vector.empty,
@@ -132,6 +166,7 @@ object FlightStagesDetection {
     eventType: EventType,
   ): ProcessingResult[A] = {
     val bufferedState = addToBuffer(state)
+    debug(s"[VALIDATION] Continuing $eventType validation, $remaining more points to check")
     ProcessingResult(
       state.copy(
         streamPhase = StreamPhase.Validation(remaining, eventType),
@@ -151,23 +186,34 @@ object FlightStagesDetection {
     val isValid    = checkValidationCondition(eventType, eventState, kinematics, config)
     val fullBuffer = addToBuffer(state)
 
+    debug(s"[VALIDATION FINALIZE] Event: $eventType, Valid: $isValid, Buffer size: ${fullBuffer.size}")
+
     if (isValid) {
-      // SUCCESS: Use TRIGGER state's backtrackWindow to find inflection point
+      debug(s"[VALIDATION] ✓✓ $eventType CONFIRMED!")
+
       val triggerState      = fullBuffer.head
       val triggerEventState = getEventState(triggerState, eventType)
       val isRising          = eventType == EventType.Takeoff || eventType == EventType.Freefall
       val inflectionPoint   = InflectionFinder.findInflectionPoint(triggerEventState.backtrackWindow, isRising)
 
-      // Find state to resume from (first state AFTER inflection point)
+      debug(s"[INFLECTION] Looking for inflection point (isRising=$isRising)")
+      inflectionPoint match {
+        case Some(fp) =>
+          debug(s"[INFLECTION] ✓ Found at index ${fp.index}, altitude ${fp.altitude}m")
+        case None =>
+          debug(s"[INFLECTION] ✗ No inflection point found")
+      }
+
       val resumeState = inflectionPoint match {
         case Some(fp) => fullBuffer.find(_.index > fp.index).getOrElse(fullBuffer.last)
         case None     => fullBuffer.last
       }
+      debug(s"[RESUME] Resuming from index ${resumeState.index}")
 
       val newEvents = updateDetectedEvents(resumeState.detectedEvents, eventType, inflectionPoint)
       val outputs   = releaseBuffer(fullBuffer, eventType, inflectionPoint)
+      debug(s"[OUTPUT] Releasing ${outputs.size} points from buffer")
 
-      // Resume from inflection+1 state with updated events
       ProcessingResult(
         resumeState.copy(
           streamPhase = StreamPhase.Streaming,
@@ -177,9 +223,12 @@ object FlightStagesDetection {
         outputs,
       )
     } else {
-      // FAILURE: Resume from T+1 (second state in buffer)
+      debug(s"[VALIDATION] ✗✗ $eventType REJECTED! Returning to streaming")
+
       val resumeState = fullBuffer.lift(1).getOrElse(fullBuffer.last)
       val outputs     = fullBuffer.map(toOutputRow)
+      debug(s"[RESUME] Resuming from index ${resumeState.index} (T+1)")
+      debug(s"[OUTPUT] Releasing ${outputs.size} points from buffer")
 
       ProcessingResult(
         resumeState.copy(
@@ -190,6 +239,8 @@ object FlightStagesDetection {
       )
     }
   }
+
+  // ─── Event Detection ───────────────────────────────────────────────────────
 
   private def tryDetectEvent[A](
     state: ProcessingState[A],
@@ -207,9 +258,19 @@ object FlightStagesDetection {
         ),
       )
 
-    candidates.collectFirst {
+    val eligibleCandidates = candidates.filter(_._2).map(_._1)
+    debug(s"[DETECT] Eligible events to check: ${eligibleCandidates.mkString(", ")}")
+
+    val result = candidates.collectFirst {
       case (eventType, true) if checkEventTrigger(state, eventType, kinematics, config) => eventType
     }
+
+    result match {
+      case Some(et) => debug(s"[DETECT] ✓ $et trigger conditions MET")
+      case None     => debug(s"[DETECT] No event triggered")
+    }
+
+    result
   }
 
   private def checkEventTrigger[A](
@@ -219,7 +280,8 @@ object FlightStagesDetection {
     config: DetectionConfig,
   ): Boolean = {
     val eventState = getEventState(state, eventType)
-    val triggered  = eventType match {
+
+    val triggered = eventType match {
       case EventType.Takeoff =>
         TakeoffDetection.checkTrigger(eventState, kinematics, config.takeoff)
       case EventType.Freefall =>
@@ -242,6 +304,8 @@ object FlightStagesDetection {
         LandingDetection.checkConstraints(state.detectedEvents, kinematics, state.index)
     }
 
+    debug(s"[TRIGGER CHECK] $eventType: triggered=$triggered, constrained=$constrained")
+
     triggered && constrained
   }
 
@@ -250,13 +314,18 @@ object FlightStagesDetection {
     eventState: EventState,
     kinematics: PointKinematics,
     config: DetectionConfig,
-  ): Boolean =
-    eventType match {
+  ): Boolean = {
+    val result = eventType match {
       case EventType.Takeoff  => TakeoffDetection.checkValidation(eventState, config.takeoff)
       case EventType.Freefall => FreefallDetection.checkValidation(eventState, config.freefall)
       case EventType.Canopy   => CanopyDetection.checkValidation(eventState, config.canopy)
       case EventType.Landing  => LandingDetection.checkValidation(eventState, kinematics, config.landing)
     }
+    debug(s"[VALIDATION CHECK] $eventType: valid=$result")
+    result
+  }
+
+  // ─── State Updates ─────────────────────────────────────────────────────────
 
   private def updateAllEventStates[A](
     state: ProcessingState[A],
@@ -303,6 +372,8 @@ object FlightStagesDetection {
       case EventType.Canopy   => config.canopy.validationWindowSize
       case EventType.Landing  => config.landing.validationWindowSize
     }
+
+  // ─── Output Generation ─────────────────────────────────────────────────────
 
   private def computeCurrentPhase(events: DetectedEvents): FlightPhase =
     if (events.landing.isDefined) FlightPhase.Landed

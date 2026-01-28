@@ -11,7 +11,7 @@ object FileOps {
   def discoverCsvFiles(): IOConfig[List[Path]] =
     IOConfig.ask.flatMap { config =>
       val (baseDir, glob) = parseInputAsGlob(config.input)
-      val matcher         = FileSystems.getDefault.getPathMatcher(s"glob:$glob")
+      val matcher         = FileSystems.getDefault.getPathMatcher(s"glob:${glob.toLowerCase}")
 
       IOConfig.blocking {
         Files
@@ -54,6 +54,15 @@ object FileOps {
         .resolve(relativePath)
         .toAbsolutePath
         .normalize
+    }
+
+  /**
+   * Returns the base directory from the input configuration
+   */
+  def getInputBaseDir(): IOConfig[Path] =
+    IOConfig.ask.map { config =>
+      val (baseDir, _) = parseInputAsGlob(config.input)
+      baseDir
     }
 
   private def parseInputAsGlob(input: Path): (Path, String) =
