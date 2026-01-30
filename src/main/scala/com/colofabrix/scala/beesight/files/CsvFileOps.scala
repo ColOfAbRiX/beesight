@@ -33,19 +33,18 @@ object CsvFileOps {
       }
 
   /**
-   * Returns a pipe that writes FlysightPoints to a CSV file
+   * Returns a pipe that writes OutputFlightRow to a CSV file (includes phase column)
    */
   def writeCsvPipe[A](
     filePath: Path,
     dryRun: Boolean,
-  )(using CsvRowEncoder[A, String],
+  )(using CsvRowEncoder[OutputFlightRow[A], String],
   ): fs2.Pipe[IOConfig, OutputFlightRow[A], Nothing] =
     stream =>
       stream
         .through { s =>
           if !dryRun then s else fs2.Stream.empty
         }
-        .map(_.source)
         .through(encodeUsingFirstHeaders(fullRows = true))
         .through(fs2.text.utf8.encode)
         .through(Files[IOConfig].writeAll(Fs2Path.fromNioPath(filePath)))

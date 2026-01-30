@@ -101,30 +101,39 @@ object FlysightPoint {
   given csvRowEncoder: CsvRowEncoder[FlysightPoint, String] with {
 
     def apply(row: FlysightPoint): CsvRow[String] =
+      CsvRow.fromNelHeaders(flysightFields(row))
+
+  }
+
+  given outputFlightRowEncoder: CsvRowEncoder[OutputFlightRow[FlysightPoint], String] with {
+
+    def apply(row: OutputFlightRow[FlysightPoint]): CsvRow[String] =
       CsvRow.fromNelHeaders(
-        NonEmptyList
-          .of(
-            ("time", row.time.toString()),
-            ("lat", formatDouble(row.lat, 7)),
-            ("lon", formatDouble(row.lon, 7)),
-            ("hMSL", formatDouble(row.hMSL, 3)),
-            ("velN", formatDouble(row.velN, 2)),
-            ("velE", formatDouble(row.velE, 2)),
-            ("velD", formatDouble(row.velD, 2)),
-            ("hAcc", formatDouble(row.hAcc, 3)),
-            ("vAcc", formatDouble(row.vAcc, 3)),
-            ("sAcc", formatDouble(row.sAcc, 2)),
-            ("heading", formatDouble(row.heading, 5)),
-            ("cAcc", formatDouble(row.cAcc, 5)),
-            ("gpsFix", row.gpsFix.toString),
-            ("numSV", row.numSV.toString),
-          )
-          .appendList(
-            row.extra,
-          ),
+        flysightFields(row.source)
+          .append(("phase", row.phase.toString)),
       )
 
   }
+
+  private def flysightFields(row: FlysightPoint): NonEmptyList[(String, String)] =
+    NonEmptyList
+      .of(
+        ("time", row.time.toString()),
+        ("lat", formatDouble(row.lat, 7)),
+        ("lon", formatDouble(row.lon, 7)),
+        ("hMSL", formatDouble(row.hMSL, 3)),
+        ("velN", formatDouble(row.velN, 2)),
+        ("velE", formatDouble(row.velE, 2)),
+        ("velD", formatDouble(row.velD, 2)),
+        ("hAcc", formatDouble(row.hAcc, 3)),
+        ("vAcc", formatDouble(row.vAcc, 3)),
+        ("sAcc", formatDouble(row.sAcc, 2)),
+        ("heading", formatDouble(row.heading, 5)),
+        ("cAcc", formatDouble(row.cAcc, 5)),
+        ("gpsFix", row.gpsFix.toString),
+        ("numSV", row.numSV.toString),
+      )
+      .appendList(row.extra)
 
   private def formatDouble(value: Double, precision: Int): String =
     BigDecimal(value)

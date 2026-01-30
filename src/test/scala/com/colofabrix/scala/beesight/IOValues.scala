@@ -2,7 +2,6 @@ package com.colofabrix.scala.beesight
 
 import cats.effect.IO
 import cats.effect.unsafe.IORuntime
-import com.colofabrix.scala.beesight.config.Config
 import org.scalatest.exceptions.TestFailedException
 import org.scalatest.Suite
 import scala.concurrent.duration.*
@@ -11,27 +10,25 @@ import scala.concurrent.duration.*
  * Mixin trait that provides helper methods for scalatest Suite, similar to scalatest's EitherValues, to test IO and
  * access its values, including exceptions
  */
-trait IOConfigValues {
+trait IOValues {
   self: Suite =>
 
   private given testRuntime: IORuntime =
     cats.effect.unsafe.implicits.global
 
-  extension [A](self: IOConfig[A]) {
+  extension [A](self: IO[A]) {
 
     /** The success value contained in the monad */
-    def result(config: Config = Config.default, timeout: FiniteDuration = 30.seconds): A =
+    def result(timeout: FiniteDuration = 30.seconds): A =
       self
-        .run(config)
         .unsafeRunTimed(timeout)(using IORuntime.global)
         .getOrElse {
           fail("Timeout while waiting for operation to complete")
         }
 
     /** True if the monad contains an exception */
-    def isException(config: Config = Config.default, timeout: FiniteDuration = 30.seconds): Boolean =
+    def isException(timeout: FiniteDuration = 30.seconds): Boolean =
       self
-        .run(config)
         .redeem(_ => true, _ => false)
         .unsafeRunTimed(timeout)
         .getOrElse {
@@ -39,9 +36,8 @@ trait IOConfigValues {
         }
 
     /** The exception value contained in the monad */
-    def exception(config: Config = Config.default, timeout: FiniteDuration = 30.seconds): Throwable =
+    def exception(timeout: FiniteDuration = 30.seconds): Throwable =
       self
-        .run(config)
         .redeemWith(
           error => IO(error),
           _ => IO.raiseError(new TestFailedException(Some("The IO value did not contain an exception."), None, 1)),

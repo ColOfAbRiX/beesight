@@ -9,7 +9,7 @@ object FlightStagesDetection {
 
   // ─── Debug Configuration ───────────────────────────────────────────────────
 
-  private val DEBUG_ENABLED = true
+  private val DEBUG_ENABLED = false
 
   private def debug(msg: => String): Unit =
     if (DEBUG_ENABLED) println(s"[DEBUG] $msg")

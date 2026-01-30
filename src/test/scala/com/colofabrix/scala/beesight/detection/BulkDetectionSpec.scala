@@ -5,7 +5,6 @@ import cats.effect.unsafe.implicits.global
 import cats.effect.unsafe.IORuntime
 import cats.syntax.all.given
 import com.colofabrix.scala.beesight.*
-import com.colofabrix.scala.beesight.config.Config
 import com.colofabrix.scala.beesight.files.CsvFileOps
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.model.formats.FlysightPoint
@@ -15,7 +14,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import scala.io.Source
 
-class FlightStagesDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues with FlightStagesMatchers {
+class BulkDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues with FlightStagesMatchers {
 
   private val flysightDir = Paths.get("src/test/resources/flysight")
   private val resultsFile = Paths.get("src/test/resources/points_results.csv")
@@ -34,8 +33,8 @@ class FlightStagesDetectionSpec extends AnyWordSpec with Matchers with IOConfigV
               val filePath = flysightDir.resolve(filename)
               val points   = CsvFileOps.readCsv[FlysightPoint](filePath)
 
-              detectPoints(points)
-                .runToIO()
+              Tools
+                .detectPoints(points)
                 .map { result =>
                   val matcher     = matchStages(expected.toFlightEvents)
                   val matchResult = matcher(result)
@@ -47,12 +46,12 @@ class FlightStagesDetectionSpec extends AnyWordSpec with Matchers with IOConfigV
                   }
                 }
           }
-          .unsafeRunSync()
+          .result()
 
       if (failures.nonEmpty) {
-        note(s"forEvery failed, because:\n${failures.mkString("\n\n")}")
+        info(s"forEvery failed, because:\n${failures.mkString("\n\n")}")
         val failureRate = 1.0 - (failures.size.toDouble / untaggedLines.size.toDouble)
-        failureRate should be >= 0.95
+        failureRate.should(be >= 0.95)
       }
 
     }
@@ -69,8 +68,8 @@ class FlightStagesDetectionSpec extends AnyWordSpec with Matchers with IOConfigV
               val filePath = flysightDir.resolve(filename)
               val points   = CsvFileOps.readCsv[FlysightPoint](filePath)
 
-              detectPoints(points)
-                .runToIO()
+              Tools
+                .detectPoints(points)
                 .map { result =>
                   val matcher     = matchStages(expected.toFlightEvents)
                   val matchResult = matcher(result)
@@ -82,12 +81,12 @@ class FlightStagesDetectionSpec extends AnyWordSpec with Matchers with IOConfigV
                   }
                 }
           }
-          .unsafeRunSync()
+          .result()
 
       if (failures.nonEmpty) {
-        note(s"forEvery failed, because:\n${failures.mkString("\n\n")}")
+        info(s"forEvery failed, because:\n${failures.mkString("\n\n")}")
         val successRate = 1.0 - (failures.size.toDouble / untaggedLines.size.toDouble)
-        successRate should be >= 0.25
+        successRate.should(be >= 0.25)
       }
 
     }
@@ -140,21 +139,5 @@ class FlightStagesDetectionSpec extends AnyWordSpec with Matchers with IOConfigV
 
   private def parseOptLong(value: Option[String]): Option[Long] =
     value.filter(_.trim.nonEmpty).map(_.trim.toLong)
-
-  private def detectPoints(data: fs2.Stream[IOConfig, FlysightPoint]): IOConfig[FlightEvents] =
-    data
-      .through(FlightStagesDetection.streamDetectA)
-      .compile
-      .last
-      .map {
-        _.fold(FlightEvents.empty) { output =>
-          FlightEvents(
-            takeoff = output.takeoff,
-            freefall = output.freefall,
-            canopy = output.canopy,
-            landing = output.landing,
-          )
-        }
-      }
 
 }

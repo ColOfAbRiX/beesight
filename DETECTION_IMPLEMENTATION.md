@@ -274,47 +274,7 @@ enum StreamPhase {
 
 **Purpose:** Tracks whether we're in normal streaming mode or validating a potential detection.
 
-**State Machine:**
-```
-                      Detection triggers (T)
-Streaming ────────────────────────────────────► Validation(40, Freefall)
-    ▲                                                      │
-    │                                                      │
-    │       Success: resume from I+1     Fail: resume from T+1
-    └──────────────────────────────────────────────────────┘
-```
-
-**Key Principle: "As If Validation Never Happened"**
-
-When validation completes, the algorithm must resume from an earlier point using the buffered state snapshot:
-- **On Trigger (T):** Freeze the current Streaming state by buffering it. Continue buffering each subsequent point with its own state snapshot.
-- **On Validation Success:** Find inflection point (I) in backtrack window, mark event at I, resume from state at I+1 with updated `detectedEvents`
-- **On Validation Failure:** Resume from state at T+1 (first point after trigger), no event marked
-
-This "time travel" is possible because `pendingBuffer` contains complete `ProcessingState` snapshots at each index.
-
-**Example flow:**
-```scala
-// Point T=100: Freefall threshold crossed, buffer contains state at T=100
-StreamPhase.Streaming → StreamPhase.Validation(40, EventType.Freefall)
-
-// Points 101-139: Buffer states at each point, counting down
-Validation(39, ...) → Validation(38, ...) → ... → Validation(1, ...)
-
-// Point 140: remainingPoints == 0, check validation
-if (stillValid) {
-  // Find inflection at I=98 (within backtrack window of state at T=100)
-  // Resume from pendingBuffer state where index > 98 (e.g., state at 99)
-  // Mark freefall event at FlightPoint(98, altitude)
-  // Output all buffered points with correct phases
-} else {
-  // Resume from pendingBuffer(1) = state at T+1 = 101
-  // Output all buffered points with original phases
-}
-→ StreamPhase.Streaming
-```
-
-**Why success doesn't re-trigger:** After marking freefall, the algorithm looks for Canopy (different phase). Even if we pass point T=100 again when outputting, the detection logic now checks for Canopy conditions, not Freefall.
+> **📖 See [Section 4.3: Stream Emission Behavior](#43-stream-emission-behavior) for the complete specification of when and what the stream emits during each phase, including the "As If Validation Never Happened" principle, buffer behavior, and emission examples.**
 
 #### 2.2.4 DetectedEvents
 
@@ -424,47 +384,9 @@ final case class BufferedState[A](
 
 **Purpose:** Complete state for the streaming algorithm.
 
-**Key Insight: Buffer Contains Full State Snapshots**
+**Key Insight:** The `pendingBuffer` stores complete `ProcessingState[A]` objects (not just raw data points) to enable "time travel" when validation completes. Each buffered entry contains the input point, kinematics, event state windows, and detectedEvents at that index.
 
-The `pendingBuffer` stores complete `ProcessingState[A]` objects, not just raw data points. This means each buffered entry contains:
-- The input point and kinematics at that index
-- **All event state windows** (smoothing, backtrack, stability) as they were at that index
-- The `detectedEvents` at that index
-
-This enables "time travel" - when validation completes, we can resume processing from any buffered point **with the exact state that existed at that point**, including all sliding windows in their correct historical positions.
-
-**Why Full State Snapshots Matter:**
-
-When we resume from inflection+1 (success) or trigger+1 (failure), we don't just need the data point - we need the entire algorithmic state from that moment. The smoothing windows, backtrack windows, and stability windows must be positioned correctly for subsequent detections.
-
-```scala
-// Each buffered state is a complete snapshot:
-pendingBuffer(0) = ProcessingState at T with:
-  - takeoffState.backtrackWindow containing samples up to T
-  - freefallState.smoothingWindow containing speeds up to T
-  - etc.
-
-pendingBuffer(1) = ProcessingState at T+1 with:
-  - all windows updated to include T+1
-
-// On success at I: resume from pendingBuffer.find(_.index > I)
-// On failure: resume from pendingBuffer(1) (T+1)
-```
-
-**Buffer Visualization:**
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  pendingBuffer (contains full ProcessingState snapshots)         │
-├─────────────────────────────────────────────────────────────────┤
-│ [stateT] [stateT+1] [stateT+2] ... [stateT+N]                   │
-│     ▲        ▲           ▲              ▲                       │
-│     │        │           │              │                       │
-│  Trigger  Resume on   Inflection     Current                    │
-│  point    failure     point (I)      point                      │
-│           (T+1)       Resume on                                 │
-│                       success (I+1)                             │
-└─────────────────────────────────────────────────────────────────┘
-```
+> **📖 See [Section 4.3: Stream Emission Behavior](#43-stream-emission-behavior) for detailed buffer visualization, when/how the buffer is released, and the "time travel" mechanism for resuming from buffered states.**
 
 ---
 
@@ -967,6 +889,8 @@ Result: FlightPoint(142, altitude_at_142)
 #### 3.4.4 detection/BufferManager.scala
 
 **Purpose:** Manage the pending output buffer during streaming and validation.
+
+> **📖 See [Section 4.3: Stream Emission Behavior](#43-stream-emission-behavior) for detailed specifications of when the buffer is released, what phases are assigned, and comprehensive emission examples.**
 
 ```scala
 package com.colofabrix.scala.beesight.detection
@@ -1867,6 +1791,497 @@ Output Stream: OutputFlightRow[A]
 - **On success:** Use `pendingBuffer[0].backtrackWindow` to find inflection I, then resume from the buffered state at index > I
 - **On failure:** Resume from `pendingBuffer[1]` (state at T+1)
 - **Both cases:** Output all buffered points, then continue with the restored state. Subsequent detections use the windows from the restored state, not the current point.
+
+### 4.3 Stream Emission Behavior
+
+This section provides the **authoritative specification** for when and what the stream emits during each phase of the detection algorithm. All emission-related logic in other sections (2.2.3, 2.2.6, 3.4.4, 3.6.3) implements this specification.
+
+#### 4.3.1 Core Principles
+
+1. **Goal**: Every emitted point has the **correct phase** at emission time
+2. **No early emissions**: Never emit before the earliest possible inflection point (respects backtrack window)
+3. **Rollback on success**: After validation success, emit only up to inflection point, then **reprocess** remaining points
+4. **Recursive**: Reprocessing follows the same rules - can trigger new validations
+
+#### 4.3.2 Emission Phases Overview
+
+The algorithm has four distinct emission phases:
+
+| Phase | Stream State | Buffer Behavior | Emission Behavior |
+|-------|--------------|-----------------|-------------------|
+| **Streaming** | Normal processing | Rolling buffer up to `backtrackWindowSize` | Emit oldest when buffer exceeds max |
+| **Validation** | Counting down | Buffer all incoming states | No emissions |
+| **Post-Validation Success** | Releasing partial buffer | Emit up to inflection, reprocess rest | Emit only confirmed points |
+| **Post-Validation Failure** | Releasing full buffer | Clear buffer | Emit all buffered points unchanged |
+
+#### 4.3.3 Before Validation (Streaming Phase)
+
+During normal streaming, the algorithm maintains a **rolling buffer** to enable backtracking when a detection is later confirmed:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    STREAMING PHASE - BUFFER BEHAVIOR                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Point arrives → Add to pendingBuffer → Check buffer size
+
+                    ┌───────────────────────────────────────┐
+                    │ pendingBuffer.size > backtrackWindowSize? │
+                    └───────────────────────────────────────┘
+                                       │
+                      ┌────────────────┴────────────────┐
+                      │ YES                             │ NO
+                      ▼                                 ▼
+            ┌─────────────────────┐          ┌─────────────────────┐
+            │ EMIT oldest point   │          │ No emission         │
+            │ (pendingBuffer.head)│          │ (continue buffering)│
+            │ Drop from buffer    │          │                     │
+            └─────────────────────┘          └─────────────────────┘
+```
+
+**Emission Content During Streaming:**
+```scala
+OutputFlightRow(
+  phase = computeCurrentPhase(state.detectedEvents),  // Based on already-confirmed events
+  takeoff = state.detectedEvents.takeoff,             // Only confirmed events
+  freefall = state.detectedEvents.freefall,
+  canopy = state.detectedEvents.canopy,
+  landing = state.detectedEvents.landing,
+  source = state.currentPoint.source,
+)
+```
+
+**Example - Buffer During Streaming:**
+```
+backtrackWindowSize = 5
+
+Points 0-4:    Buffer grows: [0] → [0,1] → ... → [0,1,2,3,4]
+               Emissions: None (buffer not full yet)
+
+Point 5:       Buffer would be [0...5] = 6 items > 5
+               Emit: Point 0 with phase=BeforeTakeoff
+               Buffer becomes: [1,2,3,4,5]
+
+Point 6:       Buffer would be [1...6] = 6 items > 5
+               Emit: Point 1 with phase=BeforeTakeoff
+               Buffer becomes: [2,3,4,5,6]
+```
+
+#### 4.3.4 During Validation
+
+When a detection trigger occurs (e.g., freefall threshold crossed), the algorithm enters **Validation phase** and stops emitting:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    VALIDATION PHASE - BUFFER BEHAVIOR                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Detection triggered at T → StreamPhase.Validation(validationWindowSize, eventType)
+
+Points T to T+N:
+  ┌──────────────────────────────────────────────────────────────────────────┐
+  │ Each point:                                                              │
+  │   1. Compute kinematics and update windows                               │
+  │   2. Add FULL ProcessingState snapshot to pendingBuffer                  │
+  │   3. Decrement remainingPoints                                           │
+  │   4. Emit: NOTHING                                                       │
+  └──────────────────────────────────────────────────────────────────────────┘
+
+Why no emissions?
+  - We don't know yet if the detection is valid
+  - If valid, we need to emit only up to inflection point with new phase
+  - Remaining points must be REPROCESSED through normal streaming
+```
+
+**Buffer Contents During Validation:**
+
+Each buffered entry contains:
+- The raw `InputFlightRow[A]` for reprocessing
+- The complete `ProcessingState[A]` snapshot for state restoration
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  pendingBuffer during Validation                                 │
+├─────────────────────────────────────────────────────────────────┤
+│ [entry5] [entry6] ... [entryT] [entryT+1] ... [entryT+N]        │
+│                           ▲        ▲              ▲              │
+│                           │        │              │              │
+│                        Trigger  Possible       Current           │
+│                        point    Inflection     point             │
+│                                 point (I)                        │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Why Full State Snapshots?**
+
+This enables "time travel" - when validation completes, we can resume processing from any buffered point **with the exact state that existed at that point**, including all sliding windows in their correct historical positions.
+
+#### 4.3.5 After Validation - Success (CRITICAL: Emit-Then-Reprocess)
+
+When validation succeeds (conditions still valid after N points), the algorithm:
+
+1. **Finds the inflection point (I)** using the trigger state's backtrack window
+2. **Updates state at I** with the new detection
+3. **Emits ONLY up to and including I** (with corrected phase)
+4. **Reprocesses remaining points** through normal streaming logic
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    VALIDATION SUCCESS - EMIT THEN REPROCESS                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Validation completes at T+N, still valid
+
+Step 1: Find inflection point I in pendingBuffer[trigger].backtrackWindow
+
+Step 2: Update state at I with new detection
+        state_I_updated = state_I.copy(
+          detectedEvents = state_I.detectedEvents.copy(freefall = Some(FlightPoint(I, alt)))
+        )
+
+Step 3: Emit buffered points ONLY up to and including I
+        emit state5 → phase=BeforeTakeoff (index < I)
+        emit state6 → phase=BeforeTakeoff (index < I)
+        emit state_I_updated → phase=Freefall ← LAST EMISSION FROM BUFFER
+
+Step 4: Collect remaining raw points for reprocessing
+        reprocessQueue = [rawPoint_{I+1}, rawPoint_{I+2}, ..., rawPoint_{T+N}]
+
+Step 5: Resume from state_I_updated, feed reprocessQueue back into streaming
+        - Windows continue from where they were at I
+        - Now looking for NEXT event (e.g., Canopy after Freefall)
+        - Buffer starts empty
+        - Normal streaming rules apply (can trigger new validations)
+```
+
+**Key Insight: Reprocessing, Not Batch Emission**
+
+Points after the inflection point are **reprocessed**, not batch-emitted. This means:
+- They go through normal `processPoint()` logic
+- They can trigger new validations (e.g., Canopy during Freefall reprocessing)
+- They are emitted according to normal streaming buffer rules
+- Nested reprocessing is possible (recursive)
+
+#### 4.3.6 After Validation - Failure
+
+When validation fails (conditions no longer valid), the algorithm:
+
+1. **Emits the entire buffer unchanged** (no phase corrections)
+2. **Resumes from state at T+1** (first point after trigger)
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    VALIDATION FAILURE - EMIT ALL UNCHANGED                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Validation completes at T+N, NO LONGER valid
+
+Step 1: Emit buffer WITHOUT corrections
+
+        For each state in pendingBuffer:
+          emit with ORIGINAL phase and events (as if trigger never happened)
+
+Step 2: Resume from pendingBuffer[T+1] (state after trigger)
+        Continue streaming, looking for same event type again
+```
+
+**Example - False Trigger (GPS Spike):**
+```
+Trigger at T=10 (spike caused threshold crossing)
+By T+20, smoothed speed is back to normal → Validation FAILS
+
+Emit all buffered points unchanged:
+  Point 5: phase=BeforeTakeoff, freefall=None   (unchanged)
+  Point 6: phase=BeforeTakeoff, freefall=None   (unchanged)
+  ...
+  Point 20: phase=BeforeTakeoff, freefall=None  (unchanged)
+
+Resume from state at index 11, still looking for Freefall
+```
+
+#### 4.3.7 End of Stream
+
+When the input stream ends, any remaining buffered points must be flushed:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    END OF STREAM - BUFFER FLUSH                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Input stream ends → Check pendingBuffer
+
+If pendingBuffer.nonEmpty:
+  - Emit all remaining points with their current phases
+  - No phase corrections (validation incomplete or never triggered)
+
+If in Validation phase when stream ends:
+  - Treat as validation failure
+  - Emit all buffered points unchanged
+```
+
+#### 4.3.8 Emission Timing Summary
+
+| Scenario | When Emitted | Phase Assigned | What Happens Next |
+|----------|--------------|----------------|-------------------|
+| Streaming, buffer full | Immediately (oldest) | Current known phase | Continue streaming |
+| Streaming, buffer not full | Deferred | - | Continue buffering |
+| During validation | Never | - | Continue validation |
+| Validation success | Emit up to I only | Corrected at I | Reprocess I+1 to T+N |
+| Validation failure | Emit all buffered | Original (unchanged) | Resume from T+1 |
+| End of stream | Immediate flush | Current known phase | Done |
+
+#### 4.3.9 The Reprocessing Mechanism
+
+When validation succeeds, points after the inflection point are **re-injected** into the stream for reprocessing. This requires special stream handling:
+
+```scala
+// Using fs2 Pull for re-injection capability
+def go(
+  inputStream: Stream[F, InputFlightRow[A]],
+  state: ProcessingState[A],
+): Pull[F, OutputFlightRow[A], Unit] =
+  inputStream.pull.uncons1.flatMap {
+    case None =>
+      // End of stream - flush remaining buffer
+      Pull.output(Chunk.seq(flushBuffer(state))) >> Pull.done
+
+    case Some((point, rest)) =>
+      processPoint(state, point) match {
+        case ContinueStreaming(newState, outputs) =>
+          Pull.output(Chunk.seq(outputs)) >> go(rest, newState)
+
+        case ValidationSuccess(newState, outputs, reprocessQueue) =>
+          // Re-inject reprocessQueue at the front of the stream
+          val newStream = Stream.emits(reprocessQueue) ++ rest
+          Pull.output(Chunk.seq(outputs)) >> go(newStream, newState)
+
+        case ValidationFailure(newState, outputs) =>
+          Pull.output(Chunk.seq(outputs)) >> go(rest, newState)
+      }
+  }
+```
+
+**Key Properties of Reprocessing:**
+
+1. **Windows continue**: The smoothing/backtrack windows from state_I are preserved
+2. **Looking for next event**: After Freefall, now looking for Canopy
+3. **Buffer restarts empty**: Fresh rolling buffer begins
+4. **Can nest**: If Canopy triggers during reprocessing, same validation+reprocess cycle applies
+5. **Recursive correctness**: Each reprocessing level follows the same rules
+
+### 4.4 Complete Worked Example: Freefall Detection
+
+This section provides a detailed trace through the algorithm to demonstrate the emit-then-reprocess behavior.
+
+#### 4.4.1 Setup
+
+```
+Configuration:
+  backtrackWindowSize = 5
+  validationWindowSize = 10
+```
+
+#### 4.4.2 Input Data
+
+```
+Index | Vertical Speed | What's Happening
+------|----------------|------------------
+  0   |     0.5        | On ground
+  1   |     0.8        | On ground
+  2   |     2.0        | Plane climbing
+  3   |     3.0        | Plane climbing
+  4   |     4.0        | Plane climbing
+  5   |     5.0        | Plane at altitude
+  6   |     5.5        | Plane at altitude
+  7   |     8.0        | ← EXIT (inflection point - speed starts rising)
+  8   |    15.0        | Freefall accelerating
+  9   |    22.0        | Freefall accelerating
+ 10   |    28.0        | ← TRIGGER (crosses 25 m/s threshold)
+ 11   |    35.0        | Freefall (validation continues)
+ 12   |    42.0        | Freefall (validation continues)
+ ...  |    ...         | ...
+ 20   |    54.0        | ← VALIDATION COMPLETE at T+10
+ 21   |    53.5        | Freefall (after validation)
+```
+
+#### 4.4.3 Phase 1: Streaming (Index 0-4)
+
+Buffer grows, NO emissions yet (buffer size ≤ backtrackWindowSize):
+
+```
+Index 0: buffer = [state0]                      → emit: nothing
+Index 1: buffer = [state0, state1]              → emit: nothing
+Index 2: buffer = [state0, state1, state2]      → emit: nothing
+Index 3: buffer = [state0,...,state3]           → emit: nothing
+Index 4: buffer = [state0,...,state4]           → emit: nothing (size=5=max)
+```
+
+#### 4.4.4 Phase 2: Streaming with Emissions (Index 5-9)
+
+```
+Index 5: buffer would be [0,1,2,3,4,5] = 6 items > 5
+         → EMIT: point 0 with phase=BeforeTakeoff
+         → buffer = [state1,...,state5]
+
+Index 6: → EMIT: point 1 with phase=BeforeTakeoff
+         → buffer = [state2,...,state6]
+
+Index 7: → EMIT: point 2 with phase=BeforeTakeoff
+         → buffer = [state3,...,state7]
+
+Index 8: → EMIT: point 3 with phase=BeforeTakeoff
+         → buffer = [state4,...,state8]
+
+Index 9: → EMIT: point 4 with phase=BeforeTakeoff
+         → buffer = [state5,...,state9]
+```
+
+#### 4.4.5 Phase 3: TRIGGER at Index 10
+
+Speed = 28 m/s > threshold (25 m/s) → **TRIGGER FREEFALL**
+
+```
+Index 10:
+  - Trigger detected!
+  - Enter Validation(remainingPoints=10, Freefall)
+  - buffer = [state5, state6, state7, state8, state9, state10]
+  - EMIT: NOTHING (validation starts)
+```
+
+**Backtrack window at trigger (indices 6-10):**
+```
+  Index 6: speed = 5.5  (plane)
+  Index 7: speed = 8.0  ← INFLECTION (first rise after falling/stable)
+  Index 8: speed = 15.0
+  Index 9: speed = 22.0
+  Index 10: speed = 28.0
+```
+
+#### 4.4.6 Phase 4: Validation (Index 11-19)
+
+```
+Index 11: remaining=9, buffer=[state5,...,state11], emit: nothing
+Index 12: remaining=8, buffer=[state5,...,state12], emit: nothing
+...
+Index 19: remaining=1, buffer=[state5,...,state19], emit: nothing
+```
+
+#### 4.4.7 Phase 5: Validation Complete at Index 20
+
+```
+Index 20: remaining=0 → CHECK VALIDATION
+
+Current speed = 54 m/s > 25*0.8 = 20 m/s → VALID!
+
+Step 1: Find inflection using backtrack window at TRIGGER (index 10)
+        → Inflection found at Index 7 (where speed started rising)
+        → EventPoint = FlightPoint(7, altitude_at_7)
+
+Step 2: Update state at index 7 with freefall detection
+        state7_updated = state7.copy(
+          detectedEvents = DetectedEvents(freefall = Some(FlightPoint(7, alt)))
+        )
+
+Step 3: Emit buffered points ONLY up to and including inflection point:
+        → EMIT: state5 with phase=BeforeTakeoff, freefall=None
+        → EMIT: state6 with phase=BeforeTakeoff, freefall=None
+        → EMIT: state7_updated with phase=Freefall, freefall=Some(7, alt) ← EVENT POINT
+
+Step 4: Collect remaining raw points for reprocessing:
+        reprocessQueue = [rawPoint8, rawPoint9, ..., rawPoint20]
+
+Step 5: Resume from state7_updated:
+        - detectedEvents now includes freefall
+        - pendingBuffer = [] (empty)
+        - streamPhase = Streaming
+        - Now looking for Canopy (not Freefall)
+```
+
+#### 4.4.8 Phase 6: Reprocessing Points 8-20
+
+Points 8-20 are re-injected into the stream and processed through normal streaming logic:
+
+```
+Reprocess Index 8:
+  - Start with state7_updated (has freefall=Some(7))
+  - Process point 8 normally
+  - buffer = [state8]
+  - emit: nothing (buffer not full)
+
+Reprocess Index 9:
+  - buffer = [state8, state9]
+  - emit: nothing
+
+...
+
+Reprocess Index 13:
+  - buffer would be [8,9,10,11,12,13] = 6 items > 5
+  - EMIT: point 8 with phase=Freefall, freefall=Some(7, alt)
+  - buffer = [state9,...,state13]
+
+Reprocess Index 14:
+  - EMIT: point 9 with phase=Freefall
+  - buffer = [state10,...,state14]
+
+... continues through index 20 ...
+```
+
+#### 4.4.9 Phase 7: Continue with Original Stream (Index 21+)
+
+After reprocessing completes, the original stream continues from index 21:
+
+```
+Index 21 (from original stream):
+  - Process normally
+  - buffer = [state17,...,state21] (continuing from reprocessing)
+  - EMIT: point 16 with phase=Freefall
+  - ... continues normally, looking for Canopy
+```
+
+#### 4.4.10 Complete Output Sequence
+
+```
+Total output (in order emitted):
+
+BATCH 1 - Streaming (at indices 5-9):
+  point 0: phase=BeforeTakeoff, freefall=None
+  point 1: phase=BeforeTakeoff, freefall=None
+  point 2: phase=BeforeTakeoff, freefall=None
+  point 3: phase=BeforeTakeoff, freefall=None
+  point 4: phase=BeforeTakeoff, freefall=None
+
+BATCH 2 - Validation Success (at index 20):
+  point 5: phase=BeforeTakeoff, freefall=None
+  point 6: phase=BeforeTakeoff, freefall=None
+  point 7: phase=Freefall, freefall=Some(7, alt)  ← EVENT POINT
+
+BATCH 3 - Reprocessing (during reprocess of 8-20):
+  point 8:  phase=Freefall, freefall=Some(7, alt)  (emitted when buffer fills)
+  point 9:  phase=Freefall, freefall=Some(7, alt)
+  point 10: phase=Freefall, freefall=Some(7, alt)
+  point 11: phase=Freefall, freefall=Some(7, alt)
+  point 12: phase=Freefall, freefall=Some(7, alt)
+  point 13: phase=Freefall, freefall=Some(7, alt)
+  point 14: phase=Freefall, freefall=Some(7, alt)
+  point 15: phase=Freefall, freefall=Some(7, alt)
+
+BATCH 4 - Continued streaming (index 21+):
+  point 16: phase=Freefall, freefall=Some(7, alt)
+  point 17: phase=Freefall, freefall=Some(7, alt)
+  ...
+```
+
+#### 4.4.11 Key Observations
+
+1. **Every emitted point has the correct phase**: Point 7 is correctly tagged as Freefall even though the trigger was at index 10.
+
+2. **No points emitted prematurely**: Points 5-7 were held in the buffer until validation confirmed the event.
+
+3. **Reprocessing uses normal rules**: Points 8-20 went through regular streaming logic, not batch-emitted.
+
+4. **Buffer restarts after validation**: During reprocessing, the buffer starts empty and refills according to normal rules.
+
+5. **State continuity**: The windows (smoothing, backtrack) continue from state7, ensuring subsequent detections (like Canopy) use correct historical data.
 
 ---
 
