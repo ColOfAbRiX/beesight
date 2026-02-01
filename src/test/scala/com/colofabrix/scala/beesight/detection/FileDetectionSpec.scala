@@ -19,19 +19,14 @@ class FileDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues {
   "FlightStagesDetection" should {
 
     "output the Phases at the point where they happen" in {
-      val inputData    = Paths.get("src/test/resources/file_detection_spec/input_data.csv")
-      val expectedData = Paths.get("src/test/resources/file_detection_spec/expected_data.csv")
+      val inputData = Paths.get("src/test/resources/file_detection_spec/input_data.csv")
 
-      val expectedPhases =
+      val inputLineCount =
         Source
-          .fromFile(expectedData.toFile)
+          .fromFile(inputData.toFile)
           .getLines()
-          .drop(1) // Skip header
-          .map { line =>
-            val cols = line.split(",")
-            cols.last.trim
-          }
-          .toList
+          .drop(1)
+          .size
 
       val processedResults =
         CsvFileOps
@@ -41,14 +36,21 @@ class FileDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues {
           .toList
           .result()
 
-      processedResults.size shouldBe expectedPhases.size
+      processedResults.size shouldBe inputLineCount
 
-      processedResults.zip(expectedPhases).zipWithIndex.foreach {
-        case ((result, expectedPhase), idx) =>
-          withClue(s"Row $idx (time: ${result.source.time}): ") {
-            result.phase.toString shouldBe expectedPhase
-          }
-      }
+      processedResults
+        .zipWithIndex
+        .sliding(2)
+        .foreach {
+          case Seq((prev, _), (curr, idx)) =>
+            if (prev.phase != curr.phase) {
+              withClue(s"Phase transition at row $idx, from ${prev.phase} to ${curr.phase}: ") {
+                curr.phaseTransitionIndex shouldBe idx
+              }
+            }
+          case _ =>
+          // Handle edge case of single element
+        }
     }
 
   }

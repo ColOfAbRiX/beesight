@@ -28,24 +28,60 @@ object FlightStagesDetection {
     streamDetectWithConfig(DetectionConfig.default)
 
   def streamDetectWithConfig[F[_], A: FileFormatAdapter](config: DetectionConfig): fs2.Pipe[F, A, OutputFlightRow[A]] =
-    _.map(FileFormatAdapter[A].toInputFlightPoint)
-      .zipWithIndex
-      .mapAccumulate(Option.empty[ProcessingState[A]]) {
-        case (maybeState, (point, idx)) =>
-          val result =
-            maybeState match {
+    input => {
+      def processWithDrain(s: fs2.Stream[F, (Option[ProcessingState[A]], Vector[OutputFlightRow[A]])]): fs2.Pull[
+        F,
+        OutputFlightRow[A],
+        Unit,
+      ] =
+        s.pull.uncons1.flatMap {
+          case None =>
+            fs2.Pull.done
+
+          case Some(((state, outputs), remaining)) =>
+            // Check if this is the last element by peeking at remaining
+            remaining.pull.uncons1.flatMap {
               case None =>
-                debug(s"[INIT] Creating initial state at index 0")
-                val initialState = createInitialState(point, config)
-                ProcessingResult(initialState, Vector.empty)
-              case Some(state) =>
-                processPoint(state, point, idx, config)
+                // This was the last element - emit outputs + flush buffer
+                val finalOutputs = state match {
+                  case Some(st) =>
+                    debug(s"[DRAIN] Flushing ${st.pendingBuffer.size} remaining buffered points")
+                    outputs ++ st.pendingBuffer.map(_.toOutputRow)
+                  case None =>
+                    outputs
+                }
+                fs2.Pull.output(fs2.Chunk.from(finalOutputs))
+
+              case Some((next, rest)) =>
+                // Not last - emit current outputs and continue
+                fs2.Pull.output(fs2.Chunk.from(outputs)) >>
+                processWithDrain(fs2.Stream(next) ++ rest)
             }
-          (Some(result.nextState), result.outputs)
-      }
-      .flatMap {
-        case (_, outputs) => fs2.Stream.emits(outputs)
-      }
+        }
+
+      val mainStream = input
+        .map(FileFormatAdapter[A].toInputFlightPoint)
+        .zipWithIndex
+        .mapAccumulate(Option.empty[ProcessingState[A]]) {
+          case (maybeState, (point, idx)) =>
+            val result =
+              maybeState match {
+                case None =>
+                  debug(s"[INIT] Creating initial state at index 0")
+                  val initialState = createInitialState(point, config)
+                  // Add the initial state to its own buffer so it gets flushed at end of stream
+                  ProcessingResult(
+                    initialState.copy(pendingBuffer = Vector(initialState)),
+                    Vector.empty,
+                  )
+                case Some(state) =>
+                  processPoint(state, point, idx, config)
+              }
+            (Some(result.nextState), result.outputs)
+        }
+
+      processWithDrain(mainStream).stream
+    }
 
   private case class StreamData[A](
     config: DetectionConfig,
@@ -130,8 +166,8 @@ object FlightStagesDetection {
   ): ProcessingResult[A] =
     tryDetectEvent(state, kinematics, config) match {
       case Some(eventType) =>
-        val validationWindow = getValidationWindowSize(config, eventType)
-        val bufferedState    = addToBuffer(state)
+        val validationWindow = config.getValidationWindowSize(eventType)
+        val bufferedState    = state.addToBuffer()
         debug(s"[TRIGGER] ✓ Event $eventType TRIGGERED! Starting validation for $validationWindow points")
         ProcessingResult(
           state.copy(
@@ -143,9 +179,10 @@ object FlightStagesDetection {
 
       case None =>
         val maxBuffer = config.freefall.backtrackWindowSize
-        val newBuffer = addToBuffer(state)
+        val newBuffer = state.addToBuffer()
+
         if (newBuffer.size > maxBuffer) {
-          val output = toOutputRow(newBuffer.head)
+          val output = newBuffer.head.toOutputRow
           debug(s"[BUFFER] Buffer full ($maxBuffer), releasing oldest point")
           ProcessingResult(
             state.copy(pendingBuffer = newBuffer.tail),
@@ -165,7 +202,7 @@ object FlightStagesDetection {
     remaining: Int,
     eventType: EventType,
   ): ProcessingResult[A] = {
-    val bufferedState = addToBuffer(state)
+    val bufferedState = state.addToBuffer()
     debug(s"[VALIDATION] Continuing $eventType validation, $remaining more points to check")
     ProcessingResult(
       state.copy(
@@ -182,21 +219,26 @@ object FlightStagesDetection {
     kinematics: PointKinematics,
     config: DetectionConfig,
   ): ProcessingResult[A] = {
-    val eventState = getEventState(state, eventType)
+    val eventState = state.getEventState(eventType)
     val isValid    = checkValidationCondition(eventType, eventState, kinematics, config)
-    val fullBuffer = addToBuffer(state)
+    val fullBuffer = state.addToBuffer()
 
     debug(s"[VALIDATION FINALIZE] Event: $eventType, Valid: $isValid, Buffer size: ${fullBuffer.size}")
 
     if (isValid) {
       debug(s"[VALIDATION] ✓✓ $eventType CONFIRMED!")
 
-      val triggerState      = fullBuffer.head
-      val triggerEventState = getEventState(triggerState, eventType)
+      val backtrackSize     = config.getBacktrackWindowSize(eventType)
+      val triggerStateIndex = (backtrackSize - 1).min(fullBuffer.size - 1)
+      val triggerState      = fullBuffer(triggerStateIndex)
+      val triggerEventState = triggerState.getEventState(eventType)
       val isRising          = eventType == EventType.Takeoff || eventType == EventType.Freefall
-      val inflectionPoint   = InflectionFinder.findInflectionPoint(triggerEventState.backtrackWindow, isRising)
+      val minSpeedDelta     = config.global.inflectionMinSpeedDelta
+      val inflectionPoint   =
+        InflectionFinder.findInflectionPoint(triggerEventState.backtrackWindow, isRising, minSpeedDelta)
 
       debug(s"[INFLECTION] Looking for inflection point (isRising=$isRising)")
+
       inflectionPoint match {
         case Some(fp) =>
           debug(s"[INFLECTION] ✓ Found at index ${fp.index}, altitude ${fp.altitude}m")
@@ -204,13 +246,14 @@ object FlightStagesDetection {
           debug(s"[INFLECTION] ✗ No inflection point found")
       }
 
-      val resumeState = inflectionPoint match {
-        case Some(fp) => fullBuffer.find(_.index > fp.index).getOrElse(fullBuffer.last)
-        case None     => fullBuffer.last
-      }
+      val resumeState =
+        inflectionPoint match {
+          case Some(fp) => fullBuffer.find(_.index > fp.index).getOrElse(fullBuffer.last)
+          case None     => fullBuffer.last
+        }
       debug(s"[RESUME] Resuming from index ${resumeState.index}")
 
-      val newEvents = updateDetectedEvents(resumeState.detectedEvents, eventType, inflectionPoint)
+      val newEvents = resumeState.detectedEvents.updateDetectedEvents(eventType, inflectionPoint)
       val outputs   = releaseBuffer(fullBuffer, eventType, inflectionPoint)
       debug(s"[OUTPUT] Releasing ${outputs.size} points from buffer")
 
@@ -226,7 +269,7 @@ object FlightStagesDetection {
       debug(s"[VALIDATION] ✗✗ $eventType REJECTED! Returning to streaming")
 
       val resumeState = fullBuffer.lift(1).getOrElse(fullBuffer.last)
-      val outputs     = fullBuffer.map(toOutputRow)
+      val outputs     = fullBuffer.map(_.toOutputRow)
       debug(s"[RESUME] Resuming from index ${resumeState.index} (T+1)")
       debug(s"[OUTPUT] Releasing ${outputs.size} points from buffer")
 
@@ -250,7 +293,7 @@ object FlightStagesDetection {
     val candidates =
       Vector(
         (EventType.Takeoff, state.detectedEvents.takeoff.isEmpty),
-        (EventType.Freefall, state.detectedEvents.takeoff.isDefined && state.detectedEvents.freefall.isEmpty),
+        (EventType.Freefall, state.detectedEvents.freefall.isEmpty),
         (EventType.Canopy, state.detectedEvents.freefall.isDefined && state.detectedEvents.canopy.isEmpty),
         (
           EventType.Landing,
@@ -261,9 +304,10 @@ object FlightStagesDetection {
     val eligibleCandidates = candidates.filter(_._2).map(_._1)
     debug(s"[DETECT] Eligible events to check: ${eligibleCandidates.mkString(", ")}")
 
-    val result = candidates.collectFirst {
-      case (eventType, true) if checkEventTrigger(state, eventType, kinematics, config) => eventType
-    }
+    val result =
+      candidates.collectFirst {
+        case (eventType, true) if checkEventTrigger(state, eventType, kinematics, config) => eventType
+      }
 
     result match {
       case Some(et) => debug(s"[DETECT] ✓ $et trigger conditions MET")
@@ -279,30 +323,32 @@ object FlightStagesDetection {
     kinematics: PointKinematics,
     config: DetectionConfig,
   ): Boolean = {
-    val eventState = getEventState(state, eventType)
+    val eventState = state.getEventState(eventType)
 
-    val triggered = eventType match {
-      case EventType.Takeoff =>
-        TakeoffDetection.checkTrigger(eventState, kinematics, config.takeoff)
-      case EventType.Freefall =>
-        val previousSmoothed = state.previousKinematics.map(_.clippedVerticalSpeed).getOrElse(0.0)
-        FreefallDetection.checkTrigger(eventState, kinematics, previousSmoothed, config.freefall)
-      case EventType.Canopy =>
-        CanopyDetection.checkTrigger(eventState, config.canopy)
-      case EventType.Landing =>
-        LandingDetection.checkTrigger(eventState, kinematics, config.landing)
-    }
+    val triggered =
+      eventType match {
+        case EventType.Takeoff =>
+          TakeoffDetection.checkTrigger(eventState, kinematics, config.takeoff)
+        case EventType.Freefall =>
+          val previousSmoothed = state.previousKinematics.map(_.clippedVerticalSpeed).getOrElse(0.0)
+          FreefallDetection.checkTrigger(eventState, kinematics, previousSmoothed, config.freefall)
+        case EventType.Canopy =>
+          CanopyDetection.checkTrigger(eventState, config.canopy)
+        case EventType.Landing =>
+          LandingDetection.checkTrigger(eventState, kinematics, config.landing)
+      }
 
-    val constrained = eventType match {
-      case EventType.Takeoff =>
-        TakeoffDetection.checkConstraints(state.detectedEvents, kinematics, config.takeoff)
-      case EventType.Freefall =>
-        FreefallDetection.checkConstraints(state.detectedEvents, kinematics, state.index, config.freefall)
-      case EventType.Canopy =>
-        CanopyDetection.checkConstraints(state.detectedEvents, kinematics, state.index)
-      case EventType.Landing =>
-        LandingDetection.checkConstraints(state.detectedEvents, kinematics, state.index)
-    }
+    val constrained =
+      eventType match {
+        case EventType.Takeoff =>
+          TakeoffDetection.checkConstraints(state.detectedEvents, kinematics, config.takeoff)
+        case EventType.Freefall =>
+          FreefallDetection.checkConstraints(state.detectedEvents, kinematics, state.index, config.freefall)
+        case EventType.Canopy =>
+          CanopyDetection.checkConstraints(state.detectedEvents, kinematics, state.index)
+        case EventType.Landing =>
+          LandingDetection.checkConstraints(state.detectedEvents, kinematics, state.index)
+      }
 
     debug(s"[TRIGGER CHECK] $eventType: triggered=$triggered, constrained=$constrained")
 
@@ -315,12 +361,13 @@ object FlightStagesDetection {
     kinematics: PointKinematics,
     config: DetectionConfig,
   ): Boolean = {
-    val result = eventType match {
-      case EventType.Takeoff  => TakeoffDetection.checkValidation(eventState, config.takeoff)
-      case EventType.Freefall => FreefallDetection.checkValidation(eventState, config.freefall)
-      case EventType.Canopy   => CanopyDetection.checkValidation(eventState, config.canopy)
-      case EventType.Landing  => LandingDetection.checkValidation(eventState, kinematics, config.landing)
-    }
+    val result =
+      eventType match {
+        case EventType.Takeoff  => TakeoffDetection.checkValidation(eventState, config.takeoff)
+        case EventType.Freefall => FreefallDetection.checkValidation(eventState, config.freefall)
+        case EventType.Canopy   => CanopyDetection.checkValidation(eventState, config.canopy)
+        case EventType.Landing  => LandingDetection.checkValidation(eventState, kinematics, config.landing)
+      }
     debug(s"[VALIDATION CHECK] $eventType: valid=$result")
     result
   }
@@ -357,43 +404,7 @@ object FlightStagesDetection {
       stabilityWindow = state.stabilityWindow.enqueue(kinematics.clippedVerticalSpeed),
     )
 
-  private def getEventState[A](state: ProcessingState[A], eventType: EventType): EventState =
-    eventType match {
-      case EventType.Takeoff  => state.takeoffState
-      case EventType.Freefall => state.freefallState
-      case EventType.Canopy   => state.canopyState
-      case EventType.Landing  => state.landingState
-    }
-
-  private def getValidationWindowSize(config: DetectionConfig, eventType: EventType): Int =
-    eventType match {
-      case EventType.Takeoff  => config.takeoff.validationWindowSize
-      case EventType.Freefall => config.freefall.validationWindowSize
-      case EventType.Canopy   => config.canopy.validationWindowSize
-      case EventType.Landing  => config.landing.validationWindowSize
-    }
-
   // ─── Output Generation ─────────────────────────────────────────────────────
-
-  private def computeCurrentPhase(events: DetectedEvents): FlightPhase =
-    if (events.landing.isDefined) FlightPhase.Landed
-    else if (events.canopy.isDefined) FlightPhase.UnderCanopy
-    else if (events.freefall.isDefined) FlightPhase.Freefall
-    else if (events.takeoff.isDefined) FlightPhase.Climbing
-    else FlightPhase.BeforeTakeoff
-
-  private def addToBuffer[A](state: ProcessingState[A]): Vector[ProcessingState[A]] =
-    state.pendingBuffer :+ state
-
-  private def toOutputRow[A](state: ProcessingState[A]): OutputFlightRow[A] =
-    OutputFlightRow(
-      phase = computeCurrentPhase(state.detectedEvents),
-      takeoff = state.detectedEvents.takeoff,
-      freefall = state.detectedEvents.freefall,
-      canopy = state.detectedEvents.canopy,
-      landing = state.detectedEvents.landing,
-      source = state.currentPoint.source,
-    )
 
   private def releaseBuffer[A](
     buffer: Vector[ProcessingState[A]],
@@ -401,16 +412,16 @@ object FlightStagesDetection {
     inflectionPoint: Option[FlightPoint],
   ): Vector[OutputFlightRow[A]] =
     inflectionPoint match {
-      case None     => buffer.map(toOutputRow)
+      case None =>
+        buffer.map(_.toOutputRow)
       case Some(fp) =>
         buffer.map { state =>
           val updatedEvents =
             if (state.index >= fp.index)
-              updateDetectedEvents(state.detectedEvents, eventType, Some(fp))
+              state.detectedEvents.updateDetectedEvents(eventType, Some(fp))
             else
               state.detectedEvents
           OutputFlightRow(
-            phase = computeCurrentPhase(updatedEvents),
             takeoff = updatedEvents.takeoff,
             freefall = updatedEvents.freefall,
             canopy = updatedEvents.canopy,
@@ -418,18 +429,6 @@ object FlightStagesDetection {
             source = state.currentPoint.source,
           )
         }
-    }
-
-  private def updateDetectedEvents(
-    events: DetectedEvents,
-    eventType: EventType,
-    point: Option[FlightPoint],
-  ): DetectedEvents =
-    eventType match {
-      case EventType.Takeoff  => events.copy(takeoff = point.orElse(events.takeoff))
-      case EventType.Freefall => events.copy(freefall = point.orElse(events.freefall))
-      case EventType.Canopy   => events.copy(canopy = point.orElse(events.canopy))
-      case EventType.Landing  => events.copy(landing = point.orElse(events.landing))
     }
 
 }

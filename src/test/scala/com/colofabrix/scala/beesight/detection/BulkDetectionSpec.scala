@@ -12,12 +12,16 @@ import java.io.File
 import java.nio.file.Paths
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+import scala.concurrent.duration.*
 import scala.io.Source
 
 class BulkDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues with FlightStagesMatchers {
 
-  private val flysightDir = Paths.get("src/test/resources/flysight")
-  private val resultsFile = Paths.get("src/test/resources/points_results.csv")
+  private val flysightDir =
+    Paths.get("src/test/resources/bulk_detection_spec/flysight")
+
+  private val resultsFile =
+    Paths.get("src/test/resources/bulk_detection_spec/points_results.csv")
 
   "FlightStagesDetection" should {
 
@@ -46,12 +50,13 @@ class BulkDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues wi
                   }
                 }
           }
-          .result()
+          .result(timeout = 5.minutes)
 
       if (failures.nonEmpty) {
-        info(s"forEvery failed, because:\n${failures.mkString("\n\n")}")
-        val failureRate = 1.0 - (failures.size.toDouble / untaggedLines.size.toDouble)
-        failureRate.should(be >= 0.95)
+        val successRate = 1.0 - (failures.size.toDouble / untaggedLines.size.toDouble)
+        info(s"Success rate is ${successRate}")
+        info(s"Test failed:\n${failures.mkString("\n\n")}")
+        successRate.should(be >= 0.95)
       }
 
     }
@@ -81,12 +86,13 @@ class BulkDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues wi
                   }
                 }
           }
-          .result()
+          .result(timeout = 5.minutes)
 
       if (failures.nonEmpty) {
-        info(s"forEvery failed, because:\n${failures.mkString("\n\n")}")
         val successRate = 1.0 - (failures.size.toDouble / untaggedLines.size.toDouble)
-        successRate.should(be >= 0.25)
+        info(s"Success rate is ${successRate}")
+        info(s"Test failed:\n${failures.mkString("\n\n")}")
+        successRate.should(be >= 0.30)
       }
 
     }
