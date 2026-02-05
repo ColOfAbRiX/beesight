@@ -1,46 +1,54 @@
 package com.colofabrix.scala.beesight.config
 
+import com.colofabrix.scala.beesight.detection.model.EventType
+
 final case class GlobalConfig(
+  preprocessWindowSize: Int,
   accelerationClip: Double,
+  // UNUSED
   inflectionMinSpeedDelta: Double,
 )
 
 final case class TakeoffConfig(
-  speedThreshold: Double,
-  climbRate: Double,
-  maxAltitude: Double,
   smoothingWindowSize: Int,
   backtrackWindowSize: Int,
   validationWindowSize: Int,
+  // UNUSED
+  speedThreshold: Double,
+  climbRate: Double,
+  maxAltitude: Double,
 )
 
 final case class FreefallConfig(
+  smoothingWindowSize: Int,
+  backtrackWindowSize: Int,
+  validationWindowSize: Int,
+  // UNUSED
   verticalSpeedThreshold: Double,
   accelerationThreshold: Double,
   accelerationMinVelocity: Double,
   minAltitudeAbove: Double,
   minAltitudeAbsolute: Double,
-  smoothingWindowSize: Int,
-  backtrackWindowSize: Int,
-  validationWindowSize: Int,
 )
 
 final case class CanopyConfig(
-  verticalSpeedMax: Double,
   smoothingWindowSize: Int,
   backtrackWindowSize: Int,
   validationWindowSize: Int,
+  // UNUSED
+  verticalSpeedMax: Double,
 )
 
 final case class LandingConfig(
+  smoothingWindowSize: Int,
+  backtrackWindowSize: Int,
+  validationWindowSize: Int,
+  // UNUSED
   speedMax: Double,
   stabilityThreshold: Double,
   meanVerticalSpeedMax: Double,
   altitudeTolerance: Double,
   stabilityWindowSize: Int,
-  smoothingWindowSize: Int,
-  backtrackWindowSize: Int,
-  validationWindowSize: Int,
 )
 
 final case class DetectionConfig(
@@ -52,11 +60,11 @@ final case class DetectionConfig(
 )
 
 object DetectionConfig {
-  import com.colofabrix.scala.beesight.detection.model.EventType
 
   val default: DetectionConfig =
     DetectionConfig(
       global = GlobalConfig(
+        preprocessWindowSize = 5,
         accelerationClip = 20.0,
         inflectionMinSpeedDelta = 1.0,
       ),
@@ -97,6 +105,14 @@ object DetectionConfig {
     )
 
   extension (self: DetectionConfig) {
+
+    def getSmoothingWindowSize(eventType: EventType): Int =
+      eventType match {
+        case EventType.Takeoff  => self.takeoff.smoothingWindowSize
+        case EventType.Freefall => self.freefall.smoothingWindowSize
+        case EventType.Canopy   => self.canopy.smoothingWindowSize
+        case EventType.Landing  => self.landing.smoothingWindowSize
+      }
 
     def getValidationWindowSize(eventType: EventType): Int =
       eventType match {

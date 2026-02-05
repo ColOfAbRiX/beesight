@@ -1,39 +1,84 @@
 package com.colofabrix.scala.beesight.collections
 
-import scala.collection.immutable.Queue
+import breeze.linalg.DenseVector
+import cats.*
+import cats.instances.vector.*
 import scala.reflect.ClassTag
 
-final class FixedSizeQueue[+A: ClassTag] private (queue: Queue[A], size: Int) {
+/**
+ * Fixed size queue backed by Vector for O(log32 n) ≈ O(1) operations
+ */
+final class FSQueue[@specialized(Double) A] private (private val buffer: Vector[A], val size: Int) {
 
-  def enqueue[B >: A: ClassTag](a: B): FixedSizeQueue[B] =
-    val updated = queue.enqueue(a)
-    if updated.size > size then new FixedSizeQueue(updated.dequeue._2, size)
-    else new FixedSizeQueue(updated, size)
+  def enqueue(a: A): FSQueue[A] =
+    push(a)._2
 
-  def setSize(size: Int): FixedSizeQueue[A] =
-    val updated = queue.drop(Math.max(0, queue.size - size))
-    new FixedSizeQueue[A](updated, Math.max(0, size))
+  def push(a: A): (Option[A], FSQueue[A]) =
+    pushMap(a)(identity)
 
-  def toArray[B >: A: ClassTag]: Array[B] =
-    queue.toArray[B]
+  def pushMap[B](a: A)(f: A => B): (Option[B], FSQueue[A]) =
+    if buffer.length >= size then
+      val outgoing  = buffer.head
+      val remaining = buffer.tail :+ a
+      (Some(f(outgoing)), new FSQueue(remaining, size))
+    else
+      (None, new FSQueue(buffer :+ a, size))
+
+  def setSize(n: Int): FSQueue[A] =
+    if n >= size then new FSQueue(buffer, n)
+    else new FSQueue(buffer.takeRight(n), n)
+
+  @inline def length: Int =
+    buffer.length
+
+  @inline def isEmpty: Boolean =
+    buffer.isEmpty
+
+  @inline def newest: Option[A] =
+    buffer.lastOption
+
+  @inline def oldest: Option[A] =
+    buffer.headOption
+
+  def oldest(n: Int): Vector[A] =
+    buffer.take(n)
+
+  def newest(n: Int): Vector[A] =
+    buffer.takeRight(n)
+
+  def toDenseVector[B >: A: ClassTag]: DenseVector[B] =
+    DenseVector(buffer.toArray[B])
 
   def toVector: Vector[A] =
-    queue.toVector
+    buffer
 
-  def isEmpty: Boolean =
-    queue.isEmpty
-
-  def isFull: Boolean =
-    queue.sizeIs == size
+  def toList: List[A] =
+    buffer.toList
 
 }
 
-object FixedSizeQueue {
+object FSQueue {
 
-  def apply[A: ClassTag](size: Int): FixedSizeQueue[A] =
-    new FixedSizeQueue(Queue.empty[A], size)
+  def apply[A](size: Int): FSQueue[A] =
+    new FSQueue(Vector.empty, size)
 
-  def empty[A: ClassTag]: FixedSizeQueue[A] =
-    new FixedSizeQueue(Queue.empty[A], 1)
+  def unapplySeq[A](fsq: FSQueue[A]): Seq[A] =
+    fsq.buffer.toSeq
+
+  def empty[A]: FSQueue[A] =
+    new FSQueue(Vector.empty, 1)
+
+  given (using M: Monad[Vector]): Monad[FSQueue] with {
+
+    def flatMap[A, B](fa: FSQueue[A])(f: A => FSQueue[B]): FSQueue[B] =
+      new FSQueue(M.flatMap(fa.buffer)(a => f(a).buffer), fa.size)
+
+    def pure[A](x: A): FSQueue[A] =
+      new FSQueue(M.pure(x), 1)
+
+    def tailRecM[A, B](a: A)(f: A => FSQueue[Either[A, B]]): FSQueue[B] =
+      new FSQueue(M.tailRecM(a)(a => f(a).buffer), f(a).size)
+
+  }
 
 }
