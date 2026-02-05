@@ -13,6 +13,9 @@ import com.colofabrix.scala.declinio.*
 import com.monovore.decline.Opts
 import java.nio.file.*
 
+/**
+ * Main entry point for the Beesight application.
+ */
 object Main extends IODeclineReaderApp[Config] {
 
   val name: String =

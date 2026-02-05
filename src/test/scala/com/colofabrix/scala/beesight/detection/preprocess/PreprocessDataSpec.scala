@@ -3,6 +3,7 @@ package com.colofabrix.scala.beesight.detection.preprocess
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import com.colofabrix.scala.beesight.config.*
+import com.colofabrix.scala.beesight.detection.model.GeoVector
 import com.colofabrix.scala.beesight.IOValues
 import com.colofabrix.scala.beesight.model.InputFlightRow
 import fs2.Stream
@@ -309,9 +310,7 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
     InputFlightRow(
       time = Instant.ofEpochSecond(seconds),
       altitude = altitude,
-      northSpeed = northSpeed,
-      eastSpeed = eastSpeed,
-      verticalSpeed = verticalSpeed,
+      speed = GeoVector(north = northSpeed, east = eastSpeed, vertical = verticalSpeed),
       source = (),
     )
 

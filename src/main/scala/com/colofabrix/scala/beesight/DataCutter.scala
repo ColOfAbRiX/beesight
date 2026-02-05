@@ -8,6 +8,9 @@ import com.colofabrix.scala.beesight.model.*
 import fs2.*
 import scala.collection.immutable.Queue
 
+/**
+ * Cuts flight data streams to retain only flight-relevant points from takeoff to landing.
+ */
 final class DataCutter private (config: Config) {
 
   /**
@@ -95,6 +98,9 @@ object DataCutter {
     afterLandingCount: Long = 0,
   )
 
+  /**
+   * Creates a new DataCutter instance using the current configuration.
+   */
   def apply(): IOConfig[DataCutter] =
     IOConfig.ask.map(new DataCutter(_))
 

@@ -2,6 +2,7 @@ package com.colofabrix.scala.beesight.model.formats
 
 import cats.data.NonEmptyList
 import cats.implicits.*
+import com.colofabrix.scala.beesight.detection.model.GeoVector
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.model.derivation.given
 import fs2.data.csv.*
@@ -52,9 +53,7 @@ object FlysightPoint {
       InputFlightRow(
         time = point.time.toInstant,
         altitude = point.hMSL,
-        northSpeed = point.velN,
-        eastSpeed = point.velE,
-        verticalSpeed = point.velD,
+        speed = GeoVector(north = point.velN, east = point.velE, vertical = point.velD),
         source = point,
       )
 

@@ -5,6 +5,9 @@ import com.colofabrix.scala.beesight.detection.model.*
 import com.colofabrix.scala.beesight.model.*
 import cats.data.Reader
 
+/**
+ * Detects flight stages (takeoff, freefall, canopy, landing) from flight data streams.
+ */
 object FlightStagesDetection {
 
   // ─── Debug Configuration ───────────────────────────────────────────────────
@@ -24,9 +27,15 @@ object FlightStagesDetection {
 
   // ─── Public API ────────────────────────────────────────────────────────────
 
+  /**
+   * Streaming pipe that detects flight stages using default configuration.
+   */
   def streamDetectA[F[_], A](using A: FileFormatAdapter[A]): fs2.Pipe[F, A, OutputFlightRow[A]] =
     streamDetectWithConfig(DetectionConfig.default)
 
+  /**
+   * Streaming pipe that detects flight stages using the provided configuration.
+   */
   @scala.annotation.nowarn
   def streamDetectWithConfig[F[_], A: FileFormatAdapter](config: DetectionConfig): fs2.Pipe[F, A, OutputFlightRow[A]] =
     stream =>
