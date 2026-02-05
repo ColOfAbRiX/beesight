@@ -1,7 +1,6 @@
 package com.colofabrix.scala.beesight.detection.math
 
 import com.colofabrix.scala.beesight.detection.model.*
-import com.colofabrix.scala.beesight.model.InputFlightRow
 import java.time.Instant
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
@@ -137,14 +136,11 @@ class KinematicsSpec extends AnyFreeSpec with Matchers {
     northSpeed: Double = 0.0,
     eastSpeed: Double = 0.0,
     verticalSpeed: Double = 0.0,
-  ): InputFlightRow[Unit] =
-    InputFlightRow(
+  ): DataPoint =
+    DataPoint(
       time = Instant.ofEpochSecond(seconds),
       altitude = altitude,
-      northSpeed = northSpeed,
-      eastSpeed = eastSpeed,
-      verticalSpeed = verticalSpeed,
-      source = (),
+      speed = GeoVector(north = northSpeed, east = eastSpeed, vertical = verticalSpeed),
     )
 
 }

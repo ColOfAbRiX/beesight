@@ -167,34 +167,34 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
         val points =
           List(
             point(1, altitude = 1000.0, verticalSpeed = 10.0),
-            point(2, altitude = 990.0, verticalSpeed = 10.0),
+            point(2, altitude = 990.0, verticalSpeed = 11.0),
             point(3, altitude = 980.0, verticalSpeed = 100.0), // Spike start
             point(4, altitude = 970.0, verticalSpeed = 100.0), // Spike continues
             point(5, altitude = 960.0, verticalSpeed = 100.0), // Spike continues
             point(6, altitude = 950.0, verticalSpeed = 100.0), // Spike end
-            point(7, altitude = 940.0, verticalSpeed = 10.0),
-            point(8, altitude = 930.0, verticalSpeed = 10.0),
-            point(9, altitude = 920.0, verticalSpeed = 10.0),
-            point(10, altitude = 910.0, verticalSpeed = 10.0),
-            point(11, altitude = 900.0, verticalSpeed = 10.0),
-            point(12, altitude = 890.0, verticalSpeed = 10.0),
-            point(13, altitude = 880.0, verticalSpeed = 10.0),
-            point(14, altitude = 870.0, verticalSpeed = 10.0),
-            point(15, altitude = 860.0, verticalSpeed = 10.0),
+            point(7, altitude = 940.0, verticalSpeed = 16.0),
+            point(8, altitude = 930.0, verticalSpeed = 17.0),
+            point(9, altitude = 920.0, verticalSpeed = 18.0),
+            point(10, altitude = 910.0, verticalSpeed = 19.0),
+            point(11, altitude = 900.0, verticalSpeed = 20.0),
+            point(12, altitude = 890.0, verticalSpeed = 21.0),
+            point(13, altitude = 880.0, verticalSpeed = 22.0),
+            point(14, altitude = 870.0, verticalSpeed = 23.0),
+            point(15, altitude = 860.0, verticalSpeed = 24.0),
           )
 
         val expected =
           List(
             point(1, altitude = 1000.0, verticalSpeed = 10.0),
-            point(2, altitude = 990.0, verticalSpeed = 10.0),
-            point(3, altitude = 980.0, verticalSpeed = 32.5),
-            point(4, altitude = 970.0, verticalSpeed = 40.0),
-            point(5, altitude = 960.0, verticalSpeed = 100.0),
-            point(6, altitude = 950.0, verticalSpeed = 100.0),
-            point(7, altitude = 940.0, verticalSpeed = 77.5),
-            point(8, altitude = 930.0, verticalSpeed = 10.0),
-            point(9, altitude = 920.0, verticalSpeed = 10.0),
-            point(10, altitude = 910.0, verticalSpeed = 10.0),
+            point(2, altitude = 990.0, verticalSpeed = 32.5),
+            point(3, altitude = 980.0, verticalSpeed = 49.375),
+            point(4, altitude = 970.0, verticalSpeed = 41.03125),
+            point(5, altitude = 960.0, verticalSpeed = 35.0234375),
+            point(6, altitude = 950.0, verticalSpeed = 30.767578125),
+            point(7, altitude = 940.0, verticalSpeed = 27.82568359375),
+            point(8, altitude = 930.0, verticalSpeed = 25.8692626953125),
+            point(9, altitude = 920.0, verticalSpeed = 24.651947021484375),
+            point(10, altitude = 910.0, verticalSpeed = 19.0),
           )
 
         val actual = runPreprocess(points, config)

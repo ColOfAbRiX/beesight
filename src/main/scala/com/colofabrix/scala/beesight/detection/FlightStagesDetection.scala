@@ -27,10 +27,11 @@ object FlightStagesDetection {
   def streamDetectA[F[_], A](using A: FileFormatAdapter[A]): fs2.Pipe[F, A, OutputFlightRow[A]] =
     streamDetectWithConfig(DetectionConfig.default)
 
+  @scala.annotation.nowarn
   def streamDetectWithConfig[F[_], A: FileFormatAdapter](config: DetectionConfig): fs2.Pipe[F, A, OutputFlightRow[A]] =
     stream =>
-      println(config)
-      println(implicitly[FileFormatAdapter[A]])
+      // println(config)
+      // println(implicitly[FileFormatAdapter[A]])
       stream.map { a =>
         OutputFlightRow(
           takeoff = None,

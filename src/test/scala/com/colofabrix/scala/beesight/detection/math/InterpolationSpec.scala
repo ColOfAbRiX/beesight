@@ -1,7 +1,6 @@
 package com.colofabrix.scala.beesight.detection.math
 
 import com.colofabrix.scala.beesight.detection.model.*
-import com.colofabrix.scala.beesight.model.InputFlightRow
 import java.time.Instant
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
@@ -12,34 +11,59 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
 
     "interpolate Double values" - {
 
-      "should return x1 when n=0" in {
-        val result = Interpolation.interpolate(10.0, 20.0, steps = 10, n = 0)
+      "should return x1 when time equals t1" in {
+        val t1   = Instant.ofEpochSecond(0)
+        val t2   = Instant.ofEpochSecond(10)
+        val time = Instant.ofEpochSecond(0)
+
+        val result = Interpolation.interpolate(10.0, 20.0)(t1, t2, time)
+
         result shouldBe 10.0
       }
 
-      "should return x2 when n=steps" in {
-        val result = Interpolation.interpolate(10.0, 20.0, steps = 10, n = 10)
+      "should return x2 when time equals t2" in {
+        val t1   = Instant.ofEpochSecond(0)
+        val t2   = Instant.ofEpochSecond(10)
+        val time = Instant.ofEpochSecond(10)
+
+        val result = Interpolation.interpolate(10.0, 20.0)(t1, t2, time)
+
         result shouldBe 20.0
       }
 
-      "should return midpoint when n=steps/2" in {
-        val result = Interpolation.interpolate(10.0, 20.0, steps = 10, n = 5)
+      "should return midpoint when time is midway" in {
+        val t1   = Instant.ofEpochSecond(0)
+        val t2   = Instant.ofEpochSecond(10)
+        val time = Instant.ofEpochSecond(5)
+
+        val result = Interpolation.interpolate(10.0, 20.0)(t1, t2, time)
+
         result shouldBe 15.0
       }
 
       "should interpolate 1/4 of the way" in {
-        val result = Interpolation.interpolate(0.0, 100.0, steps = 4, n = 1)
+        val t1   = Instant.ofEpochSecond(0)
+        val t2   = Instant.ofEpochSecond(4)
+        val time = Instant.ofEpochSecond(1)
+
+        val result = Interpolation.interpolate(0.0, 100.0)(t1, t2, time)
+
         result shouldBe 25.0
       }
 
       "should handle negative values" in {
-        val result = Interpolation.interpolate(-50.0, 50.0, steps = 10, n = 5)
+        val t1   = Instant.ofEpochSecond(0)
+        val t2   = Instant.ofEpochSecond(10)
+        val time = Instant.ofEpochSecond(5)
+
+        val result = Interpolation.interpolate(-50.0, 50.0)(t1, t2, time)
+
         result shouldBe 0.0
       }
 
     }
 
-    "interpolate InputFlightRow" - {
+    "interpolate DataPoint" - {
 
       "should return p1 values when time equals p1.time" in {
         val p1 = point(1, verticalSpeed = 10.0)
@@ -47,7 +71,7 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
 
         val result = Interpolation.interpolate(p1, p2, Instant.ofEpochSecond(1))
 
-        result.verticalSpeed shouldBe 10.0
+        result.speed.vertical shouldBe 10.0
       }
 
       "should return p2 values when time equals p2.time" in {
@@ -56,7 +80,7 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
 
         val result = Interpolation.interpolate(p1, p2, Instant.ofEpochSecond(3))
 
-        result.verticalSpeed shouldBe 30.0
+        result.speed.vertical shouldBe 30.0
       }
 
       "should return midpoint values when time is midway" in {
@@ -65,7 +89,7 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
 
         val result = Interpolation.interpolate(p1, p2, Instant.ofEpochSecond(2))
 
-        result.verticalSpeed shouldBe 20.0
+        result.speed.vertical shouldBe 20.0
       }
 
       "should interpolate all velocity components" in {
@@ -74,9 +98,9 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
 
         val result = Interpolation.interpolate(p1, p2, Instant.ofEpochSecond(5))
 
-        result.northSpeed shouldBe 50.0
-        result.eastSpeed shouldBe 25.0
-        result.verticalSpeed shouldBe -10.0
+        result.speed.north shouldBe 50.0
+        result.speed.east shouldBe 25.0
+        result.speed.vertical shouldBe -10.0
       }
 
       "should interpolate altitude" in {
@@ -104,7 +128,7 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
 
         val result = Interpolation.interpolate(oldest, newest, Instant.ofEpochSecond(2))
 
-        result.verticalSpeed shouldBe 10.0
+        result.speed.vertical shouldBe 10.0
       }
 
       "should interpolate spike boundary correctly" in {
@@ -113,7 +137,7 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
 
         val result = Interpolation.interpolate(oldest, newest, Instant.ofEpochSecond(2))
 
-        result.verticalSpeed shouldBe 32.5
+        result.speed.vertical shouldBe 32.5
       }
 
     }
@@ -153,14 +177,11 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
     northSpeed: Double = 0.0,
     eastSpeed: Double = 0.0,
     verticalSpeed: Double = 0.0,
-  ): InputFlightRow[Unit] =
-    InputFlightRow(
+  ): DataPoint =
+    DataPoint(
       time = Instant.ofEpochSecond(seconds),
       altitude = altitude,
-      northSpeed = northSpeed,
-      eastSpeed = eastSpeed,
-      verticalSpeed = verticalSpeed,
-      source = (),
+      speed = GeoVector(north = northSpeed, east = eastSpeed, vertical = verticalSpeed),
     )
 
 }
