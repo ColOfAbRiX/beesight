@@ -1,12 +1,12 @@
 package com.colofabrix.scala.beesight.detection.model
 
-import com.colofabrix.scala.beesight.model.FlightPoint
+import com.colofabrix.scala.beesight.model.*
 
 final case class DetectedEvents(
-  takeoff: Option[FlightPoint],
-  freefall: Option[FlightPoint],
-  canopy: Option[FlightPoint],
-  landing: Option[FlightPoint],
+  takeoff: Option[FlightEventPoint],
+  freefall: Option[FlightEventPoint],
+  canopy: Option[FlightEventPoint],
+  landing: Option[FlightEventPoint],
 )
 
 object DetectedEvents {
@@ -16,7 +16,7 @@ object DetectedEvents {
 
   extension (self: DetectedEvents) {
 
-    def updateDetectedEvents(eventType: EventType, point: Option[FlightPoint]): DetectedEvents =
+    def setDetectedEvents(eventType: EventType, point: Option[FlightEventPoint]): DetectedEvents =
       eventType match {
         case EventType.Takeoff  => self.copy(takeoff = point.orElse(self.takeoff))
         case EventType.Freefall => self.copy(freefall = point.orElse(self.freefall))

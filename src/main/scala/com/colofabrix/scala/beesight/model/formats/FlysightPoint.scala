@@ -2,9 +2,9 @@ package com.colofabrix.scala.beesight.model.formats
 
 import cats.data.NonEmptyList
 import cats.implicits.*
-import com.colofabrix.scala.beesight.detection.model.GeoVector
-import com.colofabrix.scala.beesight.model.*
+import com.colofabrix.scala.beesight.detection.model.*
 import com.colofabrix.scala.beesight.model.derivation.given
+import com.colofabrix.scala.beesight.model.*
 import fs2.data.csv.*
 import fs2.data.csv.generic.semiauto.*
 import java.time.*
@@ -49,12 +49,11 @@ object FlysightPoint {
 
   given flysightFormatAdapter: FileFormatAdapter[FlysightPoint] with {
 
-    def toInputFlightPoint(point: FlysightPoint): InputFlightRow[FlysightPoint] =
-      InputFlightRow(
+    def toDataPoint(point: FlysightPoint): DataPoint =
+      DataPoint(
         time = point.time.toInstant,
         altitude = point.hMSL,
         speed = GeoVector(north = point.velN, east = point.velE, vertical = point.velD),
-        source = point,
       )
 
   }
@@ -104,9 +103,9 @@ object FlysightPoint {
 
   }
 
-  given outputFlightRowEncoder: CsvRowEncoder[OutputFlightRow[FlysightPoint], String] with {
+  given outputFlightRowEncoder: CsvRowEncoder[OutputFlightPoint[FlysightPoint], String] with {
 
-    def apply(row: OutputFlightRow[FlysightPoint]): CsvRow[String] =
+    def apply(row: OutputFlightPoint[FlysightPoint]): CsvRow[String] =
       CsvRow.fromNelHeaders(
         flysightFields(row.source)
           .append(("phase", row.phase.toString)),

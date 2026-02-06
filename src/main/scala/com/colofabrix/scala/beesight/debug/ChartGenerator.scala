@@ -8,6 +8,7 @@ import com.colofabrix.scala.beesight.IOConfig
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.model.*
 import java.nio.file.*
+import com.colofabrix.scala.beesight.model.formats.FileFormatAdapter
 
 /**
  * Generates interactive HTML charts showing flight data and detected stages
@@ -15,9 +16,9 @@ import java.nio.file.*
 object ChartGenerator {
 
   /**
-   * Returns a pipe that generates an HTML chart from the stream of OutputFlightRows
+   * Returns a pipe that generates an HTML chart from the stream of OutputFlightPoints
    */
-  def chartPipe[A: FileFormatAdapter](outputCsvFile: Path): fs2.Pipe[IOConfig, OutputFlightRow[A], Nothing] =
+  def chartPipe[A: FileFormatAdapter](outputCsvFile: Path): fs2.Pipe[IOConfig, OutputFlightPoint[A], Nothing] =
     _.zipWithIndex
       .fold(ChartState[A]()) {
         case (state, (point, idx)) => updateChartState(state, point, idx)
@@ -31,24 +32,23 @@ object ChartGenerator {
       }
       .drain
 
-  private def updateChartState[A](
+  private def updateChartState[A: FileFormatAdapter](
     state: ChartState[A],
-    point: OutputFlightRow[A],
+    point: OutputFlightPoint[A],
     idx: Long,
-  )(using
-    A: FileFormatAdapter[A],
   ): ChartState[A] =
     val sep = if idx == 0 then "" else ","
 
     // Update data builders
+    val dataPoint    = FileFormatAdapter[A].toDataPoint(point.source)
     val newIndices   = state.indices.append(sep).append(idx)
-    val newAltitudes = state.altitudes.append(sep).append(A.altitude(point.source))
-    val newVelDs     = state.velDs.append(sep).append(A.verticalSpeed(point.source))
+    val newAltitudes = state.altitudes.append(sep).append(dataPoint.altitude)
+    val newVelDs     = state.velDs.append(sep).append(dataPoint.speed.vertical)
 
     // Detect phase transition
     val transition =
       if state.prevPhase != point.phase && point.phase != FlightPhase.BeforeTakeoff then
-        Some(PhaseTransition(point.phase, idx, A.altitude(point.source)))
+        Some(PhaseTransition(point.phase, idx, dataPoint.speed.vertical))
       else
         None
 
@@ -61,7 +61,7 @@ object ChartGenerator {
       lastStages = extractStages(point),
     )
 
-  private def extractStages[A](point: OutputFlightRow[A]): FlightEvents =
+  private def extractStages[A](point: OutputFlightPoint[A]): FlightEvents =
     FlightEvents(
       takeoff = point.takeoff,
       freefall = point.freefall,
@@ -169,10 +169,10 @@ object ChartGenerator {
 
   private def createTransitionMarkersJs(transitions: List[PhaseTransition]): String =
     val colorMap = Map(
-      FlightPhase.Climbing     -> "rgb(44, 160, 44)",
-      FlightPhase.Freefall     -> "rgb(214, 39, 40)",
-      FlightPhase.UnderCanopy  -> "rgb(148, 103, 189)",
-      FlightPhase.Landed       -> "rgb(140, 86, 75)",
+      FlightPhase.Climbing      -> "rgb(44, 160, 44)",
+      FlightPhase.Freefall      -> "rgb(214, 39, 40)",
+      FlightPhase.UnderCanopy   -> "rgb(148, 103, 189)",
+      FlightPhase.Landed        -> "rgb(140, 86, 75)",
       FlightPhase.BeforeTakeoff -> "rgb(128, 128, 128)",
     )
 
@@ -191,10 +191,10 @@ object ChartGenerator {
 
     s"var transitionMarkers = [${jsMarkers.mkString(",\n")}];"
 
-  private def formatStage(point: Option[FlightPoint]): String =
+  private def formatStage(point: Option[FlightEventPoint]): String =
     point match {
-      case Some(FlightPoint(idx, alt)) => f"Point $idx at altitude $alt%.2fm"
-      case None                             => "Not detected"
+      case Some(FlightEventPoint(idx, alt)) => f"Point $idx at altitude $alt%.2fm"
+      case None                        => "Not detected"
     }
 
   final private case class PhaseTransition(

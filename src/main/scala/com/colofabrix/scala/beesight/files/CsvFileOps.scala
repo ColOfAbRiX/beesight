@@ -7,7 +7,7 @@ import com.colofabrix.scala.beesight.model.formats.FlysightPoint
 import fs2.data.csv.*
 import fs2.io.file.{ Files, Flags, Path as Fs2Path }
 import java.nio.file.Path
-import com.colofabrix.scala.beesight.model.OutputFlightRow
+import com.colofabrix.scala.beesight.model.OutputFlightPoint
 
 /**
  * Aggregations of operations on files using fs2
@@ -33,13 +33,13 @@ object CsvFileOps {
       }
 
   /**
-   * Returns a pipe that writes OutputFlightRow to a CSV file (includes phase column)
+   * Returns a pipe that writes OutputFlightPoint to a CSV file (includes phase column)
    */
   def writeCsvPipe[A](
     filePath: Path,
     dryRun: Boolean,
-  )(using CsvRowEncoder[OutputFlightRow[A], String],
-  ): fs2.Pipe[IOConfig, OutputFlightRow[A], Nothing] =
+  )(using CsvRowEncoder[OutputFlightPoint[A], String],
+  ): fs2.Pipe[IOConfig, OutputFlightPoint[A], Nothing] =
     stream =>
       stream
         .through { s =>

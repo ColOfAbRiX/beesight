@@ -43,7 +43,7 @@ object Main extends IODeclineReaderApp[Config] {
         .fold(files)(limit => files.take(limit))
     }
 
-  private def processFile(inputFile: Path): IOConfig[(Path, Option[OutputFlightRow[FlysightPoint]])] =
+  private def processFile(inputFile: Path): IOConfig[(Path, Option[OutputFlightPoint[FlysightPoint]])] =
     for
       outputFile <- FileOps.createProcessedDirectory(inputFile)
       _          <- s"Processing: $inputFile -> $outputFile".stdout
@@ -58,12 +58,12 @@ object Main extends IODeclineReaderApp[Config] {
     csvStream: fs2.Stream[IOConfig, FlysightPoint],
     dataCutter: DataCutter,
     outputCsvFile: Path,
-  ): IOConfig[fs2.Stream[IOConfig, OutputFlightRow[FlysightPoint]]] =
+  ): IOConfig[fs2.Stream[IOConfig, OutputFlightPoint[FlysightPoint]]] =
     IOConfig
       .ask
       .map { config =>
         csvStream
-          .through(FlightStagesDetection.streamDetectA)
+          .through(FlightStagesDetection(DetectionConfig.default).streamDetect)
           .through(dataCutter.cutPipe)
           .broadcastThrough(
             CsvFileOps.writeCsvPipe(outputCsvFile, config.dryRun),

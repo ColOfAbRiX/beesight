@@ -10,17 +10,17 @@ package com.colofabrix.scala.beesight.model
  * @param landing The detected landing point (if found so far)
  * @param source The original source data point
  */
-final case class OutputFlightRow[A](
-  takeoff: Option[FlightPoint],
-  freefall: Option[FlightPoint],
-  canopy: Option[FlightPoint],
-  landing: Option[FlightPoint],
+final case class OutputFlightPoint[A](
+  takeoff: Option[FlightEventPoint],
+  freefall: Option[FlightEventPoint],
+  canopy: Option[FlightEventPoint],
+  landing: Option[FlightEventPoint],
   source: A,
 )
 
-object OutputFlightRow {
+object OutputFlightPoint {
 
-  extension [A](self: OutputFlightRow[A]) {
+  extension [A](self: OutputFlightPoint[A]) {
 
     def phase: FlightPhase =
       if (self.landing.isDefined) FlightPhase.Landed

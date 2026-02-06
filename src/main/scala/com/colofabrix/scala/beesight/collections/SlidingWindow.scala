@@ -24,8 +24,13 @@ sealed trait SlidingWindow[A] {
 
 object SlidingWindow {
 
+  /**
+   * A window that is still being filled (has not yet reached capacity).
+   */
   final class FillingWindow[A] private[SlidingWindow] (
-    private val buffer: Vector[A],
+    private val buffer: Array[Any],
+    private val head: Int,
+    private val len: Int,
     val capacity: Int,
   ) extends SlidingWindow[A] {
 
@@ -33,35 +38,59 @@ object SlidingWindow {
       push(a)._2
 
     def push(a: A): (Option[A], SlidingWindow[A]) =
-      val newBuffer = buffer :+ a
-      if newBuffer.length >= capacity then
-        (None, new FilledWindow(newBuffer.init, newBuffer.last, Vector.empty, capacity))
+      val newLen = len + 1
+      val tail   = (head + len) % capacity
+      buffer(tail) = a
+
+      if newLen >= capacity then
+        val focusIdx = capacity - 1
+        (None, new FilledWindow(buffer.clone(), head, focusIdx, capacity))
       else
-        (None, new FillingWindow(newBuffer, capacity))
+        (None, new FillingWindow(buffer, head, newLen, capacity))
 
     def sliceFilled(start: Int, count: Int): Option[FilledWindow[A]] =
-      val sliced =
-        if count >= 0 then buffer.slice(start, start + count)
-        else buffer.slice(start + count + 1, start + 1)
-      Option.when(sliced.nonEmpty) {
-        fromVectorAt(sliced, sliced.length - 1, sliced.length)
-      }
+      val sliceLen =
+        if count >= 0 then Math.min(count, len - start)
+        else Math.min(-count, start + 1)
+
+      if sliceLen <= 0 || start < 0 || start >= len then
+        None
+      else
+        val sliceStart = if count >= 0 then start else start + count + 1
+        val newBuffer  = new Array[Any](sliceLen)
+
+        var i = 0
+        while i < sliceLen do
+          newBuffer(i) = buffer((head + sliceStart + i) % capacity)
+          i += 1
+
+        Some(new FilledWindow(newBuffer, 0, sliceLen - 1, sliceLen))
 
     def length: Int =
-      buffer.length
+      len
 
     def isEmpty: Boolean =
-      buffer.isEmpty
+      len == 0
 
     def toVector: Vector[A] =
-      buffer
+      val builder = Vector.newBuilder[A]
+
+      var i = 0
+      while i < len do
+        builder += buffer((head + i) % capacity).asInstanceOf[A]
+        i       += 1
+
+      builder.result()
 
   }
 
+  /**
+   * A window that has reached capacity and supports zipper-like focus operations.
+   */
   final class FilledWindow[A] private[SlidingWindow] (
-    val left: Vector[A],
-    val focus: A,
-    val right: Vector[A],
+    private val buffer: Array[Any],
+    private val head: Int,
+    private val focusIdx: Int,
     val capacity: Int,
   ) extends SlidingWindow[A] {
 
@@ -69,79 +98,121 @@ object SlidingWindow {
       push(a)._2
 
     def push(a: A): (Option[A], SlidingWindow[A]) =
-      val allElements   = toVector
-      val outgoing      = allElements.head
-      val remaining     = allElements.tail :+ a
-      val focusFromEnd  = right.length
-      val newFocusIndex = remaining.length - 1 - focusFromEnd
-      val clampedIndex  = Math.max(0, Math.min(newFocusIndex, remaining.length - 1))
-      (Some(outgoing), fromVectorAt(remaining, clampedIndex, capacity))
+      val outgoing  = buffer(head).asInstanceOf[A]
+      val newBuffer = buffer.clone()
+      newBuffer(head) = a
+      val newHead     = (head + 1) % capacity
+      val newFocusIdx = Math.max(0, focusIdx - 1)
+      (Some(outgoing), new FilledWindow(newBuffer, newHead, newFocusIdx, capacity))
 
     def pushReturning(a: A): (A, FilledWindow[A]) =
       val (Some(out), window) = push(a): @unchecked
       (out, window.asInstanceOf[FilledWindow[A]])
 
     def sliceFilled(start: Int, count: Int): Option[FilledWindow[A]] =
-      val all    = toVector
-      val sliced =
-        if count >= 0 then all.slice(start, start + count)
-        else all.slice(start + count + 1, start + 1)
-      Option.when(sliced.nonEmpty) {
-        fromVectorAt(sliced, sliced.length - 1, sliced.length)
-      }
+      val sliceLen =
+        if count >= 0 then Math.min(count, capacity - start)
+        else Math.min(-count, start + 1)
+
+      if sliceLen <= 0 || start < 0 || start >= capacity then
+        None
+      else
+        val sliceStart = if count >= 0 then start else start + count + 1
+        val newBuffer  = new Array[Any](sliceLen)
+
+        var i = 0
+        while i < sliceLen do
+          newBuffer(i) = buffer((head + sliceStart + i) % capacity)
+          i += 1
+
+        Some(new FilledWindow(newBuffer, 0, sliceLen - 1, sliceLen))
 
     def length: Int =
-      left.length + 1 + right.length
+      capacity
 
-    def toVector: Vector[A] =
-      left ++ Vector(focus) ++ right
+    def toVector: Vector[A] = {
+      val builder = Vector.newBuilder[A]
+
+      var i = 0
+      while i < capacity do
+        builder += buffer((head + i) % capacity).asInstanceOf[A]
+        i       += 1
+
+      builder.result()
+    }
 
     def oldest: A =
-      left.headOption.getOrElse(focus)
+      buffer(head).asInstanceOf[A]
 
     def newest: A =
-      right.lastOption.getOrElse(focus)
+      buffer((head + capacity - 1) % capacity).asInstanceOf[A]
+
+    def focus: A =
+      buffer((head + focusIdx) % capacity).asInstanceOf[A]
+
+    def left: Vector[A] = {
+      val builder = Vector.newBuilder[A]
+
+      var i = 0
+      while i < focusIdx do
+        builder += buffer((head + i) % capacity).asInstanceOf[A]
+        i       += 1
+
+      builder.result()
+    }
+
+    def right: Vector[A] = {
+      val builder = Vector.newBuilder[A]
+
+      var i = focusIdx + 1
+      while i < capacity do
+        builder += buffer((head + i) % capacity).asInstanceOf[A]
+        i       += 1
+
+      builder.result()
+    }
 
     // Zipper operations
 
     def moveLeft: Option[FilledWindow[A]] =
-      left.lastOption.map { newFocus =>
-        new FilledWindow(left.init, newFocus, focus +: right, capacity)
-      }
+      if focusIdx > 0 then
+        Some(new FilledWindow(buffer, head, focusIdx - 1, capacity))
+      else
+        None
 
     def moveRight: Option[FilledWindow[A]] =
-      right.headOption.map { newFocus =>
-        new FilledWindow(left :+ focus, newFocus, right.tail, capacity)
-      }
+      if focusIdx < capacity - 1 then
+        Some(new FilledWindow(buffer, head, focusIdx + 1, capacity))
+      else
+        None
 
     def modifyFocus(f: A => A): FilledWindow[A] =
-      new FilledWindow(left, f(focus), right, capacity)
+      val newBuffer = buffer.clone()
+      val idx       = (head + focusIdx) % capacity
+      newBuffer(idx) = f(buffer(idx).asInstanceOf[A])
+      new FilledWindow(newBuffer, head, focusIdx, capacity)
 
     def setFocus(a: A): FilledWindow[A] =
-      new FilledWindow(left, a, right, capacity)
+      val newBuffer = buffer.clone()
+      val idx       = (head + focusIdx) % capacity
+      newBuffer(idx) = a
+      new FilledWindow(newBuffer, head, focusIdx, capacity)
 
     def focusIndex: Int =
-      left.length
+      focusIdx
 
     def focusAt(index: Int): FilledWindow[A] =
-      val clipped = Math.max(0, Math.min(index, length - 1))
-      fromVectorAt(toVector, clipped, capacity)
+      val clipped = Math.max(0, Math.min(index, capacity - 1))
+      new FilledWindow(buffer, head, clipped, capacity)
+
   }
 
   def apply[A](capacity: Int): SlidingWindow[A] =
-    new FillingWindow(Vector.empty, Math.max(1, capacity))
+    val cap = Math.max(1, capacity)
+    new FillingWindow(new Array[Any](cap), 0, 0, cap)
 
   def empty[A]: SlidingWindow[A] =
-    new FillingWindow(Vector.empty, 1)
-
-  private def fromVectorAt[A](elements: Vector[A], focusIndex: Int, capacity: Int): FilledWindow[A] =
-    val idx = Math.max(0, Math.min(focusIndex, elements.length - 1))
-    new FilledWindow(
-      left = elements.take(idx),
-      focus = elements(idx),
-      right = elements.drop(idx + 1),
-      capacity = capacity,
-    )
+    new FillingWindow(new Array[Any](1), 0, 0, 1)
 
   object Filling {
     def unapply[A](sw: SlidingWindow[A]): Option[FillingWindow[A]] =
@@ -165,26 +236,26 @@ object SlidingWindow {
       w.focus
 
     def coflatMap[A, B](w: FilledWindow[A])(f: FilledWindow[A] => B): FilledWindow[B] =
-      val elements = w.toVector
+      val results = new Array[Any](w.capacity)
 
-      val results =
-        elements
-          .indices
-          .map { i =>
-            val focused = fromVectorAt(elements, i, w.capacity)
-            f(focused)
-          }
-          .toVector
+      var i = 0
+      while i < w.capacity do
+        val focused = w.focusAt(i)
+        results(i) = f(focused)
+        i += 1
 
-      fromVectorAt(results, w.focusIndex, w.capacity)
+      new FilledWindow(results, 0, w.focusIndex, w.capacity)
 
     def map[A, B](fa: FilledWindow[A])(f: A => B): FilledWindow[B] =
-      new FilledWindow(
-        left = fa.left.map(f),
-        focus = f(fa.focus),
-        right = fa.right.map(f),
-        capacity = fa.capacity,
-      )
+      val vec       = fa.toVector
+      val newBuffer = new Array[Any](fa.capacity)
+
+      var i = 0
+      while i < fa.capacity do
+        newBuffer(i) = f(vec(i))
+        i += 1
+
+      new FilledWindow(newBuffer, 0, fa.focusIndex, fa.capacity)
 
   }
 
@@ -193,7 +264,15 @@ object SlidingWindow {
     def map[A, B](fa: SlidingWindow[A])(f: A => B): SlidingWindow[B] =
       fa match {
         case fw: FillingWindow[A] =>
-          new FillingWindow(fw.toVector.map(f), fw.capacity)
+          val vec       = fw.toVector
+          val newBuffer = new Array[Any](fw.capacity)
+
+          var i = 0
+          while i < fw.length do
+            newBuffer(i) = f(vec(i))
+            i += 1
+
+          new FillingWindow(newBuffer, 0, fw.length, fw.capacity)
         case fw: FilledWindow[A] =>
           Comonad[FilledWindow].map(fw)(f)
       }

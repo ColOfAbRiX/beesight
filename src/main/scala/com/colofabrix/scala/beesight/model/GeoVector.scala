@@ -1,4 +1,4 @@
-package com.colofabrix.scala.beesight.detection.model
+package com.colofabrix.scala.beesight.model
 
 import java.lang.Math.*
 import cats.Order
@@ -64,12 +64,12 @@ object GeoVector {
 
   }
 
-  // given Order[GeoVector] with {
-  //   def compare(x: GeoVector, y: GeoVector): Int =
-  //     java.lang.Double.compare(x.magnitude, y.magnitude)
-  // }
+  given Order[GeoVector] with {
+    def compare(x: GeoVector, y: GeoVector): Int =
+      java.lang.Double.compare(x.magnitude, y.magnitude)
+  }
 
-  // given Ordering[GeoVector] =
-  //   implicitly[Order[GeoVector]].toOrdering
+  given Ordering[GeoVector] =
+    implicitly[Order[GeoVector]].toOrdering
 
 }

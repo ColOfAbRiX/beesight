@@ -6,7 +6,7 @@ import com.colofabrix.scala.beesight.collections.*
 import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.colofabrix.scala.beesight.detection.math.*
 import com.colofabrix.scala.beesight.detection.model.*
-import com.colofabrix.scala.beesight.model.InputFlightRow
+import com.colofabrix.scala.beesight.model.InputFlightPoint
 import com.colofabrix.scala.beesight.utils.*
 import java.time.Instant
 import monocle.syntax.all.*
@@ -15,14 +15,13 @@ final private[detection] class PreprocessData[A] private (config: DetectionConfi
 
   private type StreamState[A] = State[PreprocessState, A]
 
-  def preprocess[F[_]]: fs2.Pipe[F, InputFlightRow[A], InputFlightRow[A]] =
-    _.mapStateCollect(initialPreprocessState) { currentInputFlightRow =>
+  def preprocess[F[_]]: fs2.Pipe[F, DataPoint, DataPoint] =
+    _.mapStateCollect(initialPreprocessState) { currentPoint =>
       for {
-        (source, currentPoint) = DataPoint.fromInputFlightRow(currentInputFlightRow)
         currentData           <- buildCurrentWindowData(currentPoint)
         _                     <- despikeSecondOldest()
         oldestData            <- pushWindowData(currentData)
-        result                 = oldestData.map(_.point.toInputFlightRow(source))
+        result                 = oldestData.map(_.point)
       } yield result
     }
 

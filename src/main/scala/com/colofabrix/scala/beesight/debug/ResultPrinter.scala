@@ -10,7 +10,7 @@ import com.colofabrix.scala.beesight.model.formats.FlysightPoint
 
 object ResultPrinter {
 
-  def printStagesPipe: fs2.Pipe[IOConfig, OutputFlightRow[FlysightPoint], Nothing] =
+  def printStagesPipe: fs2.Pipe[IOConfig, OutputFlightPoint[FlysightPoint], Nothing] =
     data =>
       data
         .fold(Option.empty[FlightEvents]) { (_, point) =>
@@ -22,7 +22,7 @@ object ResultPrinter {
         }
         .drain
 
-  private def extractStages(point: OutputFlightRow[FlysightPoint]): FlightEvents =
+  private def extractStages(point: OutputFlightPoint[FlysightPoint]): FlightEvents =
     FlightEvents(
       takeoff = point.takeoff,
       freefall = point.freefall,
@@ -38,7 +38,7 @@ object ResultPrinter {
   given niceDouble: Show[Double] =
     value => f"${value}%.2f"
 
-  given nicePoint: Show[FlightPoint] =
+  given nicePoint: Show[FlightEventPoint] =
     point => s"point ${point.index.show} at altitude ${point.altitude.show}"
 
   given niceFlightPoints: Show[FlightEvents] =

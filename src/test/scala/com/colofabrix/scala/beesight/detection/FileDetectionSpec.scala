@@ -13,6 +13,7 @@ import java.nio.file.Paths
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import scala.io.Source
+import com.colofabrix.scala.beesight.config.DetectionConfig
 
 class FileDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues {
 
@@ -31,7 +32,7 @@ class FileDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues {
       val processedResults =
         CsvFileOps
           .readCsv[FlysightPoint](inputData)
-          .through(FlightStagesDetection.streamDetectA)
+          .through(FlightStagesDetection(DetectionConfig.default).streamDetect)
           .compile
           .toList
           .result()

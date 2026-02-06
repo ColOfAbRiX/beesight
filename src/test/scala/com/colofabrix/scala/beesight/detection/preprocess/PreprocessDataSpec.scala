@@ -3,9 +3,9 @@ package com.colofabrix.scala.beesight.detection.preprocess
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import com.colofabrix.scala.beesight.config.*
-import com.colofabrix.scala.beesight.detection.model.GeoVector
+import com.colofabrix.scala.beesight.model.GeoVector
 import com.colofabrix.scala.beesight.IOValues
-import com.colofabrix.scala.beesight.model.InputFlightRow
+import com.colofabrix.scala.beesight.model.InputFlightPoint
 import fs2.Stream
 import java.time.Instant
 import org.scalatest.freespec.AnyFreeSpec
@@ -69,14 +69,14 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
       }
 
       "should handle empty input" in {
-        val expected = List.empty[InputFlightRow[Unit]]
+        val expected = List.empty[InputFlightPoint[Unit]]
         val actual   = runPreprocess(List.empty)
 
         actual shouldBe expected
       }
 
       "should handle single point input" in {
-        val expected = List.empty[InputFlightRow[Unit]]
+        val expected = List.empty[InputFlightPoint[Unit]]
         val actual   = runPreprocess(List(point(1)))
 
         actual shouldBe expected
@@ -86,7 +86,7 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
         val config = buildConfig(preprocessWindowSize = 5)
         val points = List(point(1), point(2), point(3))
 
-        val expected = List.empty[InputFlightRow[Unit]]
+        val expected = List.empty[InputFlightPoint[Unit]]
         val actual   = runPreprocess(points, config)
 
         actual shouldBe expected
@@ -96,7 +96,7 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
         val config = buildConfig(preprocessWindowSize = 3)
         val points = List(point(1), point(2), point(3))
 
-        val expected = List.empty[InputFlightRow[Unit]]
+        val expected = List.empty[InputFlightPoint[Unit]]
         val actual   = runPreprocess(points, config)
 
         actual shouldBe expected
@@ -306,8 +306,8 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
     northSpeed: Double = 0.0,
     eastSpeed: Double = 0.0,
     verticalSpeed: Double = 0.0,
-  ): InputFlightRow[Unit] =
-    InputFlightRow(
+  ): InputFlightPoint[Unit] =
+    InputFlightPoint(
       time = Instant.ofEpochSecond(seconds),
       altitude = altitude,
       speed = GeoVector(north = northSpeed, east = eastSpeed, vertical = verticalSpeed),
@@ -315,11 +315,11 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
     )
 
   private def runPreprocess(
-    points: List[InputFlightRow[Unit]],
+    points: List[InputFlightPoint[Unit]],
     config: DetectionConfig = DetectionConfig.default,
-  ): List[InputFlightRow[Unit]] =
+  ): List[InputFlightPoint[Unit]] =
     Stream
-      .emits[IO, InputFlightRow[Unit]](points)
+      .emits[IO, InputFlightPoint[Unit]](points)
       .through(PreprocessData[Unit](config).preprocess)
       .compile
       .toList

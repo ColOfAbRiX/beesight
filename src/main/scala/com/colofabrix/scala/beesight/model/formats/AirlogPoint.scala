@@ -2,9 +2,9 @@ package com.colofabrix.scala.beesight.model.formats
 
 import cats.data.NonEmptyList
 import cats.implicits.*
-import com.colofabrix.scala.beesight.detection.model.GeoVector
-import com.colofabrix.scala.beesight.model.*
+import com.colofabrix.scala.beesight.detection.model.*
 import com.colofabrix.scala.beesight.model.derivation.given
+import com.colofabrix.scala.beesight.model.*
 import fs2.data.csv.*
 import fs2.data.csv.generic.semiauto.*
 import java.time.*
@@ -38,9 +38,9 @@ object AirlogPoint {
 
   given airlogFormatAdapter: FileFormatAdapter[AirlogPoint] with {
 
-    def toInputFlightPoint(point: AirlogPoint): InputFlightRow[AirlogPoint] = {
+    def toDataPoint(point: AirlogPoint): DataPoint =
       val headingRad = Math.toRadians(point.motion.heading)
-      InputFlightRow(
+      DataPoint(
         time = point.time,
         altitude = point.altitude.gps,
         speed = GeoVector(
@@ -48,9 +48,7 @@ object AirlogPoint {
           east = point.motion.speed * Math.sin(headingRad),
           vertical = point.motion.sink,
         ),
-        source = point,
       )
-    }
 
   }
 

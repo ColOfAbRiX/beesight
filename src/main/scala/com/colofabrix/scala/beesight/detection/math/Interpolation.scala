@@ -1,6 +1,7 @@
 package com.colofabrix.scala.beesight.detection.math
 
 import com.colofabrix.scala.beesight.detection.model.*
+import com.colofabrix.scala.beesight.model.GeoVector
 import java.time.Instant
 
 /**

@@ -1,4 +1,4 @@
-package com.colofabrix.scala.beesight.detection.model
+package com.colofabrix.scala.beesight.model
 
 enum EventType {
   case Takeoff

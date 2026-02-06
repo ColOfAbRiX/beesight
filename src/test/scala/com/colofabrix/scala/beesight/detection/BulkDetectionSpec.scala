@@ -101,10 +101,10 @@ class BulkDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues wi
 
   final private case class TestFileRow(
     filename: String,
-    takeoff: Option[FlightPoint],
-    freefall: Option[FlightPoint],
-    canopy: Option[FlightPoint],
-    landing: Option[FlightPoint],
+    takeoff: Option[FlightEventPoint],
+    freefall: Option[FlightEventPoint],
+    canopy: Option[FlightEventPoint],
+    landing: Option[FlightEventPoint],
     tag: Option[String],
   ) {
     def toFlightEvents: FlightEvents =
@@ -135,10 +135,10 @@ class BulkDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues wi
 
         TestFileRow(
           filename = filename,
-          takeoff = parseOptLong(cols.lift(header("takeoff_pt"))).map(FlightPoint(_, 0.0)),
-          freefall = parseOptLong(cols.lift(header("freefall_pt"))).map(FlightPoint(_, 0.0)),
-          canopy = parseOptLong(cols.lift(header("canopy_pt"))).map(FlightPoint(_, 0.0)),
-          landing = parseOptLong(cols.lift(header("landing_pt"))).map(FlightPoint(_, 0.0)),
+          takeoff = parseOptLong(cols.lift(header("takeoff_pt"))).map(FlightEventPoint(_, 0.0)),
+          freefall = parseOptLong(cols.lift(header("freefall_pt"))).map(FlightEventPoint(_, 0.0)),
+          canopy = parseOptLong(cols.lift(header("canopy_pt"))).map(FlightEventPoint(_, 0.0)),
+          landing = parseOptLong(cols.lift(header("landing_pt"))).map(FlightEventPoint(_, 0.0)),
           tag = cols.lift(header("tag")).filter(_.trim.nonEmpty),
         )
       }

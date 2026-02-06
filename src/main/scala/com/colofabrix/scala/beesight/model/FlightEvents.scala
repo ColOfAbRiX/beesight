@@ -9,10 +9,10 @@ package com.colofabrix.scala.beesight.model
  * @param landing The detected landing point (if found)
  */
 final case class FlightEvents(
-  takeoff: Option[FlightPoint],
-  freefall: Option[FlightPoint],
-  canopy: Option[FlightPoint],
-  landing: Option[FlightPoint],
+  takeoff: Option[FlightEventPoint],
+  freefall: Option[FlightEventPoint],
+  canopy: Option[FlightEventPoint],
+  landing: Option[FlightEventPoint],
 )
 
 object FlightEvents {
@@ -29,3 +29,11 @@ object FlightEvents {
     )
 
 }
+
+/**
+ * A point in the flight timeline representing a detected stage transition
+ */
+final case class FlightEventPoint(
+  index: Long,
+  altitude: Double,
+)

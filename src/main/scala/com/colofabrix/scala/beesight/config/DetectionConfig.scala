@@ -1,6 +1,6 @@
 package com.colofabrix.scala.beesight.config
 
-import com.colofabrix.scala.beesight.detection.model.EventType
+import com.colofabrix.scala.beesight.model.EventType
 
 final case class GlobalConfig(
   preprocessWindowSize: Int,
