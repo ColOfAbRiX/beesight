@@ -1,6 +1,7 @@
 package com.colofabrix.scala.beesight.model.formats
 
 import com.colofabrix.scala.beesight.detection.model.DataPoint
+import com.colofabrix.scala.beesight.model.OutputFlightPoint
 
 /**
  * Type class for adapting various flight data file formats to a common InputFlightPoint representation.

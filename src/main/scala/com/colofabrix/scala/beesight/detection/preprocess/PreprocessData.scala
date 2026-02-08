@@ -6,7 +6,6 @@ import com.colofabrix.scala.beesight.collections.*
 import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.colofabrix.scala.beesight.detection.math.*
 import com.colofabrix.scala.beesight.detection.model.*
-import com.colofabrix.scala.beesight.model.InputFlightPoint
 import com.colofabrix.scala.beesight.utils.*
 import java.time.Instant
 import monocle.syntax.all.*
@@ -58,20 +57,6 @@ final private[detection] class PreprocessData[A] private (config: DetectionConfi
       case currentState @ PreprocessState(_) =>
         currentState
     }
-
-  private def interpolate(w1: SpikeWindowData, w2: SpikeWindowData, time: Instant): SpikeWindowData = {
-    val interpolatedKinematics =
-      for {
-        k1    <- w1.kinematics
-        k2    <- w2.kinematics
-        result = Interpolation.interpolate(k1, k2, time)
-      } yield result
-
-    SpikeWindowData(
-      point = Interpolation.interpolate(w1.point, w2.point, time),
-      kinematics = interpolatedKinematics,
-    )
-  }
 
 }
 

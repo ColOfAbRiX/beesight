@@ -10,7 +10,8 @@ class SlidingWindowSpec extends AnyFreeSpec with Matchers {
     "creation" - {
 
       "should start as FillingWindow" in {
-        val window = SlidingWindow[Int](3)
+        val window =
+          SlidingWindow[Int](3)
         window shouldBe a[SlidingWindow.FillingWindow[?]]
       }
 
@@ -29,15 +30,17 @@ class SlidingWindowSpec extends AnyFreeSpec with Matchers {
     "FillingWindow" - {
 
       "should start empty" in {
-        val window = SlidingWindow[Int](3)
+        val window =
+          SlidingWindow[Int](3)
         window.length shouldBe 0
         window.toVector shouldBe Vector.empty
       }
 
       "should grow as elements are added" in {
-        val window = SlidingWindow[Int](3)
-          .enqueue(1)
-          .enqueue(2)
+        val window =
+          SlidingWindow[Int](3)
+            .enqueue(1)
+            .enqueue(2)
 
         window.length shouldBe 2
         window.toVector shouldBe Vector(1, 2)
@@ -51,11 +54,21 @@ class SlidingWindowSpec extends AnyFreeSpec with Matchers {
         next.length shouldBe 1
       }
 
+      "push should return None when reached capacity" in {
+        val window           = SlidingWindow[Int](2)
+        val (popped1, next1) = window.push(1)
+        val (popped2, next2) = next1.push(2)
+
+        popped2 shouldBe None
+        next2.length shouldBe 2
+      }
+
       "should transition to FilledWindow when capacity reached" in {
-        val window = SlidingWindow[Int](3)
-          .enqueue(1)
-          .enqueue(2)
-          .enqueue(3)
+        val window =
+          SlidingWindow[Int](3)
+            .enqueue(1)
+            .enqueue(2)
+            .enqueue(3)
 
         window shouldBe a[SlidingWindow.FilledWindow[?]]
         window.length shouldBe 3

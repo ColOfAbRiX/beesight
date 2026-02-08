@@ -13,6 +13,9 @@ Global / tpolecatExcludeOptions ++=
   )
 Test / tpolecatScalacOptions := Set.empty
 
+addCommandAlias("styleApply", "; scalafix OrganizeImports; scalafmtAll")
+addCommandAlias("styleCheck", "; scalafix --check; scalafmtCheckAll")
+
 lazy val root =
   project
     .in(file("."))
@@ -26,18 +29,21 @@ lazy val root =
       semanticdbEnabled    := true,
       scalacOptions        += "-preview",
       libraryDependencies ++= List(
-        "co.fs2"               %% "fs2-core"             % "3.10.2",
-        "co.fs2"               %% "fs2-io"               % "3.10.2",
-        "com.colofabrix.scala" %% "declinio"             % "1.0.0",
-        "com.monovore"         %% "decline"              % "2.4.1",
-        "dev.optics"           %% "monocle-core"         % "3.1.0",
-        "dev.optics"           %% "monocle-macro"        % "3.1.0",
-        "io.github.pityka"     %% "nspl-awt"             % "0.10.0",
-        "org.gnieh"            %% "fs2-data-csv-generic" % "1.11.1",
-        "org.gnieh"            %% "fs2-data-csv"         % "1.11.1",
-        "org.scalanlp"         %% "breeze"               % "2.1.0",
-        "org.scalatest"        %% "scalatest"            % "3.2.18" % Test,
-        "org.typelevel"        %% "cats-core"            % "2.12.0",
-        "org.typelevel"        %% "cats-effect"          % "3.5.4",
+        "co.fs2"               %% "fs2-core"                      % "3.10.2",
+        "co.fs2"               %% "fs2-io"                        % "3.10.2",
+        "com.colofabrix.scala" %% "declinio"                      % "1.0.0",
+        "com.monovore"         %% "decline"                       % "2.4.1",
+        "dev.optics"           %% "monocle-core"                  % "3.1.0",
+        "dev.optics"           %% "monocle-macro"                 % "3.1.0",
+        "io.github.pityka"     %% "nspl-awt"                      % "0.10.0",
+        "org.gnieh"            %% "fs2-data-csv-generic"          % "1.11.1",
+        "org.gnieh"            %% "fs2-data-csv"                  % "1.11.1",
+        "org.scalanlp"         %% "breeze"                        % "2.1.0",
+        "org.scalatest"        %% "scalatest"                     % "3.2.18" % Test,
+        "org.typelevel"        %% "cats-core"                     % "2.12.0",
+        "org.typelevel"        %% "cats-effect-testing-scalatest" % "1.7.0"  % Test,
+        "org.typelevel"        %% "cats-effect"                   % "3.5.4",
       ),
+      semanticdbEnabled := true,
+      semanticdbVersion := scalafixSemanticdb.revision,
     )

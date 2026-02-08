@@ -1,7 +1,7 @@
 package com.colofabrix.scala.beesight.model
 
-import java.lang.Math.*
 import cats.Order
+import java.lang.Math.*
 
 /**
  * Represents a 3D velocity vector with north, east, and vertical components.
@@ -13,6 +13,9 @@ final case class GeoVector(
 )
 
 object GeoVector {
+
+  val zero: GeoVector =
+    GeoVector(0.0, 0.0, 0.0)
 
   extension (self: GeoVector) {
 

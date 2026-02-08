@@ -2,6 +2,7 @@ package com.colofabrix.scala.beesight.collections
 
 import breeze.linalg.DenseVector
 import cats.*
+import cats.syntax.all.*
 import scala.reflect.ClassTag
 
 /**
@@ -13,6 +14,7 @@ sealed trait SlidingWindow[A] {
   def toVector: Vector[A]
   def enqueue(a: A): SlidingWindow[A]
   def push(a: A): (Option[A], SlidingWindow[A])
+  def isAtCapacity: Boolean
   def sliceFilled(start: Int, count: Int): Option[SlidingWindow.FilledWindow[A]]
 
   def toList: List[A] =
@@ -48,6 +50,9 @@ object SlidingWindow {
       else
         (None, new FillingWindow(buffer, head, newLen, capacity))
 
+    def isAtCapacity: Boolean =
+      len === capacity
+
     def sliceFilled(start: Int, count: Int): Option[FilledWindow[A]] =
       val sliceLen =
         if count >= 0 then Math.min(count, len - start)
@@ -82,6 +87,11 @@ object SlidingWindow {
 
       builder.result()
 
+    def asFilledWindow: Option[FilledWindow[A]] =
+      Option.when(isAtCapacity) {
+        new FilledWindow[A](buffer, head, 0, capacity)
+      }
+
   }
 
   /**
@@ -108,6 +118,9 @@ object SlidingWindow {
     def pushReturning(a: A): (A, FilledWindow[A]) =
       val (Some(out), window) = push(a): @unchecked
       (out, window.asInstanceOf[FilledWindow[A]])
+
+    def isAtCapacity: Boolean =
+      true
 
     def sliceFilled(start: Int, count: Int): Option[FilledWindow[A]] =
       val sliceLen =

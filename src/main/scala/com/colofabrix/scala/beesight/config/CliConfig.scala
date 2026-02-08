@@ -3,8 +3,7 @@ package com.colofabrix.scala.beesight.config
 import cats.data.*
 import cats.implicits.*
 import com.monovore.decline.*
-import java.nio.file.Path
-import java.nio.file.Paths
+import java.nio.file.{ Path, Paths }
 
 object CliConfig {
 

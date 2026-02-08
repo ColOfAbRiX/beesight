@@ -1,11 +1,10 @@
 package com.colofabrix.scala.beesight.stats
 
-import breeze.linalg.*
-import breeze.stats.*
-import cats.effect.IO
-import com.colofabrix.scala.beesight.stats.CusumDetector.*
-import java.lang.Math.*
-import scala.collection.immutable.Queue
+import breeze.linalg.DenseVector
+import breeze.stats
+import com.colofabrix.scala.beesight.collections.SlidingWindow.FilledWindow
+import com.colofabrix.scala.beesight.stats.CusumDetector.CusumState
+import java.lang.Math.sqrt
 
 /**
  * CUSUM (Cumulative Sum) algorithm for change detection
@@ -14,177 +13,68 @@ import scala.collection.immutable.Queue
  * The algorithm detects changes by accumulating deviations from a threshold value and signaling when the accumulated
  * sum exceeds a threshold.
  *
- * @param windowSize The size of the sliding window used for calculating the mean and standard deviation
- * @param threshold The threshold for detecting changes (K value in CUSUM literature)
+ * @param slack The slack parameter (K value) that reduces sensitivity to small deviations
+ * @param threshold The threshold for detecting changes (H value in CUSUM literature)
+ * @param f Extractor function to obtain the numeric value from type A
  *
  * See https://blog.stackademic.com/the-cusum-algorithm-all-the-essential-information-you-need-with-python-examples-f6a5651bf2e5
  */
-final class CusumDetector private (
-  windowSize: Int,
+final class CusumDetector[A] private (
+  _state: CusumState,
   slack: Double,
   threshold: Double,
-  meanFn: WinStat,
-  stdDevFn: WinStat,
+  f: A => Double,
 ) {
 
-  def checkNextValue(state: CusumState, value: Double): CusumState =
-    state match {
-      case CusumState.Empty =>
-        CusumState.Filling(Queue(value))
+  private var state: CusumState =
+    _state
 
-      case CusumState.Filling(window) if window.length < windowSize =>
-        CusumState.Filling(window.enqueue(value))
+  /**
+   * Detects peaks in the signal based on the current window and value
+   */
+  def detectPeak(window: FilledWindow[A], current: A): CusumDetector.Peak = {
+    val currentValue = f(current)
+    val values       = window.toVector.map(f)
+    val allValues    = DenseVector((values :+ currentValue).toArray)
 
-      case CusumState.Filling(window) =>
-        calculateStats(value, window, 0.0 , 0.0)
+    val mean   = stats.mean(allValues)
+    val stdDev = sqrt(stats.variance.population(allValues))
 
-      case CusumState.Detection(_, window, _, _, positiveSum, negativeSum, _) =>
-        calculateStats(value, window, positiveSum, negativeSum)
-    }
+    val deviation   = currentValue - mean
+    val positiveSum = Math.max(0.0, state.positiveSum + deviation - slack * stdDev)
+    val negativeSum = Math.max(0.0, state.negativeSum - deviation - slack * stdDev)
 
-  private def calculateStats(
-    value: Double,
-    queue: Queue[Double],
-    prevPositiveSum: Double,
-    prevNegativeSum: Double,
-  ): CusumState =
-    val pStat     = meanFn(queue, value)
-    val pStdDev   = stdDevFn(queue, value)
-    val deviation = value - pStat
+    state = CusumState(positiveSum, negativeSum)
 
-    val positiveSum = Math.max(0.0, prevPositiveSum + deviation - slack * pStdDev)
-    val negativeSum = Math.max(0.0, prevNegativeSum - deviation - slack * pStdDev)
+    val relativeThreshold = threshold * stdDev
 
-    val relativeThreshold = threshold * pStdDev
-
-    val peak =
-      if positiveSum > relativeThreshold && positiveSum > negativeSum then Peak.PositivePeak
-      else if negativeSum > relativeThreshold && negativeSum > positiveSum then Peak.NegativePeak
-      else Peak.Stable
-
-    val nextWindow =
-      queue
-        .dequeue
-        ._2
-        .enqueue(value)
-
-    CusumState.Detection(
-      currentValue = value,
-      window = nextWindow,
-      windowAverage = pStat,
-      windowStDev = pStdDev,
-      positiveSum = positiveSum,
-      negativeSum = negativeSum,
-      peakResult = peak,
-    )
+    if positiveSum > relativeThreshold && positiveSum > negativeSum then
+      CusumDetector.Peak.PositivePeak
+    else if negativeSum > relativeThreshold && negativeSum > positiveSum then
+      CusumDetector.Peak.NegativePeak
+    else
+      CusumDetector.Peak.Stable
+  }
 
 }
 
 object CusumDetector {
 
-  private type WinStat =
-    (Queue[Double], Double) => Double
-
-  private val MeanFn: WinStat =
-    (window, current) => breeze.stats.mean(DenseVector(window.enqueue(current).toArray))
-
-  private val MedianFn: WinStat =
-    (window, current) => breeze.stats.median(DenseVector(window.enqueue(current).toArray))
-
-  private val StdDevFn: WinStat =
-    (window, current) => sqrt(breeze.stats.variance.population(DenseVector(window.enqueue(current).toArray)))
-
-  private def EMA(tailSize: Int): WinStat =
-    (window, current) =>
-      val alpha = 2.0 / (tailSize.toDouble + 1.0)
-      val allValues = window.enqueue(current)
-      allValues.foldLeft(allValues.head) { (ema, value) =>
-        alpha * value + (1.0 - alpha) * ema
-      }
-
-  private def EMAStdDev(tailSize: Int): WinStat =
-    (window, current) =>
-      val alpha = 2.0 / (tailSize.toDouble + 1.0)
-      val allValues = window.enqueue(current)
-
-      val emaMean =
-        allValues.foldLeft(allValues.head) { (ema, value) =>
-          alpha * value + (1.0 - alpha) * ema
-        }
-
-      val emaVariance =
-        allValues.foldLeft(0.0) { (emaVar, value) =>
-          val deviation = value - emaMean
-          alpha * (deviation * deviation) + (1.0 - alpha) * emaVar
-        }
-
-      sqrt(emaVariance)
-
-  def apply(windowSize: Int, slack: Double, threshold: Double, meanFn: WinStat, stdDevFn: WinStat): CusumDetector =
-    new CusumDetector(
-      windowSize = Math.max(windowSize, 1),
-      threshold = Math.max(threshold, 0.0),
-      slack = Math.max(slack, 0.0),
-      meanFn = meanFn,
-      stdDevFn = stdDevFn,
-    )
-
-  def withMean(windowSize: Int, slack: Double, threshold: Double): CusumDetector =
-    new CusumDetector(
-      windowSize = Math.max(windowSize, 1),
-      threshold = Math.max(threshold, 0.0),
-      slack = Math.max(slack, 0.0),
-      meanFn = MeanFn,
-      stdDevFn = StdDevFn,
-    )
-
-  def withMedian(windowSize: Int, slack: Double, threshold: Double): CusumDetector =
-    new CusumDetector(
-      windowSize = Math.max(windowSize, 1),
-      threshold = Math.max(threshold, 0.0),
-      slack = Math.max(slack, 0.0),
-      meanFn = MedianFn,
-      stdDevFn = StdDevFn,
-    )
-
-  def withEMA(windowSize: Int, slack: Double, threshold: Double): CusumDetector =
-    new CusumDetector(
-      windowSize = 1,
-      threshold = Math.max(threshold, 0.0),
-      slack = Math.max(slack, 0.0),
-      meanFn = EMA(windowSize),
-      stdDevFn = StdDevFn,
-    )
-
-  def withFullEMA(windowSize: Int, slack: Double, threshold: Double): CusumDetector =
-    new CusumDetector(
-      windowSize = Math.max(windowSize, 1),
-      threshold = Math.max(threshold, 0.0),
-      slack = Math.max(slack, 0.0),
-      meanFn = EMA(windowSize),
-      stdDevFn = EMAStdDev(windowSize),
-    )
-
   enum Peak {
     case PositivePeak, Stable, NegativePeak
   }
 
-  enum CusumState {
+  private case class CusumState(
+    positiveSum: Double,
+    negativeSum: Double,
+  )
 
-    case Empty extends CusumState
-
-    case Filling(window: Queue[Double]) extends CusumState
-
-    case Detection(
-      currentValue: Double,
-      window: Queue[Double],
-      windowAverage: Double,
-      windowStDev: Double,
-      positiveSum: Double = 0.0,
-      negativeSum: Double = 0.0,
-      peakResult: Peak,
-    ) extends CusumState
-
-  }
+  def apply[A](slack: Double, threshold: Double)(f: A => Double): CusumDetector[A] =
+    new CusumDetector(
+      CusumState(0.0, 0.0),
+      Math.max(slack, 0.0),
+      Math.max(threshold, 0.0),
+      f,
+    )
 
 }

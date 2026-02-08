@@ -1,12 +1,12 @@
 package com.colofabrix.scala.beesight.debug
 
+import cats.Show
 import cats.effect.IO
 import cats.implicits.given
-import cats.Show
 import com.colofabrix.scala.beesight.*
 import com.colofabrix.scala.beesight.model.*
-import scala.io.AnsiColor.*
 import com.colofabrix.scala.beesight.model.formats.FlysightPoint
+import scala.io.AnsiColor.*
 
 object ResultPrinter {
 

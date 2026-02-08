@@ -1,14 +1,12 @@
 package com.colofabrix.scala.beesight.debug
 
-import cats.syntax.all.*
 import cats.effect.implicits.given
-import com.colofabrix.scala.beesight.*
+import cats.syntax.all.*
 import com.colofabrix.scala.beesight.files.FileOps
-import com.colofabrix.scala.beesight.IOConfig
 import com.colofabrix.scala.beesight.model.*
-import com.colofabrix.scala.beesight.model.*
-import java.nio.file.*
 import com.colofabrix.scala.beesight.model.formats.FileFormatAdapter
+import com.colofabrix.scala.beesight.{ IOConfig, * }
+import java.nio.file.*
 
 /**
  * Generates interactive HTML charts showing flight data and detected stages
@@ -194,7 +192,7 @@ object ChartGenerator {
   private def formatStage(point: Option[FlightEventPoint]): String =
     point match {
       case Some(FlightEventPoint(idx, alt)) => f"Point $idx at altitude $alt%.2fm"
-      case None                        => "Not detected"
+      case None                             => "Not detected"
     }
 
   final private case class PhaseTransition(

@@ -28,4 +28,16 @@ package object utils {
 
   }
 
+  extension (self: fs2.Stream.type) {
+
+    def liftPipeFirst[F[_], A, B, C](pipe: fs2.Pipe[F, A, B]): fs2.Pipe[F, (A, C), (B, C)] =
+      stream =>
+        stream
+          .map { case (a, c) => (a, c, ()) }
+          .through { s =>
+            pipe(s.map(_._1)).zip(s.map(_._2))
+          }
+
+  }
+
 }

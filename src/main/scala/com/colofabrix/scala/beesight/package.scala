@@ -1,11 +1,10 @@
 package com.colofabrix.scala.beesight
 
-import cats.data.ReaderT
-import cats.effect.IO
-import cats.effect.LiftIO
-import cats.effect.std.Console
-import com.colofabrix.scala.beesight.config.Config
 import cats.MonadThrow
+import cats.data.ReaderT
+import cats.effect.std.Console
+import cats.effect.{ IO, LiftIO }
+import com.colofabrix.scala.beesight.config.Config
 
 type IOConfig[A] = ReaderT[IO, Config, A]
 
