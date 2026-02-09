@@ -2,7 +2,7 @@ package com.colofabrix.scala.beesight.stats
 
 import breeze.linalg.DenseVector
 import breeze.stats
-import com.colofabrix.scala.beesight.collections.SlidingWindow.FilledWindow
+import com.colofabrix.scala.beesight.collections.SWindow.FilledWindow
 import com.colofabrix.scala.beesight.stats.CusumDetector.CusumState
 import java.lang.Math.sqrt
 

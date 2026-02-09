@@ -2,14 +2,14 @@ package com.colofabrix.scala.beesight.detection
 
 import cats.data.State
 import cats.syntax.all.*
-import com.colofabrix.scala.beesight.collections.NESlidingWindow
-import com.colofabrix.scala.beesight.collections.NESlidingWindow.*
-import com.colofabrix.scala.beesight.config.DetectionConfig
-import com.colofabrix.scala.beesight.config.EventConfigs
+import com.colofabrix.scala.beesight.collections.NonEmptyWindow
+import com.colofabrix.scala.beesight.collections.NonEmptyWindow.*
+import com.colofabrix.scala.beesight.config.{ DetectionConfig, EventConfigs }
 import com.colofabrix.scala.beesight.detection.FlightStagesDetection.*
-import com.colofabrix.scala.beesight.detection.math.Kinematics
+import com.colofabrix.scala.beesight.detection.math.*
 import com.colofabrix.scala.beesight.detection.model.*
 import com.colofabrix.scala.beesight.detection.preprocess.PreprocessData
+import com.colofabrix.scala.beesight.detection.stages.*
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.model.formats.FileFormatAdapter
 import com.colofabrix.scala.beesight.utils.*
@@ -21,8 +21,11 @@ import scala.annotation.nowarn
  */
 final class FlightStagesDetection private (config: DetectionConfig) {
 
-  private def preprocessor[A]: PreprocessData[A] =
-    PreprocessData[A](config)
+  private val preprocessor: PreprocessData =
+    PreprocessData(config)
+
+  private def freefallHandler: FreefallHandler =
+    FreefallHandler(config)
 
   /**
    * Streaming pipe that detects flight stages using the provided configuration.
@@ -58,7 +61,7 @@ final class FlightStagesDetection private (config: DetectionConfig) {
           case (currentPoint, idx) =>
             for {
               oldestData <- pushCurrentPoint(currentPoint)
-              _          <- transitionState()
+              _          <- transitionToRunning()
               phase      <- detectPhase(currentPoint, idx)
             } yield oldestData.flatMap(_.detectedEvents)
         }
@@ -79,8 +82,18 @@ final class FlightStagesDetection private (config: DetectionConfig) {
         (currentState, Some(oldestPoint))
     }
 
-  private def transitionState(): StreamState[Unit] =
-    State.modifyFilling { state =>
+  private def computeSmoothedKinematics(
+    currentPoint: DataPoint,
+    previousWindow: NonEmptyWindow[DataPoint],
+    eventType: EventType,
+  ): PointKinematics =
+    ???
+    // val smoothingWindowSize = config.getSmoothingWindowSize(eventType)
+    // val smoothingWindow     = window.toVector.takeRight(smoothingWindowSize)
+    // Kinematics.computeSmoothed(currentPoint, smoothingWindow)
+
+  private def transitionToRunning(): StreamState[Unit] =
+    DetectionState.fillingModify { state =>
       state
         .window
         .asFilledWindow
@@ -93,15 +106,18 @@ final class FlightStagesDetection private (config: DetectionConfig) {
         }
     }
 
-  @nowarn
   private def detectPhase(currentPoint: DataPoint, idx: Long): StreamState[Option[FlightPhase]] =
-    State.running { state =>
+    DetectionState.runningState { state =>
       state.phase match {
-        case FlightPhase.BeforeTakeoff => (state, state.phase)
-        case FlightPhase.Climbing      => (state, state.phase)
-        case FlightPhase.Freefall      => (state, state.phase)
-        case FlightPhase.UnderCanopy   => (state, state.phase)
-        case FlightPhase.Landed        => (state, state.phase)
+        case FlightPhase.BeforeTakeoff =>
+          println(currentPoint.toString + idx.toString)
+          val trigger = freefallHandler.detectTrigger(state.window.focusAt(state.focus))
+          val result  = (state, state.phase)
+          result
+        case FlightPhase.Climbing    => (state, state.phase)
+        case FlightPhase.Freefall    => (state, state.phase)
+        case FlightPhase.UnderCanopy => (state, state.phase)
+        case FlightPhase.Landed      => (state, state.phase)
       }
     }
 
@@ -109,9 +125,10 @@ final class FlightStagesDetection private (config: DetectionConfig) {
 
   @nowarn
   private def initialStreamState(first: DataPoint, idx: Long): (DetectionState, None.type) =
+    val smoothWindows     = config.eventConfigsAsList.map(_.smoothingWindowSize)
     val backWindows       = config.eventConfigsAsList.map(_.backtrackWindowSize)
     val validationWindows = config.eventConfigsAsList.map(_.validationWindowSize)
-    val slidingWindowSize = backWindows.max + 1 + validationWindows.max
+    val slidingWindowSize = Math.max(smoothWindows.max, backWindows.max) + 1 + validationWindows.max
 
     val firstKinematics =
       PointKinematics(
@@ -129,7 +146,7 @@ final class FlightStagesDetection private (config: DetectionConfig) {
         detectedEvents = None,
       )
 
-    val firstWindow = NESlidingWindow(slidingWindowSize, firstData)
+    val firstWindow = NonEmptyWindow(slidingWindowSize, firstData)
 
     DetectionState.Filling(firstWindow) -> None
 
@@ -137,28 +154,8 @@ final class FlightStagesDetection private (config: DetectionConfig) {
 
 object FlightStagesDetection {
 
-  private type StreamState[A] = State[DetectionState, A]
-
-  enum DetectionState {
-
-    case Filling(
-      window: NESlidingWindow[DetectionData],
-    ) extends DetectionState
-
-    case Running(
-      window: NESlidingWindow.NEFilledWindow[DetectionData],
-      phase: FlightPhase,
-      focus: Int,
-    ) extends DetectionState
-
-  }
-
-  final case class DetectionData(
-    point: DataPoint,
-    kinematics: PointKinematics,
-    phase: Option[FlightPhase],
-    detectedEvents: Option[FlightEvents],
-  )
+  private type StreamState[A] =
+    State[DetectionState, A]
 
   def apply(config: DetectionConfig): FlightStagesDetection =
     new FlightStagesDetection(config)
@@ -170,26 +167,18 @@ object FlightStagesDetection {
 
     def getWindowFocus(eventType: EventType): Int =
       eventType match {
-        case EventType.Takeoff  => self.takeoff.backtrackWindowSize
-        case EventType.Freefall => self.freefall.backtrackWindowSize
-        case EventType.Canopy   => self.canopy.backtrackWindowSize
-        case EventType.Landing  => self.landing.backtrackWindowSize
+        case EventType.Takeoff  => Math.max(self.takeoff.backtrackWindowSize, self.takeoff.smoothingWindowSize)
+        case EventType.Freefall => Math.max(self.freefall.backtrackWindowSize, self.freefall.smoothingWindowSize)
+        case EventType.Canopy   => Math.max(self.canopy.backtrackWindowSize, self.canopy.smoothingWindowSize)
+        case EventType.Landing  => Math.max(self.landing.backtrackWindowSize, self.landing.smoothingWindowSize)
       }
 
-  }
-
-  extension (self: State.type) {
-
-    def modifyFilling(f: DetectionState.Filling => DetectionState): StreamState[Unit] =
-      State.modify {
-        case state: DetectionState.Filling => f(state)
-        case state: DetectionState.Running => state
-      }
-
-    def running[A](f: DetectionState.Running => (DetectionState.Running, A)): StreamState[Option[A]] =
-      State.modify {
-        case state: DetectionState.Filling => (state, None)
-        case state: DetectionState.Running => f(state).bimap(identity, Some(_))
+    def getSmoothingWindowSize(eventType: EventType): Int =
+      eventType match {
+        case EventType.Takeoff  => self.takeoff.smoothingWindowSize
+        case EventType.Freefall => self.freefall.smoothingWindowSize
+        case EventType.Canopy   => self.canopy.smoothingWindowSize
+        case EventType.Landing  => self.landing.smoothingWindowSize
       }
 
   }

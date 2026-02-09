@@ -1,6 +1,6 @@
 package com.colofabrix.scala.beesight.detection.preprocess
 
-import com.colofabrix.scala.beesight.collections.SlidingWindow.FilledWindow
+import com.colofabrix.scala.beesight.collections.SWindow.FilledWindow
 import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.colofabrix.scala.beesight.detection.math.Interpolation
 import java.time.Instant

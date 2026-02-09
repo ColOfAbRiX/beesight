@@ -319,7 +319,7 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
   ): List[DataPoint] =
     Stream
       .emits[IO, DataPoint](points)
-      .through(PreprocessData[Unit](config).preprocess)
+      .through(PreprocessData(config).preprocess)
       .compile
       .toList
       .result()

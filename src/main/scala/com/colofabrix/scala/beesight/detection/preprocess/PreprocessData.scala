@@ -10,7 +10,7 @@ import com.colofabrix.scala.beesight.utils.*
 import java.time.Instant
 import monocle.syntax.all.*
 
-final private[detection] class PreprocessData[A] private (config: DetectionConfig) {
+final private[detection] class PreprocessData private (config: DetectionConfig) {
 
   private type StreamState[A] = State[PreprocessState, A]
 
@@ -25,14 +25,14 @@ final private[detection] class PreprocessData[A] private (config: DetectionConfi
     }
 
   private val initialPreprocessState: PreprocessState =
-    PreprocessState(SlidingWindow(Math.max(2, config.global.preprocessWindowSize)))
+    PreprocessState(SWindow(Math.max(2, config.global.preprocessWindowSize)))
 
   private def buildCurrentWindowData(currentPoint: DataPoint): StreamState[SpikeWindowData] =
     State.inspect {
       case PreprocessState(window) =>
         val kinematics =
           window
-            .sliceFilled(window.length - 1, 1)
+            .filledSubwindow(window.length - 1, 1)
             .map { previousData =>
               Kinematics.compute(previousData.focus.point, currentPoint)
             }
@@ -50,7 +50,7 @@ final private[detection] class PreprocessData[A] private (config: DetectionConfi
 
   private def despikeSecondOldest(): StreamState[Unit] =
     State.modify {
-      case currentState @ PreprocessState(currentWindow: SlidingWindow.FilledWindow[SpikeWindowData]) =>
+      case currentState @ PreprocessState(currentWindow: SWindow.FilledWindow[SpikeWindowData]) =>
         currentState
           .focus(_.window)
           .replace(Despike.despike(config, currentWindow))
@@ -62,7 +62,7 @@ final private[detection] class PreprocessData[A] private (config: DetectionConfi
 
 object PreprocessData {
 
-  def apply[A](config: DetectionConfig): PreprocessData[A] =
-    new PreprocessData[A](config)
+  def apply(config: DetectionConfig): PreprocessData =
+    new PreprocessData(config)
 
 }

@@ -1,44 +1,45 @@
 package com.colofabrix.scala.beesight.collections
 
+import cats.syntax.all.*
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
 class SlidingWindowSpec extends AnyFreeSpec with Matchers {
 
-  "SlidingWindow" - {
+  "SWindow" - {
 
     "creation" - {
 
       "should start as FillingWindow" in {
         val window =
-          SlidingWindow[Int](3)
-        window shouldBe a[SlidingWindow.FillingWindow[?]]
+          SWindow[Int](3)
+        window shouldBe a[SWindow.FillingWindow[?]]
       }
 
       "should have specified capacity" in {
-        val window = SlidingWindow[Int](5)
+        val window = SWindow[Int](5)
         window.capacity shouldBe 5
       }
 
       "should enforce minimum capacity of 1" in {
-        val window = SlidingWindow[Int](0)
+        val window = SWindow[Int](0)
         window.capacity shouldBe 1
       }
 
     }
 
-    "FillingWindow" - {
+    "Filling" - {
 
       "should start empty" in {
         val window =
-          SlidingWindow[Int](3)
+          SWindow[Int](3)
         window.length shouldBe 0
         window.toVector shouldBe Vector.empty
       }
 
       "should grow as elements are added" in {
         val window =
-          SlidingWindow[Int](3)
+          SWindow[Int](3)
             .enqueue(1)
             .enqueue(2)
 
@@ -47,7 +48,7 @@ class SlidingWindowSpec extends AnyFreeSpec with Matchers {
       }
 
       "push should return None while filling" in {
-        val window         = SlidingWindow[Int](3)
+        val window         = SWindow[Int](3)
         val (popped, next) = window.push(1)
 
         popped shouldBe None
@@ -55,7 +56,7 @@ class SlidingWindowSpec extends AnyFreeSpec with Matchers {
       }
 
       "push should return None when reached capacity" in {
-        val window           = SlidingWindow[Int](2)
+        val window           = SWindow[Int](2)
         val (popped1, next1) = window.push(1)
         val (popped2, next2) = next1.push(2)
 
@@ -65,12 +66,12 @@ class SlidingWindowSpec extends AnyFreeSpec with Matchers {
 
       "should transition to FilledWindow when capacity reached" in {
         val window =
-          SlidingWindow[Int](3)
+          SWindow[Int](3)
             .enqueue(1)
             .enqueue(2)
             .enqueue(3)
 
-        window shouldBe a[SlidingWindow.FilledWindow[?]]
+        window shouldBe a[SWindow.FilledWindow[?]]
         window.length shouldBe 3
       }
 
@@ -110,8 +111,10 @@ class SlidingWindowSpec extends AnyFreeSpec with Matchers {
       }
 
       "oldest and newest should be same for capacity 1" in {
-        val window = SlidingWindow[Int](1).enqueue(42)
-          .asInstanceOf[SlidingWindow.FilledWindow[Int]]
+        val window =
+          SWindow[Int](1)
+            .enqueue(42)
+            .asInstanceOf[SWindow.FilledWindow[Int]]
 
         window.oldest shouldBe 42
         window.newest shouldBe 42
@@ -209,8 +212,6 @@ class SlidingWindowSpec extends AnyFreeSpec with Matchers {
     "despiking scenario simulation" - {
 
       "focusAt(1) should target second oldest for despiking" in {
-        // Window: [oldest, secondOldest, ..., newest]
-        // Despiking checks secondOldest at index 1
         val window  = filledWindow("t1", "t2", "t3", "t4", "t5")
         val focused = window.focusAt(1)
 
@@ -254,7 +255,7 @@ class SlidingWindowSpec extends AnyFreeSpec with Matchers {
         val (_, w1) = window.push(4)
         val (_, w2) = w1.push(5)
 
-        w2.asInstanceOf[SlidingWindow.FilledWindow[Int]].oldest shouldBe 3
+        w2.asInstanceOf[SWindow.FilledWindow[Int]].oldest shouldBe 3
       }
 
       "newest should be correct after multiple pushes" in {
@@ -262,38 +263,141 @@ class SlidingWindowSpec extends AnyFreeSpec with Matchers {
         val (_, w1) = window.push(4)
         val (_, w2) = w1.push(5)
 
-        w2.asInstanceOf[SlidingWindow.FilledWindow[Int]].newest shouldBe 5
+        w2.asInstanceOf[SWindow.FilledWindow[Int]].newest shouldBe 5
       }
 
     }
 
-    "toVector and toList" - {
+    "filledSubwindow(start, count)" - {
+
+      "should return elements from start to the right with positive count" in {
+        val window    = filledWindow(1, 2, 3, 4, 5)
+        val subwindow = window.filledSubwindow(1, 3) // start=1, count=3
+
+        subwindow.isDefined shouldBe true
+        subwindow.get.toVector shouldBe Vector(2, 3, 4)
+      }
+
+      "should return elements from start to the left with negative count" in {
+        val window    = filledWindow(1, 2, 3, 4, 5)
+        val subwindow = window.filledSubwindow(3, -3) // start=3, count=-3
+
+        subwindow.isDefined shouldBe true
+        subwindow.get.toVector shouldBe Vector(2, 3, 4)
+      }
+
+      "should return None for out of bounds start" in {
+        val window = filledWindow(1, 2, 3, 4, 5)
+
+        window.filledSubwindow(10, 3).isDefined shouldBe false
+        window.filledSubwindow(-1, 3).isDefined shouldBe false
+      }
+
+      "should return None for zero count" in {
+        val window = filledWindow(1, 2, 3, 4, 5)
+        window.filledSubwindow(2, 0).isDefined shouldBe false
+      }
+
+      "should clip count at window boundary (right)" in {
+        val window    = filledWindow(1, 2, 3, 4, 5)
+        val subwindow = window.filledSubwindow(3, 10) // start=3, asks for 10 but only 2 available
+
+        subwindow.isDefined shouldBe true
+        subwindow.get.toVector shouldBe Vector(4, 5)
+      }
+
+      "should clip count at window boundary (left)" in {
+        val window    = filledWindow(1, 2, 3, 4, 5)
+        val subwindow = window.filledSubwindow(1, -10) // start=1, asks for -10 but only 2 available
+
+        subwindow.isDefined shouldBe true
+        subwindow.get.toVector shouldBe Vector(1, 2)
+      }
+
+    }
+
+    "filledSubwindow(count) from focus" - {
+
+      "should return focus and elements to the right with positive count" in {
+        val window    = filledWindow(1, 2, 3, 4, 5).focusAt(2)
+        val subwindow = window.filledSubwindow(3) // count=3: focus(3) + 2 to right
+
+        subwindow.isDefined shouldBe true
+        subwindow.get.toVector shouldBe Vector(3, 4, 5)
+      }
+
+      "should return focus and elements to the left with negative count" in {
+        val window    = filledWindow(1, 2, 3, 4, 5).focusAt(2)
+        val subwindow = window.filledSubwindow(-3) // count=-3: 2 to left + focus(3)
+
+        subwindow.isDefined shouldBe true
+        subwindow.get.toVector shouldBe Vector(1, 2, 3)
+      }
+
+      "should return just focus with count=1" in {
+        val window    = filledWindow(1, 2, 3, 4, 5).focusAt(2)
+        val subwindow = window.filledSubwindow(1)
+
+        subwindow.isDefined shouldBe true
+        subwindow.get.toVector shouldBe Vector(3)
+      }
+
+      "should return just focus with count=-1" in {
+        val window    = filledWindow(1, 2, 3, 4, 5).focusAt(2)
+        val subwindow = window.filledSubwindow(-1)
+
+        subwindow.isDefined shouldBe true
+        subwindow.get.toVector shouldBe Vector(3)
+      }
+
+      "should clip at right boundary" in {
+        val window    = filledWindow(1, 2, 3, 4, 5).focusAt(4) // focus on 5
+        val subwindow = window.filledSubwindow(5)              // asks for 5, only 1 available
+
+        subwindow.isDefined shouldBe true
+        subwindow.get.toVector shouldBe Vector(5)
+      }
+
+      "should clip at left boundary" in {
+        val window    = filledWindow(1, 2, 3, 4, 5).focusAt(0) // focus on 1
+        val subwindow = window.filledSubwindow(-5)             // asks for -5, only 1 available
+
+        subwindow.isDefined shouldBe true
+        subwindow.get.toVector shouldBe Vector(1)
+      }
+
+      "should return None for FillingWindow (no focus)" in {
+        val window = SWindow[Int](5).enqueue(1).enqueue(2).enqueue(3)
+        window.filledSubwindow(2) shouldBe None
+      }
+
+    }
+
+    "toVector" - {
 
       "should return elements in order for FillingWindow" in {
         val window =
-          SlidingWindow[Int](5)
+          SWindow[Int](5)
             .enqueue(1)
             .enqueue(2)
             .enqueue(3)
 
         window.toVector shouldBe Vector(1, 2, 3)
-        window.toList shouldBe List(1, 2, 3)
       }
 
       "should return elements in order for FilledWindow" in {
         val window = filledWindow(1, 2, 3, 4, 5)
 
         window.toVector shouldBe Vector(1, 2, 3, 4, 5)
-        window.toList shouldBe List(1, 2, 3, 4, 5)
       }
 
     }
 
   }
 
-  private def filledWindow[A](elements: A*): SlidingWindow.FilledWindow[A] =
+  private def filledWindow[A](elements: A*): SWindow.FilledWindow[A] =
     elements
-      .foldLeft(SlidingWindow[A](elements.size))((w, e) => w.enqueue(e))
-      .asInstanceOf[SlidingWindow.FilledWindow[A]]
+      .foldLeft(SWindow[A](elements.size))((w, e) => w.enqueue(e))
+      .asInstanceOf[SWindow.FilledWindow[A]]
 
 }

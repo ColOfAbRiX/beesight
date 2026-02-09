@@ -1,6 +1,6 @@
 import org.typelevel.scalacoptions.ScalacOptions
 
-val scala3Version = "3.7.4"
+val scala3Version = "3.8.1"
 
 Global / run / fork              := true
 Global / onChangedBuildSource    := ReloadOnSourceChanges

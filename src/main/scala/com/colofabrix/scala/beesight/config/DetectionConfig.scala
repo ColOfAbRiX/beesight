@@ -110,32 +110,4 @@ object DetectionConfig {
       ),
     )
 
-  // extension (self: DetectionConfig) {
-
-  //   def getSmoothingWindowSize(eventType: EventType): Int =
-  //     eventType match {
-  //       case EventType.Takeoff  => self.takeoff.smoothingWindowSize
-  //       case EventType.Freefall => self.freefall.smoothingWindowSize
-  //       case EventType.Canopy   => self.canopy.smoothingWindowSize
-  //       case EventType.Landing  => self.landing.smoothingWindowSize
-  //     }
-
-  //   def getValidationWindowSize(eventType: EventType): Int =
-  //     eventType match {
-  //       case EventType.Takeoff  => self.takeoff.validationWindowSize
-  //       case EventType.Freefall => self.freefall.validationWindowSize
-  //       case EventType.Canopy   => self.canopy.validationWindowSize
-  //       case EventType.Landing  => self.landing.validationWindowSize
-  //     }
-
-  //   def getBacktrackWindowSize(eventType: EventType): Int =
-  //     eventType match {
-  //       case EventType.Takeoff  => self.takeoff.backtrackWindowSize
-  //       case EventType.Freefall => self.freefall.backtrackWindowSize
-  //       case EventType.Canopy   => self.canopy.backtrackWindowSize
-  //       case EventType.Landing  => self.landing.backtrackWindowSize
-  //     }
-
-  // }
-
 }

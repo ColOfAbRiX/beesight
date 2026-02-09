@@ -1,67 +1,45 @@
 package com.colofabrix.scala.beesight.stats
 
-import breeze.linalg.*
-import breeze.stats.*
-import cats.effect.IO
-import com.colofabrix.scala.beesight.stats.StdevStabilityDetector.*
-import java.lang.Math.*
-import scala.collection.immutable.Queue
+import breeze.linalg.DenseVector
+import breeze.stats
+import com.colofabrix.scala.beesight.collections.SWindow.FilledWindow
+import java.lang.Math.sqrt
 
 /**
  * A detector that identifies stability or peaks in data based on standard deviation.
  *
- * This detector maintains a sliding window of values and calculates statistics (mean and
- * standard deviation) on this window. It determines if a new value represents a positive peak,
- * negative peak, or stable state based on how far it deviates from the window's mean.
+ * This detector calculates statistics (mean and standard deviation) on a filled window
+ * and determines if a new value represents a stable or unstable state based on how far
+ * it deviates from the window's mean.
  *
- * @param windowSize The size of the sliding window used for calculations
- * @param distance The number of standard deviations a value must deviate to be considered a peak
+ * @param distance The number of standard deviations a value must deviate to be considered unstable
+ * @param f Extractor function to obtain the numeric value from type A
  */
-final class StdevStabilityDetector(windowSize: Int, distance: Double):
+final class StdevStabilityDetector[A] private (
+  distance: Double,
+  f: A => Double,
+) {
 
-  private val safeWindowSize: Int =
-    Math.max(windowSize, 1)
+  /**
+   * Detects stability based on the current window and value
+   */
+  def detectStability(window: FilledWindow[A], current: A): StdevStabilityDetector.Stability = {
+    val currentValue = f(current)
+    val values       = window.toVector.map(f)
+    val allValues    = DenseVector((values :+ currentValue).toArray)
 
-  private val safeDistance: Double =
-    Math.max(distance, 0.0)
+    val mean   = stats.mean(allValues)
+    val stdDev = sqrt(stats.variance.population(allValues))
 
-  def checkNextValue(state: DetectorState, value: Double): DetectorState =
-    state match {
-      case DetectorState.Empty =>
-        DetectorState.Filling(Queue(value))
+    val deviation = Math.abs(currentValue - mean)
 
-      case DetectorState.Filling(window) if window.length < safeWindowSize =>
-        DetectorState.Filling(window.enqueue(value))
+    if deviation > stdDev * distance then
+      StdevStabilityDetector.Stability.Unstable
+    else
+      StdevStabilityDetector.Stability.Stable
+  }
 
-      case DetectorState.Filling(window) =>
-        calculateStats(value, window)
-
-      case DetectorState.Detection(_, window, _, _, _) =>
-        calculateStats(value, window)
-    }
-
-  private def calculateStats(value: Double, queue: Queue[Double]): DetectorState =
-    val pAvg    = mean(queue)
-    val pStdDev = sqrt(variance.population(queue))
-
-    val stability =
-      if value - pAvg > pStdDev * safeDistance then Stability.Unstable
-      else if pAvg - value > pStdDev * safeDistance then Stability.Unstable
-      else Stability.Stable
-
-    val nextWindow =
-      queue
-        .dequeue
-        ._2
-        .enqueue(value)
-
-    DetectorState.Detection(
-      currentValue = value,
-      window = nextWindow,
-      windowAverage = pAvg,
-      windowStDev = pStdDev,
-      stability = stability,
-    )
+}
 
 object StdevStabilityDetector {
 
@@ -69,20 +47,10 @@ object StdevStabilityDetector {
     case Stable, Unstable
   }
 
-  enum DetectorState {
-
-    case Empty extends DetectorState
-
-    case Filling(window: Queue[Double]) extends DetectorState
-
-    case Detection(
-      currentValue: Double,
-      window: Queue[Double],
-      windowAverage: Double,
-      windowStDev: Double,
-      stability: Stability,
-    ) extends DetectorState
-
-  }
+  def apply[A](distance: Double)(f: A => Double): StdevStabilityDetector[A] =
+    new StdevStabilityDetector(
+      Math.max(distance, 0.0),
+      f,
+    )
 
 }
