@@ -1,11 +1,10 @@
 package com.colofabrix.scala.beesight.detection.preprocess
 
-import com.colofabrix.scala.beesight.collections.SWindow
+import com.colofabrix.scala.beesight.collections.NonEmptyWindow
 import com.colofabrix.scala.beesight.detection.model.*
-import java.time.Instant
 
 final private[preprocess] case class PreprocessState(
-  window: SWindow[SpikeWindowData],
+  window: Option[NonEmptyWindow[SpikeWindowData]],
 )
 
 final private[preprocess] case class SpikeWindowData(

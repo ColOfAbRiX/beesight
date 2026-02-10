@@ -6,6 +6,9 @@ import cats.syntax.all.*
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.*
 import com.colofabrix.scala.beesight.collections.SWindow.*
 
+type NEW[A] = NonEmptyWindow[A]
+val NEW = NonEmptyWindow
+
 /**
  * A non-empty sliding window - guaranteed to have at least one element.
  */
@@ -49,7 +52,7 @@ object NonEmptyWindow {
   /**
    * A non-empty window that is still being filled (has not yet reached capacity).
    */
-  final class NonEmptyFillingWindow[A] private[NonEmptyWindow] (
+  final class NonEmptyFilling[A] private[NonEmptyWindow] (
     val underlying: FillingWindow[A],
   ) extends NonEmptyWindow[A] {
 
@@ -83,13 +86,13 @@ object NonEmptyWindow {
     def enqueue(a: A): NonEmptyWindow[A] =
       underlying.push(a)._2 match {
         case filled: FilledWindow[A]   => new NonEmptyFilled(filled)
-        case filling: FillingWindow[A] => new NonEmptyFillingWindow(filling)
+        case filling: FillingWindow[A] => new NonEmptyFilling(filling)
       }
 
     def push(a: A): (Option[A], NonEmptyWindow[A]) =
       underlying.push(a) match {
         case (out, filled: FilledWindow[A])   => (out, new NonEmptyFilled(filled))
-        case (out, filling: FillingWindow[A]) => (out, new NonEmptyFillingWindow(filling))
+        case (out, filling: FillingWindow[A]) => (out, new NonEmptyFilling(filling))
       }
 
     //  Subwindows & Conversions  //
@@ -105,8 +108,8 @@ object NonEmptyWindow {
 
     //  Transformations  //
 
-    def map[B](f: A => B): NonEmptyFillingWindow[B] =
-      new NonEmptyFillingWindow(underlying.map(f))
+    def map[B](f: A => B): NonEmptyFilling[B] =
+      new NonEmptyFilling(underlying.map(f))
 
     def foldLeft[B](z: B)(f: (B, A) => B): B =
       underlying.foldLeft(z)(f)
@@ -214,8 +217,11 @@ object NonEmptyWindow {
 
     underlying match {
       case filled: FilledWindow[A]   => new NonEmptyFilled(filled)
-      case filling: FillingWindow[A] => new NonEmptyFillingWindow(filling)
+      case filling: FillingWindow[A] => new NonEmptyFilling(filling)
     }
+
+  def fromFilled[A](filled: FilledWindow[A]): NonEmptyFilled[A] =
+    new NonEmptyFilled(filled)
 
   //  Type Class Instances  //
 
@@ -230,7 +236,7 @@ object NonEmptyWindow {
 
       val underlying =
         fa match {
-          case filling: NonEmptyFillingWindow[A] => filling.underlying: SWindow[A]
+          case filling: NonEmptyFilling[A] => filling.underlying: SWindow[A]
           case filled: NonEmptyFilled[A]         => filled.underlying: SWindow[A]
         }
 
@@ -238,7 +244,7 @@ object NonEmptyWindow {
         .traverse(underlying)(f)
         .map {
           case filled: FilledWindow[B]   => new NonEmptyFilled(filled)
-          case filling: FillingWindow[B] => new NonEmptyFillingWindow(filling)
+          case filling: FillingWindow[B] => new NonEmptyFilling(filling)
         }
 
     def foldLeft[A, B](fa: NonEmptyWindow[A], b: B)(f: (B, A) => B): B =

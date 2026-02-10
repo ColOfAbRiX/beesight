@@ -2,7 +2,7 @@ package com.colofabrix.scala.beesight.detection
 
 import cats.data.State
 import cats.syntax.all.*
-import com.colofabrix.scala.beesight.collections.NonEmptyWindow
+import com.colofabrix.scala.beesight.collections.*
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.*
 import com.colofabrix.scala.beesight.config.{ DetectionConfig, EventConfigs }
 import com.colofabrix.scala.beesight.detection.FlightStagesDetection.*
@@ -13,6 +13,7 @@ import com.colofabrix.scala.beesight.detection.stages.*
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.model.formats.FileFormatAdapter
 import com.colofabrix.scala.beesight.utils.*
+import monocle.Iso
 import monocle.syntax.all.*
 import scala.annotation.nowarn
 
@@ -125,11 +126,6 @@ final class FlightStagesDetection private (config: DetectionConfig) {
 
   @nowarn
   private def initialStreamState(first: DataPoint, idx: Long): (DetectionState, None.type) =
-    val smoothWindows     = config.eventConfigsAsList.map(_.smoothingWindowSize)
-    val backWindows       = config.eventConfigsAsList.map(_.backtrackWindowSize)
-    val validationWindows = config.eventConfigsAsList.map(_.validationWindowSize)
-    val slidingWindowSize = Math.max(smoothWindows.max, backWindows.max) + 1 + validationWindows.max
-
     val firstKinematics =
       PointKinematics(
         time = first.time,
@@ -149,6 +145,12 @@ final class FlightStagesDetection private (config: DetectionConfig) {
     val firstWindow = NonEmptyWindow(slidingWindowSize, firstData)
 
     DetectionState.Filling(firstWindow) -> None
+
+  private val slidingWindowSize: Int =
+    val smoothWindows     = config.eventConfigsAsList.map(_.smoothingWindowSize)
+    val backWindows       = config.eventConfigsAsList.map(_.backtrackWindowSize)
+    val validationWindows = config.eventConfigsAsList.map(_.validationWindowSize)
+    Math.max(smoothWindows.max, backWindows.max) + 1 + validationWindows.max
 
 }
 
@@ -182,5 +184,16 @@ object FlightStagesDetection {
       }
 
   }
+
+  given splitIso[A: FileFormatAdapter]: Iso[A, (DataPoint, A)] =
+    Iso((a: A) => (FileFormatAdapter[A].toDataPoint(a), a))(_._2)
+
+  given combineIso[A]: Iso[OutputFlightPoint[A], (FlightEvents, A)] =
+    Iso { (o: OutputFlightPoint[A]) =>
+      (FlightEvents(o.takeoff, o.freefall, o.canopy, o.landing), o.source)
+    } {
+      case (events, source) =>
+        OutputFlightPoint(events.takeoff, events.freefall, events.canopy, events.landing, source)
+    }
 
 }
