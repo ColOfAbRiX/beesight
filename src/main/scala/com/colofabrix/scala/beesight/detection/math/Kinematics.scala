@@ -1,8 +1,6 @@
 package com.colofabrix.scala.beesight.detection.math
 
-import com.colofabrix.scala.beesight.collections.NonEmptyWindow
-import com.colofabrix.scala.beesight.collections.SWindow
-import com.colofabrix.scala.beesight.collections.SWindow.*
+import com.colofabrix.scala.beesight.collections.NonEmptyWindow.*
 import com.colofabrix.scala.beesight.detection.model.*
 import com.colofabrix.scala.beesight.model.*
 import java.time.Duration
@@ -26,7 +24,7 @@ object Kinematics {
       acceleration = acceleration,
     )
 
-  def computeSmoothed(currentPoint: DataPoint, previousWindow: NonEmptyWindow[DataPoint]): PointKinematics =
+  def computeSmoothed(previousWindow: NonEmptyFilled[DataPoint], currentPoint: DataPoint): PointKinematics =
     val previousPoint = previousWindow.newest
 
     val currentWindow = previousWindow.enqueue(currentPoint).map(_.speed)

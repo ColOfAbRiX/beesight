@@ -31,6 +31,7 @@ sealed trait SWindow[A] {
 
   def filledSubwindow(start: Int, count: Int): Option[FilledWindow[A]]
   def filledSubwindow(count: Int): Option[FilledWindow[A]]
+  def takeNewest(i: Int): Option[FilledWindow[A]]
 
   //  Transformations  //
 
@@ -135,6 +136,14 @@ object SWindow {
         new FilledWindow[A](buffer, head, 0, capacity)
       }
 
+    def takeNewest(i: Int): Option[FilledWindow[A]] =
+      if len == 0 then
+        None
+      else
+        val count = Math.max(1, Math.min(i, len))
+        val start = len - count
+        filledSubwindow(start, count)
+
     //  Transformations  //
 
     def map[B](f: A => B): FillingWindow[B] =
@@ -162,6 +171,10 @@ object SWindow {
         acc = f(buffer((head + i) % capacity).asInstanceOf[A], acc)
         i -= 1
       acc
+
+    override def toString: String =
+      val elements = toVector.mkString(", ")
+      s"FillingWindow[$len/$capacity]($elements)"
 
   }
 
@@ -284,6 +297,11 @@ object SWindow {
     def rightInclusive: FilledWindow[A] =
       filledSubwindow(focusIdx, capacity - focusIdx).get
 
+    def takeNewest(i: Int): Option[FilledWindow[A]] =
+      val count = Math.max(1, Math.min(i, capacity))
+      val start = capacity - count
+      filledSubwindow(start, count)
+
     //  Transformations  //
 
     def map[B](f: A => B): FilledWindow[B] =
@@ -311,6 +329,11 @@ object SWindow {
         acc = f(buffer((head + i) % capacity).asInstanceOf[A], acc)
         i -= 1
       acc
+
+    override def toString: String =
+      val vec      = toVector
+      val elements = vec.zipWithIndex.map { case (e, i) => if i == focusIdx then s"[$e]" else e.toString }.mkString(", ")
+      s"FilledWindow[$capacity]($elements)"
 
   }
 

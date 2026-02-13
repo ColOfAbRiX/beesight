@@ -6,7 +6,7 @@ import breeze.stats.median as breezeMedian
 import cats.data.NonEmptyVector
 import breeze.linalg.DenseVector
 import com.colofabrix.scala.beesight.model.GeoVector
-import com.colofabrix.scala.beesight.collections.NonEmptyWindow
+import com.colofabrix.scala.beesight.collections.NEW
 
 object Stats {
 
@@ -15,7 +15,7 @@ object Stats {
     val arr  = iter.toArray
     if arr.isEmpty then 0.0 else breezeMedian(DenseVector(arr))
 
-  def median(window: NonEmptyWindow[GeoVector]): GeoVector =
+  def median(window: NEW[GeoVector]): GeoVector =
     val (east, north, vertical) =
       window.foldMap { vector =>
         (List(vector.east), List(vector.north), List(vector.vertical))

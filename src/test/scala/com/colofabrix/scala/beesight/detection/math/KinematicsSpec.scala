@@ -1,5 +1,7 @@
 package com.colofabrix.scala.beesight.detection.math
 
+import com.colofabrix.scala.beesight.collections.*
+import com.colofabrix.scala.beesight.collections.NonEmptyWindow.*
 import com.colofabrix.scala.beesight.detection.model.*
 import com.colofabrix.scala.beesight.model.GeoVector
 import java.time.Instant
@@ -129,6 +131,79 @@ class KinematicsSpec extends AnyFreeSpec with Matchers {
 
     }
 
+    "computeSmoothed" - {
+
+      "should use median speed from window" in {
+        val window = filledWindowOfDataPoints(
+          point(0, verticalSpeed = 10.0),
+          point(1, verticalSpeed = 50.0),
+          point(2, verticalSpeed = 20.0),
+        )
+        val curr = point(3, verticalSpeed = 30.0)
+
+        val result = Kinematics.computeSmoothed(window, curr)
+
+        // After enqueue: speeds are [50, 20, 30], median is 30
+        result.speed.vertical shouldBe 30.0
+      }
+
+      "should calculate acceleration based on time delta" in {
+        val window = filledWindowOfDataPoints(
+          point(0, verticalSpeed = 10.0),
+          point(1, verticalSpeed = 20.0),
+          point(2, verticalSpeed = 30.0),
+        )
+        val curr = point(3, verticalSpeed = 50.0)
+
+        val result = Kinematics.computeSmoothed(window, curr)
+
+        // prev (newest in window) = point(2) with speed 30
+        // curr = point(3) with speed 50
+        // dt = 1s, acceleration = (50-30)/1 = 20
+        result.acceleration.vertical shouldBe 20.0
+      }
+
+      "should set result time to current point time" in {
+        val window = filledWindowOfDataPoints(
+          point(5, verticalSpeed = 10.0),
+          point(6, verticalSpeed = 20.0),
+          point(7, verticalSpeed = 30.0),
+        )
+        val curr = point(10, verticalSpeed = 40.0)
+
+        val result = Kinematics.computeSmoothed(window, curr)
+
+        result.time shouldBe Instant.ofEpochSecond(10)
+      }
+
+      "should set result altitude to current point altitude" in {
+        val window = filledWindowOfDataPoints(
+          point(0, altitude = 1000.0),
+          point(1, altitude = 950.0),
+          point(2, altitude = 900.0),
+        )
+        val curr = point(3, altitude = 850.0)
+
+        val result = Kinematics.computeSmoothed(window, curr)
+
+        result.altitude shouldBe 850.0
+      }
+
+      "should handle window of size 1" in {
+        val window = filledWindowOfDataPoints(
+          point(0, verticalSpeed = 10.0),
+        )
+        val curr = point(1, verticalSpeed = 30.0)
+
+        val result = Kinematics.computeSmoothed(window, curr)
+
+        // After enqueue: only curr speed, median is 30
+        result.speed.vertical shouldBe 30.0
+        result.acceleration.vertical shouldBe 20.0
+      }
+
+    }
+
   }
 
   private def point(
@@ -143,5 +218,11 @@ class KinematicsSpec extends AnyFreeSpec with Matchers {
       altitude = altitude,
       speed = GeoVector(north = northSpeed, east = eastSpeed, vertical = verticalSpeed),
     )
+
+  private def filledWindowOfDataPoints(points: DataPoint*): NonEmptyFilled[DataPoint] =
+    val underlying = points
+      .foldLeft(SWindow[DataPoint](points.size))((w, p) => w.enqueue(p))
+      .asInstanceOf[SWindow.FilledWindow[DataPoint]]
+    NonEmptyWindow.fromFilled(underlying)
 
 }

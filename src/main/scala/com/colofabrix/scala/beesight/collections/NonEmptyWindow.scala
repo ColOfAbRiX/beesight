@@ -35,9 +35,7 @@ sealed trait NonEmptyWindow[A] {
 
   //  Subwindows & Conversions  //
 
-  def filledSubwindow(start: Int, count: Int): Option[FilledWindow[A]]
-  def filledSubwindow(count: Int): Option[FilledWindow[A]]
-  def asFilledWindow: Option[NonEmptyFilled[A]]
+  def takeNewest(i: Int): NonEmptyFilled[A]
 
   //  Transformations  //
 
@@ -97,14 +95,17 @@ object NonEmptyWindow {
 
     //  Subwindows & Conversions  //
 
-    def filledSubwindow(start: Int, count: Int): Option[FilledWindow[A]] =
-      underlying.filledSubwindow(start, count)
+    def filledSubwindow(start: Int, count: Int): Option[NonEmptyFilled[A]] =
+      underlying.filledSubwindow(start, count).map(new NonEmptyFilled(_))
 
-    def filledSubwindow(count: Int): Option[FilledWindow[A]] =
-      underlying.filledSubwindow(count)
+    def filledSubwindow(count: Int): Option[NonEmptyFilled[A]] =
+      underlying.filledSubwindow(count).map(new NonEmptyFilled(_))
 
     def asFilledWindow: Option[NonEmptyFilled[A]] =
-      underlying.asFilledWindow.map(new NonEmptyFilled[A](_))
+      None
+
+    def takeNewest(i: Int): NonEmptyFilled[A] =
+      new NonEmptyFilled(underlying.takeNewest(i).get)
 
     //  Transformations  //
 
@@ -116,6 +117,9 @@ object NonEmptyWindow {
 
     def foldRight[B](z: B)(f: (A, B) => B): B =
       underlying.foldRight(z)(f)
+
+    override def toString: String =
+      s"NonEmptyFilling(${underlying.toString})"
 
   }
 
@@ -153,11 +157,11 @@ object NonEmptyWindow {
 
     //  Mutations  //
 
-    def enqueue(a: A): NonEmptyWindow[A] =
+    def enqueue(a: A): NonEmptyFilled[A] =
       val (_, newWindow) = underlying.pushReturning(a)
       new NonEmptyFilled(newWindow)
 
-    def push(a: A): (Option[A], NonEmptyWindow[A]) =
+    def push(a: A): (Option[A], NonEmptyFilled[A]) =
       val (out, newWindow) = underlying.pushReturning(a)
       (Some(out), new NonEmptyFilled(newWindow))
 
@@ -167,14 +171,17 @@ object NonEmptyWindow {
 
     //  Subwindows & Conversions  //
 
-    def filledSubwindow(start: Int, count: Int): Option[FilledWindow[A]] =
-      underlying.filledSubwindow(start, count)
+    def filledSubwindow(start: Int, count: Int): NonEmptyFilled[A] =
+      new NonEmptyFilled(underlying.filledSubwindow(start, count).get)
 
-    def filledSubwindow(count: Int): Option[FilledWindow[A]] =
-      underlying.filledSubwindow(count)
+    def filledSubwindow(count: Int): NonEmptyFilled[A] =
+      new NonEmptyFilled(underlying.filledSubwindow(count).get)
 
     def asFilledWindow: Option[NonEmptyFilled[A]] =
       Some(this)
+
+    def takeNewest(i: Int): NonEmptyFilled[A] =
+      new NonEmptyFilled(underlying.takeNewest(i).get)
 
     //  Focus (Zipper)  //
 
@@ -184,17 +191,17 @@ object NonEmptyWindow {
     def focusAt(index: Int): NonEmptyFilled[A] =
       new NonEmptyFilled(underlying.focusAt(index))
 
-    def left: Option[FilledWindow[A]] =
-      underlying.left
+    def left: Option[NonEmptyFilled[A]] =
+      underlying.left.map(new NonEmptyFilled(_))
 
-    def right: Option[FilledWindow[A]] =
-      underlying.right
+    def right: Option[NonEmptyFilled[A]] =
+      underlying.right.map(new NonEmptyFilled(_))
 
-    def leftInclusive: FilledWindow[A] =
-      underlying.leftInclusive
+    def leftInclusive: NonEmptyFilled[A] =
+      new NonEmptyFilled(underlying.leftInclusive)
 
-    def rightInclusive: FilledWindow[A] =
-      underlying.rightInclusive
+    def rightInclusive: NonEmptyFilled[A] =
+      new NonEmptyFilled(underlying.rightInclusive)
 
     //  Transformations  //
 
@@ -206,6 +213,9 @@ object NonEmptyWindow {
 
     def foldRight[B](z: B)(f: (A, B) => B): B =
       underlying.foldRight(z)(f)
+
+    override def toString: String =
+      s"NonEmptyFilled(${underlying.toString})"
 
   }
 

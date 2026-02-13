@@ -393,6 +393,89 @@ class SlidingWindowSpec extends AnyFreeSpec with Matchers {
 
     }
 
+    "takeNewest" - {
+
+      "FilledWindow" - {
+
+        "should return the newest i elements" in {
+          val window = filledWindow(1, 2, 3, 4, 5)
+          val result = window.takeNewest(3)
+
+          result.isDefined shouldBe true
+          result.get.toVector shouldBe Vector(3, 4, 5)
+        }
+
+        "should return all elements when i >= capacity" in {
+          val window = filledWindow(1, 2, 3, 4, 5)
+          val result = window.takeNewest(10)
+
+          result.isDefined shouldBe true
+          result.get.toVector shouldBe Vector(1, 2, 3, 4, 5)
+        }
+
+        "should return at least 1 element when i <= 0" in {
+          val window = filledWindow(1, 2, 3, 4, 5)
+          val result = window.takeNewest(0)
+
+          result.isDefined shouldBe true
+          result.get.toVector shouldBe Vector(5)
+        }
+
+        "should return single newest element when i = 1" in {
+          val window = filledWindow(1, 2, 3, 4, 5)
+          val result = window.takeNewest(1)
+
+          result.isDefined shouldBe true
+          result.get.toVector shouldBe Vector(5)
+        }
+
+        "should set focus to last element (newest)" in {
+          val window = filledWindow(1, 2, 3, 4, 5)
+          val result = window.takeNewest(3).get
+
+          result.focusIndex shouldBe 2
+          result.focus shouldBe 5
+        }
+
+      }
+
+      "FillingWindow" - {
+
+        "should return newest elements when window has elements" in {
+          val window = SWindow[Int](5).enqueue(1).enqueue(2).enqueue(3)
+          val result = window.takeNewest(2)
+
+          result.isDefined shouldBe true
+          result.get.toVector shouldBe Vector(2, 3)
+        }
+
+        "should return None when window is empty" in {
+          val window = SWindow[Int](5)
+          val result = window.takeNewest(3)
+
+          result.isDefined shouldBe false
+        }
+
+        "should return at least 1 element when i <= 0 and window not empty" in {
+          val window = SWindow[Int](5).enqueue(1).enqueue(2).enqueue(3)
+          val result = window.takeNewest(0)
+
+          result.isDefined shouldBe true
+          result.get.toVector shouldBe Vector(3)
+        }
+
+        "should return all elements when i > length" in {
+          val window = SWindow[Int](5).enqueue(1).enqueue(2).enqueue(3)
+          val result = window.takeNewest(10)
+
+          result.isDefined shouldBe true
+          result.get.toVector shouldBe Vector(1, 2, 3)
+        }
+
+      }
+
+    }
+
   }
 
   private def filledWindow[A](elements: A*): SWindow.FilledWindow[A] =
