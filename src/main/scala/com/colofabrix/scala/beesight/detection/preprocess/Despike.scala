@@ -1,13 +1,13 @@
 package com.colofabrix.scala.beesight.detection.preprocess
 
-import com.colofabrix.scala.beesight.collections.SWindow.FilledWindow
+import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
 import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.colofabrix.scala.beesight.detection.math.Interpolation
 import java.time.Instant
 
 object Despike {
 
-  def despike(config: DetectionConfig, currentWindow: FilledWindow[SpikeWindowData]): FilledWindow[SpikeWindowData] =
+  def despike(config: DetectionConfig, currentWindow: NonEmptyFilled[SpikeWindowData]): NonEmptyFilled[SpikeWindowData] =
     val oldest       = currentWindow.oldest
     val newest       = currentWindow.newest
     val focused      = currentWindow.focusAt(1)
@@ -25,7 +25,7 @@ object Despike {
     else
       focused
 
-  private def interpolate(w1: SpikeWindowData, w2: SpikeWindowData, time: Instant): SpikeWindowData = {
+  private def interpolate(w1: SpikeWindowData, w2: SpikeWindowData, time: Instant): SpikeWindowData =
     val interpolatedKinematics =
       for {
         k1    <- w1.kinematics
@@ -37,6 +37,5 @@ object Despike {
       point = Interpolation.interpolate(w1.point, w2.point, time),
       kinematics = interpolatedKinematics,
     )
-  }
 
 }

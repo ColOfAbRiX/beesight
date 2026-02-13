@@ -220,9 +220,8 @@ class KinematicsSpec extends AnyFreeSpec with Matchers {
     )
 
   private def filledWindowOfDataPoints(points: DataPoint*): NonEmptyFilled[DataPoint] =
-    val underlying = points
-      .foldLeft(SWindow[DataPoint](points.size))((w, p) => w.enqueue(p))
-      .asInstanceOf[SWindow.FilledWindow[DataPoint]]
-    NonEmptyWindow.fromFilled(underlying)
+    points.tail
+      .foldLeft(NonEmptyWindow(points.size, points.head))((w, p) => w.enqueue(p))
+      .asInstanceOf[NonEmptyFilled[DataPoint]]
 
 }

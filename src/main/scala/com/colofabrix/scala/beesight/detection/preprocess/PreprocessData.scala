@@ -14,7 +14,8 @@ final private[detection] class PreprocessData private (config: DetectionConfig) 
 
   private type StreamState[A] = State[PreprocessState, A]
 
-  private val windowCapacity: Int = Math.max(2, config.global.preprocessWindowSize)
+  private val windowCapacity: Int =
+    Math.max(2, config.global.preprocessWindowSize)
 
   def preprocess[F[_]]: fs2.Pipe[F, DataPoint, DataPoint] =
     _.mapStateCollect1(initialPreprocessState) { currentPoint =>
@@ -26,13 +27,22 @@ final private[detection] class PreprocessData private (config: DetectionConfig) 
     }
 
   private val initialPreprocessState: DataPoint => (PreprocessState, Option[DataPoint]) =
-    _ => PreprocessState(None) -> None
+    firstPoint => {
+      // First element initializes the window (no kinematics since no previous point)
+      val windowData = SpikeWindowData(firstPoint, None)
+      val window     = NonEmptyWindow(windowCapacity, windowData)
+      (PreprocessState(Some(window)), None) // Window initialized, no output yet (proper delay)
+    }
 
   private def buildCurrentWindowData(currentPoint: DataPoint): StreamState[SpikeWindowData] =
     State.inspect { state =>
-      val kinematics = state.window.map { window =>
-        Kinematics.compute(window.newest.point, currentPoint)
-      }
+      val kinematics =
+        state
+          .window
+          .map { window =>
+            Kinematics.compute(window.newest.point, currentPoint)
+          }
+
       SpikeWindowData(currentPoint, kinematics)
     }
 
@@ -42,7 +52,6 @@ final private[detection] class PreprocessData private (config: DetectionConfig) 
         case None =>
           val newWindow = NonEmptyWindow(windowCapacity, currentData)
           (PreprocessState(Some(newWindow)), None)
-
         case Some(window) =>
           val (oldestData, newWindow) = window.push(currentData)
           (PreprocessState(Some(newWindow)), oldestData)
@@ -53,9 +62,8 @@ final private[detection] class PreprocessData private (config: DetectionConfig) 
     State.modify { state =>
       state.window match {
         case Some(filled: NonEmptyFilled[SpikeWindowData]) =>
-          val despiked = Despike.despike(config, filled.underlying)
+          val despiked = Despike.despike(config, filled)
           state.focus(_.window).replace(Some(NonEmptyWindow.fromFilled(despiked)))
-
         case _ =>
           state
       }

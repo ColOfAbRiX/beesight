@@ -2,7 +2,7 @@ package com.colofabrix.scala.beesight.stats
 
 import breeze.linalg.DenseVector
 import breeze.stats
-import com.colofabrix.scala.beesight.collections.SWindow.FilledWindow
+import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
 import java.lang.Math.sqrt
 
 /**
@@ -23,10 +23,10 @@ final class StdevStabilityDetector[A] private (
   /**
    * Detects stability based on the current window and value
    */
-  def detectStability(window: FilledWindow[A], current: A): StdevStabilityDetector.Stability = {
+  def detectStability(window: NonEmptyFilled[A], current: A): StdevStabilityDetector.Stability =
     val currentValue = f(current)
     val values       = window.toVector.map(f)
-    val allValues    = DenseVector((values :+ currentValue).toArray)
+    val allValues: DenseVector[Double] = DenseVector((values :+ currentValue).toArray)
 
     val mean   = stats.mean(allValues)
     val stdDev = sqrt(stats.variance.population(allValues))
@@ -37,7 +37,6 @@ final class StdevStabilityDetector[A] private (
       StdevStabilityDetector.Stability.Unstable
     else
       StdevStabilityDetector.Stability.Stable
-  }
 
 }
 

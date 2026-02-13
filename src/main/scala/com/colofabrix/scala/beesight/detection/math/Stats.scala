@@ -1,12 +1,11 @@
 package com.colofabrix.scala.beesight.detection.math
 
-import cats.syntax.all.*
-import com.colofabrix.scala.beesight.collections.SWindow
+import breeze.linalg.DenseVector
 import breeze.stats.median as breezeMedian
 import cats.data.NonEmptyVector
-import breeze.linalg.DenseVector
-import com.colofabrix.scala.beesight.model.GeoVector
+import cats.syntax.all.*
 import com.colofabrix.scala.beesight.collections.NEW
+import com.colofabrix.scala.beesight.model.GeoVector
 
 object Stats {
 
