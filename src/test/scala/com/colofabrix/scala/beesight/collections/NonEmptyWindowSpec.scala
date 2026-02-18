@@ -391,6 +391,117 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
 
     }
 
+    "dequeue" - {
+
+      "should return oldest n elements and remaining window" in {
+        val window = filledWindow(1, 2, 3, 4, 5)
+        val (dequeued, remaining) = window.dequeue(2)
+
+        dequeued shouldBe Vector(1, 2)
+        remaining.toVector shouldBe Vector(3, 4, 5)
+      }
+
+      "should return NonEmptyFilling" in {
+        val window = filledWindow(1, 2, 3, 4, 5)
+        val (_, remaining) = window.dequeue(2)
+
+        remaining shouldBe a[NonEmptyFilling[?]]
+      }
+
+      "should preserve original capacity for refilling" in {
+        val window = filledWindow(1, 2, 3, 4, 5)
+        val (_, remaining) = window.dequeue(2)
+
+        remaining.capacity shouldBe 5
+        remaining.length shouldBe 3
+      }
+
+      "should handle dequeue(0) by returning empty vector and all elements" in {
+        val window = filledWindow(1, 2, 3, 4, 5)
+        val (dequeued, remaining) = window.dequeue(0)
+
+        dequeued shouldBe empty
+        remaining.toVector shouldBe Vector(1, 2, 3, 4, 5)
+      }
+
+      "should handle negative n as dequeue(0)" in {
+        val window = filledWindow(1, 2, 3, 4, 5)
+        val (dequeued, remaining) = window.dequeue(-5)
+
+        dequeued shouldBe empty
+        remaining.toVector shouldBe Vector(1, 2, 3, 4, 5)
+      }
+
+      "should keep at least one element when n >= capacity" in {
+        val window = filledWindow(1, 2, 3, 4, 5)
+        val (dequeued, remaining) = window.dequeue(10)
+
+        dequeued shouldBe Vector(1, 2, 3, 4)
+        remaining.toVector shouldBe Vector(5)
+        remaining.length shouldBe 1
+      }
+
+      "should keep at least one element when n == capacity" in {
+        val window = filledWindow(1, 2, 3, 4, 5)
+        val (dequeued, remaining) = window.dequeue(5)
+
+        dequeued shouldBe Vector(1, 2, 3, 4)
+        remaining.toVector shouldBe Vector(5)
+      }
+
+      "should work with capacity 2 window" in {
+        val window = filledWindow(1, 2)
+        val (dequeued, remaining) = window.dequeue(1)
+
+        dequeued shouldBe Vector(1)
+        remaining.toVector shouldBe Vector(2)
+        remaining.capacity shouldBe 2
+      }
+
+      "should adjust focus index when dequeuing" in {
+        val window = filledWindow(1, 2, 3, 4, 5).focusAt(3)
+        window.focus shouldBe 4
+
+        val (_, remaining) = window.dequeue(2)
+        // Focus was at index 3, after removing 2 elements, it should shift
+        remaining.focusIndex shouldBe 1
+        remaining.focus shouldBe 4
+      }
+
+      "should clip focus to last element if focus becomes out of bounds" in {
+        val window = filledWindow(1, 2, 3, 4, 5).focusAt(4)
+        window.focus shouldBe 5
+
+        val (_, remaining) = window.dequeue(3)
+        // Only 2 elements remain (indices 0, 1), focus should be clipped
+        remaining.focusIndex shouldBe 1
+        remaining.focus shouldBe 5
+      }
+
+      "should support refilling after dequeue" in {
+        val window = filledWindow(1, 2, 3, 4, 5)
+        val (_, remaining) = window.dequeue(3)
+
+        remaining.length shouldBe 2
+        remaining.capacity shouldBe 5
+
+        val refilled = remaining.enqueue(6).enqueue(7).enqueue(8)
+        refilled.length shouldBe 5
+        refilled shouldBe a[NonEmptyFilled[?]]
+        refilled.toVector shouldBe Vector(4, 5, 6, 7, 8)
+      }
+
+      "dequeued elements should be in FIFO order" in {
+        val window = filledWindow(10, 20, 30, 40, 50)
+        val (dequeued, _) = window.dequeue(3)
+
+        dequeued shouldBe Vector(10, 20, 30)
+        dequeued.head shouldBe 10
+        dequeued.last shouldBe 30
+      }
+
+    }
+
     "detection pipeline scenario" - {
 
       case class DataPoint(time: Int, value: Double)

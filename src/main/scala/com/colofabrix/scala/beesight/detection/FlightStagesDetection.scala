@@ -1,7 +1,7 @@
 package com.colofabrix.scala.beesight.detection
 
-import cats.Eval
 import cats.data.*
+import cats.Eval
 import cats.syntax.all.*
 import com.colofabrix.scala.beesight.collections.*
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.*
@@ -16,6 +16,8 @@ import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.model.formats.FileFormatAdapter
 import com.colofabrix.scala.beesight.utils.*
 import com.colofabrix.scala.beesight.utils.StreamBypass.*
+import monocle.syntax.all.*
+import scala.annotation.tailrec
 
 /**
  * Detects flight stages (takeoff, freefall, canopy, landing) from flight data streams.
@@ -24,8 +26,11 @@ final class FlightStagesDetection private (config: DetectionConfig) {
 
   //  Type Aliases  //
 
-  private type StateHandler[S, A] =
+  private type Transition[S <: StateTrait, A] =
     IndexedState[S, StateTrait, A]
+
+  private type KeepState[S <: StateTrait, A] =
+    IndexedState[S, S, A]
 
   //  Configuration / Derived Values  //
 
@@ -40,8 +45,8 @@ final class FlightStagesDetection private (config: DetectionConfig) {
   private val preprocessor: PreprocessData =
     PreprocessData(config)
 
-  private def freefallHandler: FreefallHandler =
-    FreefallHandler(config)
+  private val freefallHandler: StageHandler =
+    FreefallHandler(config.freefall)
 
   //  Public API  //
 
@@ -57,18 +62,20 @@ final class FlightStagesDetection private (config: DetectionConfig) {
     pointStream =>
       pointStream
         .through(preprocessor.preprocess)
-        .take(100) // FIXME: This is for debug only
         .zipWithIndex
-        .mapStateCollect1(initialStreamState.tupled) { (currentPoint, idx) =>
-          State {
-            case state: FillingState =>
-              handleFillingState(currentPoint).run(state).value
-            case state: DetectionState =>
-              handleDetectionState(currentPoint).run(state).value
-          }
+        .statefulMapEmits(initialStreamState.tupled) {
+          case ((currentPoint, _), state: FillingState) =>
+            handleFillingState(currentPoint)
+              .as(Vector.empty[FlightEvents])
+              .run(state)
+              .value
+          case ((currentPoint, idx), state: DetectionState) =>
+            handleDetectionState(currentPoint, idx)
+              .run(state)
+              .value
         }
 
-  private val initialStreamState: (DataPoint, Long) => (StateTrait, Option[FlightEvents]) =
+  private val initialStreamState: (DataPoint, Long) => (StateTrait, Vector[FlightEvents]) =
     case (first, _) =>
       val firstKinematics =
         PointKinematics(
@@ -83,54 +90,119 @@ final class FlightStagesDetection private (config: DetectionConfig) {
           point = first,
           kinematics = firstKinematics,
           phase = None,
-          detectedEvents = None,
+          detectedEvents = FlightEvents.empty,
         )
 
       NEW(slidingWindowSize, firstData) match {
         case window: NonEmptyFilled[?] =>
-          DetectionState(window, FlightPhase.BeforeTakeoff) -> None
+          DetectionState(window, FlightPhase.BeforeTakeoff, 0) -> Vector.empty
         case window: NonEmptyFilling[?] =>
-          FillingState(window) -> None
+          FillingState(window, FlightPhase.BeforeTakeoff, 0) -> Vector.empty
       }
 
   //  State Handlers  //
 
-  private def handleFillingState(currentPoint: DataPoint): StateHandler[FillingState, Option[FlightEvents]] =
-    IndexedState { previousState =>
-      buildAndPushData(previousState.window, currentPoint) match {
+  private def handleFillingState(currentPoint: DataPoint): Transition[FillingState, Unit] =
+    IndexedState.modify { previousState =>
+      val currentData = buildCurrentDetectionData(previousState.window, currentPoint)
+      val window      = previousState.window.enqueue(currentData)
+
+      window match {
         case currentWindow: NonEmptyFilling[?] =>
-          (FillingState(currentWindow), None)
+          FillingState(currentWindow, previousState.phase, previousState.focusIdx)
         case currentWindow: NonEmptyFilled[?] =>
-          (DetectionState(currentWindow, FlightPhase.BeforeTakeoff), None)
+          DetectionState(currentWindow, previousState.phase, previousState.focusIdx)
       }
     }
 
-  private def handleDetectionState(currentPoint: DataPoint): StateHandler[DetectionState, Option[FlightEvents]] =
-    asStateHandler {
-      for {
-        _ <- pushRawDetectionState(currentPoint)
-        _ <- detectPhase()
-      } yield None
-    }
+  private def handleDetectionState(
+    currentPoint: DataPoint,
+    idx: Long,
+  ): Transition[DetectionState, Vector[FlightEvents]] =
+    for {
+      oldestData      <- pushCurrentDetectionState(currentPoint)
+      additionalEmits <- detectPhase(idx)
+      allToEmit        = oldestData.detectedEvents +: additionalEmits
+    } yield allToEmit
 
   //  State Operations  //
 
-  private def pushRawDetectionState(currentPoint: DataPoint): State[DetectionState, Unit] =
-    State.modify { previousState =>
-      buildAndPushData(previousState.window, currentPoint) match {
-        case currentWindow: NonEmptyFilled[?] =>
-          DetectionState(currentWindow, FlightPhase.BeforeTakeoff)
-        case _ =>
-          throw new IllegalStateException("Window unexpectedly became non-full during detection")
-      }
+  private def pushCurrentDetectionState(currentPoint: DataPoint): KeepState[DetectionState, DetectionData] =
+    IndexedState { previousState =>
+      val currentData                 = buildCurrentDetectionData(previousState.window, currentPoint)
+      val (oldestData, currentWindow) = previousState.window.pushReturning(currentData)
+      val currentState                = previousState.focus(_.window).replace(currentWindow)
+      currentState -> oldestData
     }
 
-  private def detectPhase(): State[DetectionState, Unit] =
-    State.pure(())
+  private def detectPhase(idx: Long): Transition[DetectionState, Vector[FlightEvents]] =
+    IndexedState {
+      case state @ DetectionState(_, FlightPhase.BeforeTakeoff, _) =>
+        runDetectionOnWindow(state, freefallHandler, idx, EventType.Freefall)
+          .getOrElse(state -> Vector.empty)
+      case s @ DetectionState(window, FlightPhase.Climbing, focusIdx) =>
+        s -> Vector.empty
+      case s @ DetectionState(window, FlightPhase.Freefall, focusIdx) =>
+        s -> Vector.empty
+      case s @ DetectionState(window, FlightPhase.UnderCanopy, focusIdx) =>
+        s -> Vector.empty
+      case s @ DetectionState(window, FlightPhase.Landed, focusIdx) =>
+        s -> Vector.empty
+    }
+
+  private def runDetectionOnWindow(
+    currentState: DetectionState,
+    stageHandler: StageHandler,
+    oldestDataIdx: Long,
+    eventType: EventType,
+  ): Option[(StateTrait, Vector[FlightEvents])] =
+    type DetectionType = Option[(StateTrait, Vector[FlightEvents])]
+
+    val stageConfig = config.getEventConfigs(eventType)
+
+    val leftElements  = Math.max(stageConfig.backtrackWindowSize, stageConfig.smoothingWindowSize)
+    val rightElements = stageConfig.validationWindowSize
+    val expectedFocus = leftElements
+
+    @tailrec
+    def loop(loopCurrentFocus: Int, accumulator: DetectionType): DetectionType =
+      val focusedWindow =
+        currentState
+          .window
+          .subwindowAt(leftElements, loopCurrentFocus, rightElements)
+
+      val loopResult =
+        stageHandler
+          .stageDetection(focusedWindow)
+          .map { detectionIdx =>
+            val (beforeDetection, inclusiveAfterDetection) = focusedWindow.dequeue(detectionIdx - 1)
+
+            // TODO: Check that these past events have the correct `detectedEvents`. How was it set?
+            val beforeDetectionEvents = beforeDetection.map(_.detectedEvents)
+
+            val newWindow =
+              inclusiveAfterDetection.map { dataPoint =>
+                dataPoint
+                  .focus(_.phase)
+                  .modify(identity)                                        // TODO: Update with correct value
+                  .focus(_.detectedEvents.freefall)                        // TODO: This must changed based on eventType
+                  .set(FlightEventPoint(0, dataPoint.point.altitude).some) /* TODO: Index should be included with data
+                   * point */
+              }
+
+            FillingState(newWindow, FlightPhase.Freefall, detectionIdx) -> beforeDetection
+          }
+
+      if loopCurrentFocus <= expectedFocus then
+        loop(loopCurrentFocus + 1, loopResult)
+      else
+        accumulator
+
+    loop(currentWindowFocus, None)
 
   //  Pure Helpers  //
 
-  private def buildAndPushData(previousWindow: NEW[DetectionData], currentPoint: DataPoint): NEW[DetectionData] =
+  private def buildCurrentDetectionData(previousWindow: NEW[DetectionData], currentPoint: DataPoint): DetectionData =
     val smoothingWindowSize = config.freefall.smoothingWindowSize
 
     val smoothingWindow =
@@ -138,10 +210,9 @@ final class FlightStagesDetection private (config: DetectionConfig) {
         .takeNewest(smoothingWindowSize)
         .map(_.point)
 
-    val kinematics  = Kinematics.computeSmoothed(smoothingWindow, currentPoint)
-    val currentData = DetectionData(currentPoint, kinematics, None, None)
+    val kinematics = Kinematics.computeSmoothed(smoothingWindow, currentPoint)
 
-    previousWindow.enqueue(currentData)
+    DetectionData(currentPoint, kinematics, None, FlightEvents.empty)
 
 }
 
@@ -164,8 +235,8 @@ object FlightStagesDetection {
         case EventType.Landing  => self.landing
       }
 
-    def eventConfigsAsList: List[EventConfigs] =
-      List(self.takeoff, self.freefall, self.canopy, self.landing)
+    def eventConfigsAsList: Vector[EventConfigs] =
+      Vector(self.takeoff, self.freefall, self.canopy, self.landing)
 
   }
 
@@ -178,10 +249,5 @@ object FlightStagesDetection {
   given combiner[A]: Combiner[FlightEvents, A, OutputFlightPoint[A]] with
     def combine(events: FlightEvents, source: A): OutputFlightPoint[A] =
       OutputFlightPoint(events.takeoff, events.freefall, events.canopy, events.landing, source)
-
-  //  Private Helpers  //
-
-  private def asStateHandler[S <: StateTrait, A](state: State[S, A]): IndexedState[S, StateTrait, A] =
-    state.modify[StateTrait](identity)
 
 }

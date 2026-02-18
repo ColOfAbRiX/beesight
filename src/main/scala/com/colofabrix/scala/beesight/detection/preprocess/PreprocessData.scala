@@ -18,7 +18,7 @@ final private[detection] class PreprocessData private (config: DetectionConfig) 
     Math.max(2, config.global.preprocessWindowSize)
 
   def preprocess[F[_]]: fs2.Pipe[F, DataPoint, DataPoint] =
-    _.mapStateCollect1(initialPreprocessState) { currentPoint =>
+    _.stateMapEmits(initialPreprocessState) { currentPoint =>
       for {
         currentData <- buildCurrentWindowData(currentPoint)
         _           <- despikeSecondOldest()
@@ -27,12 +27,10 @@ final private[detection] class PreprocessData private (config: DetectionConfig) 
     }
 
   private val initialPreprocessState: DataPoint => (PreprocessState, Option[DataPoint]) =
-    firstPoint => {
-      // First element initializes the window (no kinematics since no previous point)
+    firstPoint =>
       val windowData = SpikeWindowData(firstPoint, None)
       val window     = NonEmptyWindow(windowCapacity, windowData)
-      (PreprocessState(Some(window)), None) // Window initialized, no output yet (proper delay)
-    }
+      PreprocessState(Some(window)) -> None
 
   private def buildCurrentWindowData(currentPoint: DataPoint): StreamState[SpikeWindowData] =
     State.inspect { state =>

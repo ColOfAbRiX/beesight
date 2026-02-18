@@ -30,11 +30,11 @@ final case class FreefallConfig(
   backtrackWindowSize: Int,
   validationWindowSize: Int,
   // UNUSED
-  // verticalSpeedThreshold: Double,
-  // accelerationThreshold: Double,
-  // accelerationMinVelocity: Double,
-  // minAltitudeAbove: Double,
-  // minAltitudeAbsolute: Double,
+  verticalSpeedThreshold: Double,
+  accelerationThreshold: Double,
+  accelerationMinVelocity: Double,
+  minAltitudeAbove: Double,
+  validationVerticalSpeed: Double,
 ) extends EventConfigs
 
 final case class CanopyConfig(
@@ -83,11 +83,11 @@ object DetectionConfig {
         validationWindowSize = 40,
       ),
       freefall = FreefallConfig(
-        // verticalSpeedThreshold = 25.0,
-        // accelerationThreshold = 3.0,
-        // accelerationMinVelocity = 10.0,
-        // minAltitudeAbove = 600.0,
-        // minAltitudeAbsolute = 600.0,
+        verticalSpeedThreshold = 25.0,
+        accelerationThreshold = 3.0,
+        accelerationMinVelocity = 10.0,
+        minAltitudeAbove = 600.0,
+        validationVerticalSpeed = 7.0,
         smoothingWindowSize = 5,
         backtrackWindowSize = 10,
         validationWindowSize = 40,

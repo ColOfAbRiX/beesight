@@ -9,16 +9,19 @@ sealed trait StateTrait
 
 final case class FillingState(
   window: NonEmptyFilling[DetectionData],
+  phase: FlightPhase,
+  focusIdx: Int
 ) extends StateTrait
 
 final case class DetectionState(
   window: NonEmptyFilled[DetectionData],
   phase: FlightPhase,
+  focusIdx: Int
 ) extends StateTrait
 
 final case class DetectionData(
   point: DataPoint,
   kinematics: PointKinematics,
   phase: Option[FlightPhase],
-  detectedEvents: Option[FlightEvents],
+  detectedEvents: FlightEvents,
 )

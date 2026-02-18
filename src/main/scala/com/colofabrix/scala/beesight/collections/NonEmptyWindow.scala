@@ -25,13 +25,13 @@ sealed trait NonEmptyWindow[A] {
   // ── Accessors ──────────────────────────────────────────────────────────────
 
   def toVector: Vector[A]
-  def toDenseVector(f: A => Double): DenseVector[Double]
   def oldest: A
   def newest: A
 
   // ── Mutations ──────────────────────────────────────────────────────────────
 
   def enqueue(a: A): NonEmptyWindow[A]
+  def dequeue(n: Int): (Vector[A], NonEmptyFilling[A])
   def push(a: A): (Option[A], NonEmptyWindow[A])
 
   // ── Subwindows ─────────────────────────────────────────────────────────────
@@ -83,14 +83,6 @@ object NonEmptyWindow {
         i       += 1
       builder.result()
 
-    def toDenseVector(f: A => Double): DenseVector[Double] =
-      val result = new Array[Double](len)
-      var i      = 0
-      while i < len do
-        result(i) = f(buffer((head + i) % capacity).asInstanceOf[A])
-        i += 1
-      DenseVector(result)
-
     def oldest: A =
       buffer(head).asInstanceOf[A]
 
@@ -124,6 +116,26 @@ object NonEmptyWindow {
         newBuffer(idx) = buffer((head + start + idx) % capacity)
         idx += 1
       new NonEmptyFilled(newBuffer, 0, count - 1, count)
+
+    def dequeue(n: Int): (Vector[A], NonEmptyFilling[A]) =
+      val maxDequeue  = Math.max(0, Math.min(n, capacity - 1))
+      val remaining   = capacity - maxDequeue
+      val newCapacity = capacity
+      val newBuffer   = new Array[Any](newCapacity)
+      val dequeued    = Vector.newBuilder[A]
+
+      var i = 0
+      while i < maxDequeue do
+        dequeued += buffer((head + i) % capacity).asInstanceOf[A]
+        i        += 1
+
+      var j = 0
+      while j < remaining do
+        newBuffer(j) = buffer((head + maxDequeue + j) % capacity)
+        j += 1
+
+      val newFocusIdx = Math.max(0, Math.min(focusIdx - maxDequeue, remaining - 1))
+      (dequeued.result(), new NonEmptyFilling(newBuffer, 0, remaining, newFocusIdx, newCapacity))
 
     // ── Focus (Zipper) ───────────────────────────────────────────────────────
 
@@ -198,14 +210,6 @@ object NonEmptyWindow {
         i       += 1
       builder.result()
 
-    def toDenseVector(f: A => Double): DenseVector[Double] =
-      val result = new Array[Double](capacity)
-      var i      = 0
-      while i < capacity do
-        result(i) = f(buffer((head + i) % capacity).asInstanceOf[A])
-        i += 1
-      DenseVector(result)
-
     def oldest: A =
       buffer(head).asInstanceOf[A]
 
@@ -248,10 +252,48 @@ object NonEmptyWindow {
       while i < safeLen do
         newBuffer(i) = buffer((head + sliceStart + i) % capacity)
         i += 1
+
       new NonEmptyFilled(newBuffer, 0, safeLen - 1, safeLen)
 
     def filledSubwindow(count: Int): NonEmptyFilled[A] =
       filledSubwindow(focusIdx, count)
+
+    def subwindowAt(left: Int, focus: Int, right: Int): NonEmptyFilled[A] =
+      val clampedFocus = Math.max(0, Math.min(focus, capacity - 1))
+
+      val actualLeft  = Math.min(Math.max(0, left), clampedFocus)
+      val actualRight = Math.min(Math.max(0, right), capacity - 1 - clampedFocus)
+
+      val startIdx = clampedFocus - actualLeft
+      val sliceLen = actualLeft + 1 + actualRight
+
+      val newBuffer = new Array[Any](sliceLen)
+      var i         = 0
+      while i < sliceLen do
+        newBuffer(i) = buffer((head + startIdx + i) % capacity)
+        i += 1
+
+      new NonEmptyFilled(newBuffer, 0, actualLeft, sliceLen)
+
+    def dequeue(n: Int): (Vector[A], NonEmptyFilling[A]) =
+      val maxDequeue  = Math.max(0, Math.min(n, capacity - 1))
+      val remaining   = capacity - maxDequeue
+      val newCapacity = capacity
+      val newBuffer   = new Array[Any](newCapacity)
+      val dequeued    = Vector.newBuilder[A]
+
+      var i = 0
+      while i < maxDequeue do
+        dequeued += buffer((head + i) % capacity).asInstanceOf[A]
+        i        += 1
+
+      var j = 0
+      while j < remaining do
+        newBuffer(j) = buffer((head + maxDequeue + j) % capacity)
+        j += 1
+
+      val newFocusIdx = Math.max(0, Math.min(focusIdx - maxDequeue, remaining - 1))
+      (dequeued.result(), new NonEmptyFilling(newBuffer, 0, remaining, newFocusIdx, newCapacity))
 
     // ── Focus (Zipper) ───────────────────────────────────────────────────────
 
@@ -325,8 +367,10 @@ object NonEmptyWindow {
     val buffer = new Array[Any](cap)
     buffer(0) = first
 
-    if cap == 1 then new NonEmptyFilled(buffer, 0, 0, cap)
-    else new NonEmptyFilling(buffer, 0, 1, 0, cap)
+    if cap == 1 then
+      new NonEmptyFilled(buffer, 0, 0, cap)
+    else
+      new NonEmptyFilling(buffer, 0, 1, 0, cap)
 
   def fromFilled[A](filled: NonEmptyFilled[A]): NonEmptyFilled[A] =
     filled
