@@ -46,7 +46,7 @@ object ChartGenerator {
     // Detect phase transition
     val transition =
       if state.prevPhase != point.phase && point.phase != FlightPhase.BeforeTakeoff then
-        Some(PhaseTransition(point.phase, idx, dataPoint.speed.vertical))
+        Some(PhaseTransition(point.phase, idx, dataPoint.altitude))
       else
         None
 

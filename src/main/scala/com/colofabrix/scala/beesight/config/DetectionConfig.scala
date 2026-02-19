@@ -19,6 +19,7 @@ final case class TakeoffConfig(
   smoothingWindowSize: Int,
   backtrackWindowSize: Int,
   validationWindowSize: Int,
+  validationVerticalSpeed: Double,
   // UNUSED
   // speedThreshold: Double,
   // climbRate: Double,
@@ -29,7 +30,6 @@ final case class FreefallConfig(
   smoothingWindowSize: Int,
   backtrackWindowSize: Int,
   validationWindowSize: Int,
-  // UNUSED
   verticalSpeedThreshold: Double,
   accelerationThreshold: Double,
   accelerationMinVelocity: Double,
@@ -41,8 +41,8 @@ final case class CanopyConfig(
   smoothingWindowSize: Int,
   backtrackWindowSize: Int,
   validationWindowSize: Int,
-  // UNUSED
-  // verticalSpeedMax: Double,
+  verticalSpeedThreshold: Double,
+  validationVerticalSpeed: Double,
 ) extends EventConfigs
 
 final case class LandingConfig(
@@ -81,6 +81,7 @@ object DetectionConfig {
         smoothingWindowSize = 5,
         backtrackWindowSize = 10,
         validationWindowSize = 40,
+        validationVerticalSpeed = -6.0
       ),
       freefall = FreefallConfig(
         verticalSpeedThreshold = 25.0,
@@ -93,10 +94,11 @@ object DetectionConfig {
         validationWindowSize = 40,
       ),
       canopy = CanopyConfig(
-        // verticalSpeedMax = 12.0,
         smoothingWindowSize = 5,
         backtrackWindowSize = 10,
         validationWindowSize = 40,
+        verticalSpeedThreshold = 12.0,
+        validationVerticalSpeed = 2.0
       ),
       landing = LandingConfig(
         // speedMax = 5.0,
