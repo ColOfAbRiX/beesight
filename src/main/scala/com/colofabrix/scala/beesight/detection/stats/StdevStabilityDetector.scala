@@ -1,4 +1,4 @@
-package com.colofabrix.scala.beesight.stats
+package com.colofabrix.scala.beesight.detection.stats
 
 import breeze.linalg.DenseVector
 import breeze.stats

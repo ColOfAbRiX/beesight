@@ -7,7 +7,10 @@ import java.time.Instant
 
 object Despike {
 
-  def despike(config: DetectionConfig, currentWindow: NonEmptyFilled[SpikeWindowData]): NonEmptyFilled[SpikeWindowData] =
+  def despike(
+    config: DetectionConfig,
+    currentWindow: NonEmptyFilled[SpikeWindowData],
+  ): NonEmptyFilled[SpikeWindowData] =
     val oldest       = currentWindow.oldest
     val newest       = currentWindow.newest
     val focused      = currentWindow.focusAt(1)

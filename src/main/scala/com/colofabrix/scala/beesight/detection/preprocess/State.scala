@@ -8,6 +8,6 @@ final private[preprocess] case class PreprocessState(
 )
 
 final private[preprocess] case class SpikeWindowData(
-  point: DataPoint,
+  point: IndexedDataPoint,
   kinematics: Option[PointKinematics],
 )

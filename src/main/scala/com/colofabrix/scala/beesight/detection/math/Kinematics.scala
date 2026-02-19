@@ -13,7 +13,7 @@ object Kinematics {
   /**
    * Computes acceleration by comparing velocity changes between two consecutive data points.
    */
-  def compute(prev: DataPoint, curr: DataPoint): PointKinematics =
+  def compute(prev: IndexedDataPoint, curr: IndexedDataPoint): PointKinematics =
     val dt           = Duration.between(prev.time, curr.time).toMillis / 1000.0
     val acceleration = (curr.speed - prev.speed) / dt
 
@@ -24,7 +24,10 @@ object Kinematics {
       acceleration = acceleration,
     )
 
-  def computeSmoothed(previousWindow: NonEmptyFilled[DataPoint], currentPoint: DataPoint): PointKinematics =
+  def computeSmoothed(
+    previousWindow: NonEmptyFilled[IndexedDataPoint],
+    currentPoint: IndexedDataPoint,
+  ): PointKinematics =
     val previousPoint = previousWindow.newest
 
     val currentWindow = previousWindow.enqueue(currentPoint).map(_.speed)

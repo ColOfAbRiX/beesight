@@ -10,3 +10,15 @@ enum FlightPhase(val sequence: Int) {
   case UnderCanopy   extends FlightPhase(3)
   case Landed        extends FlightPhase(4)
 }
+
+object FlightPhase {
+
+  def fromEvent(event: EventType): FlightPhase =
+    event match {
+      case EventType.Takeoff  => FlightPhase.Climbing
+      case EventType.Freefall => FlightPhase.Freefall
+      case EventType.Canopy   => FlightPhase.UnderCanopy
+      case EventType.Landing  => FlightPhase.Landed
+    }
+
+}

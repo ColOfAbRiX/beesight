@@ -1,9 +1,9 @@
-package com.colofabrix.scala.beesight.stats
+package com.colofabrix.scala.beesight.detection.stats
 
 import breeze.linalg.DenseVector
 import breeze.stats
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
-import com.colofabrix.scala.beesight.stats.CusumDetector.CusumState
+import com.colofabrix.scala.beesight.detection.stats.CusumDetector.CusumState
 import java.lang.Math.sqrt
 
 /**
@@ -33,8 +33,8 @@ final class CusumDetector[A] private (
    * Detects peaks in the signal based on the current window and value
    */
   def detectPeak(window: NonEmptyFilled[A], current: A): CusumDetector.Peak =
-    val currentValue = f(current)
-    val values       = window.toVector.map(f)
+    val currentValue                   = f(current)
+    val values                         = window.toVector.map(f)
     val allValues: DenseVector[Double] = DenseVector((values :+ currentValue).toArray)
 
     val mean   = stats.mean(allValues)

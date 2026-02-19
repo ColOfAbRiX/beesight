@@ -32,14 +32,15 @@ object Interpolation {
     )
 
   /**
-   * Linearly interpolates between two DataPoint values to a target time.
+   * Linearly interpolates between two IndexedDataPoint values to a target time.
    */
-  def interpolate[A](p1: DataPoint, p2: DataPoint, time: Instant): DataPoint =
+  def interpolate[A](p1: IndexedDataPoint, p2: IndexedDataPoint, time: Instant): IndexedDataPoint =
     interpolate_(p1, p2, time)(tParam(p1.time, p2.time, time))
 
-  private def interpolate_(p1: DataPoint, p2: DataPoint, time: Instant)(t: Double): DataPoint =
-    DataPoint(
+  private def interpolate_(p1: IndexedDataPoint, p2: IndexedDataPoint, time: Instant)(t: Double): IndexedDataPoint =
+    IndexedDataPoint(
       time = time,
+      idx = p1.idx,
       altitude = interpolate_(p1.altitude, p2.altitude)(t),
       speed = interpolate_(p1.speed, p2.speed)(t),
     )

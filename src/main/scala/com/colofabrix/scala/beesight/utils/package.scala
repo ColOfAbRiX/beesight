@@ -1,58 +1,11 @@
 package com.colofabrix.scala.beesight
 
-import cats.data.*
 import cats.Foldable
+import cats.data.*
+import com.colofabrix.scala.beesight.config.*
+import com.colofabrix.scala.beesight.model.*
 
-package object utils {
-
-  extension [F[_], A](self: fs2.Stream[F, A]) {
-
-    def mapAccumulate1[S, B](init: A => (S, B))(f: (S, A) => (S, B)): fs2.Stream[F, (S, B)] =
-      self
-        .pull
-        .uncons1
-        .flatMap {
-          case Some((head, tail)) =>
-            val (initial, first) = init(head)
-            val firstStream      = fs2.Stream.emit((initial, first))
-            val tailStream       = tail.mapAccumulate(initial)(f)
-            (firstStream ++ tailStream).pull.echo
-          case None =>
-            fs2.Pull.done
-        }
-        .stream
-
-    def statefulMapEmits[G[_]: Foldable, SA, SB <: SA, B](
-      init: A => (SA, G[B]),
-    )(f: (A, SA) => (SB, G[B]),
-    ): fs2.Stream[F, B] =
-      self
-        .mapAccumulate1[SA, G[B]](init) { (s, a) =>
-          val (newState, output) = f(a, s)
-          (newState: SA, output)
-        }
-        .flatMap {
-          case (_, output) => fs2.Stream.emits(Foldable[G].toList(output))
-        }
-
-    def stateMapEmits[G[_]: Foldable, S, B](init: A => (S, G[B]))(f: A => State[S, G[B]]): fs2.Stream[F, B] =
-      self.statefulMapEmits[G, S, S, B](init) { (a, s) =>
-        f(a).run(s).value
-      }
-
-  }
-
-  extension (self: IndexedState.type) {
-
-    def get[S]: IndexedState[S, S, S] =
-      IndexedState(s => (s, s))
-
-    def modify[SA, SB](f: SA => SB): IndexedState[SA, SB, Unit] =
-      IndexedState(s => (f(s), ()))
-
-    def inspect[S, T](f: S => T): IndexedState[S, S, T] =
-      IndexedState(s => (s, f(s)))
-
-  }
-
-}
+package object utils
+  extends StreamBypass
+    with StreamAccumulators
+    with IndexedStateUtils

@@ -28,6 +28,18 @@ object FlightEvents {
       landing = None,
     )
 
+  extension (self: FlightEvents) {
+
+    def setEvent(eventType: EventType, value: FlightEventPoint): FlightEvents =
+      eventType match {
+        case EventType.Takeoff  => self.copy(takeoff = Some(value))
+        case EventType.Freefall => self.copy(freefall = Some(value))
+        case EventType.Canopy   => self.copy(canopy = Some(value))
+        case EventType.Landing  => self.copy(landing = Some(value))
+      }
+
+  }
+
 }
 
 /**

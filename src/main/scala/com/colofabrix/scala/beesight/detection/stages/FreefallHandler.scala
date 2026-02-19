@@ -3,7 +3,7 @@ package com.colofabrix.scala.beesight.detection.stages
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
 import com.colofabrix.scala.beesight.config.FreefallConfig
 import com.colofabrix.scala.beesight.detection.math.Stats
-import com.colofabrix.scala.beesight.detection.model.DetectionData
+import com.colofabrix.scala.beesight.detection.model.{ DetectionData, IndexedDataPoint }
 import com.colofabrix.scala.beesight.model.EventType
 import java.time.Duration
 
@@ -33,8 +33,8 @@ final class FreefallHandler private (config: FreefallConfig) extends StageHandle
 
     newest.altitude < focus.altitude - validationDistance
 
-  protected def findInflection(window: NonEmptyFilled[DetectionData]): Int =
-    window.focusIndex
+  protected def findInflection(window: NonEmptyFilled[DetectionData]): Option[Int] =
+    Some(window.focusIndex)
 
 }
 

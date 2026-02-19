@@ -20,8 +20,8 @@ final case class DetectionState(
 ) extends StateTrait
 
 final case class DetectionData(
-  point: DataPoint,
+  point: IndexedDataPoint,
   kinematics: PointKinematics,
-  phase: Option[FlightPhase],
+  phase: FlightPhase,
   detectedEvents: FlightEvents,
 )
