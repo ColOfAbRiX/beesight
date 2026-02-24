@@ -2,6 +2,8 @@ package com.colofabrix.scala.beesight.detection.stages
 
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
 import com.colofabrix.scala.beesight.config.CanopyConfig
+import com.colofabrix.scala.beesight.detection.DebugLog
+import com.colofabrix.scala.beesight.detection.DebugLog.*
 import com.colofabrix.scala.beesight.detection.math.Stats
 import com.colofabrix.scala.beesight.detection.model.{ DetectionData, IndexedDataPoint }
 import com.colofabrix.scala.beesight.model.EventType
@@ -21,11 +23,14 @@ final class CanopyHandler private (config: CanopyConfig) extends StageHandler {
         .focus
         .detectedEvents
         .freefall
-        .fold(100000.0)(_.altitude)
+        .fold(Double.MaxValue)(_.altitude)
 
     val isBelowFreefall = kinematics.altitude < freefallAltitude
 
     val isAboveMinAltitude = kinematics.altitude > config.minCanopyAltitude
+
+    DebugLog(s"  |  altitude=${kinematics.altitude.fmt}, verticalSpeed=${kinematics.speed.vertical.fmt}")
+    DebugLog(s"  |  speedTrigger=$speedTrigger, isBelowFreefall=$isBelowFreefall, isAboveMinAltitude=$isAboveMinAltitude")
 
     speedTrigger && isBelowFreefall && isAboveMinAltitude
 

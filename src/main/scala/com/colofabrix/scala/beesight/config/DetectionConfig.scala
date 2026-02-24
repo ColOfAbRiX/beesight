@@ -22,9 +22,9 @@ object DetectionConfig {
         smoothingWindowSize = 5,
         backtrackWindowSize = 10,
         validationWindowSize = 40,
-        validationVerticalSpeed = -4.0,
-        verticalSpeedThreshold = -6.0,
-        horizontalSpeedThreshold = 25.0,
+        validationVerticalSpeed = -3.0,
+        verticalSpeedThreshold = -2.0,
+        horizontalSpeedThreshold = 30.0,
         maxTakeoffAltitude = 600.0,
       ),
       freefall = FreefallConfig(
@@ -50,9 +50,9 @@ object DetectionConfig {
         backtrackWindowSize = 10,
         validationWindowSize = 40,
         verticalSpeedThreshold = 1.0,
+        horizontalSpeedThreshold = 2.0,
         stabilityThreshold = 0.5,
         validationVerticalSpeed = 0.05,
-        horizontalSpeedThreshold = 2.0
       ),
     )
 
@@ -67,8 +67,6 @@ sealed trait EventConfigs {
   def smoothingWindowSize: Int
   def backtrackWindowSize: Int
   def validationWindowSize: Int
-  def validationVerticalSpeed: Double
-  def verticalSpeedThreshold: Double
 }
 
 final case class TakeoffConfig(

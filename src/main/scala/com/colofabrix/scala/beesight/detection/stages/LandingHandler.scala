@@ -2,13 +2,14 @@ package com.colofabrix.scala.beesight.detection.stages
 
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
 import com.colofabrix.scala.beesight.config.LandingConfig
+import com.colofabrix.scala.beesight.detection.DebugLog
+import com.colofabrix.scala.beesight.detection.DebugLog.*
 import com.colofabrix.scala.beesight.detection.math.Stats
 import com.colofabrix.scala.beesight.detection.model.{ DetectionData, IndexedDataPoint }
 import com.colofabrix.scala.beesight.model.EventType
 import java.time.Duration
-import scala.annotation.nowarn
 
-final class LandingHandler private (@nowarn config: LandingConfig) extends StageHandler {
+final class LandingHandler private (config: LandingConfig) extends StageHandler {
 
   protected def detectTrigger(window: NonEmptyFilled[DetectionData]): Boolean =
     val kinematics = window.focus.kinematics
@@ -25,20 +26,24 @@ final class LandingHandler private (@nowarn config: LandingConfig) extends Stage
         .focus
         .detectedEvents
         .canopy
-        .fold(100000.0)(_.altitude)
+        .fold(Double.MaxValue)(_.altitude)
 
     val isBelowCanopy = kinematics.altitude < canopyAltitude
+
+    val stdev = Stats.stdDev(window.map(_.kinematics.speed.vertical))
+    DebugLog(s"  |  altitude=${kinematics.altitude.fmt}, verticalSpeed=${kinematics.speed.vertical.fmt}, horizontalSpeed=${kinematics.speed.horizontal.fmt} stdev=${stdev.fmt}")
+    DebugLog(s"  |  isVerticalSpeedStable=$isVerticalSpeedStable, speedTrigger=$speedTrigger, isBelowCanopy=$isBelowCanopy")
 
     isVerticalSpeedStable && speedTrigger && isBelowCanopy
 
   protected def validateTrigger(window: NonEmptyFilled[DetectionData]): Boolean =
-    val focus  = window.focus.kinematics
-    val newest = window.newest.kinematics
-    val dt     = Duration.between(focus.time, newest.time).toMillis / 1000.0
-
-    val validationDistance = config.validationVerticalSpeed * dt
-
-    newest.altitude < focus.altitude - validationDistance
+    window
+      .right
+      .map { stabilityWindow =>
+        val speeds = stabilityWindow.map(_.kinematics.speed.vertical)
+        Stats.stdDev(speeds) < config.stabilityThreshold
+      }
+      .getOrElse(false)
 
   protected def findInflection(window: NonEmptyFilled[DetectionData]): Option[Int] =
     Some(window.focusIndex)

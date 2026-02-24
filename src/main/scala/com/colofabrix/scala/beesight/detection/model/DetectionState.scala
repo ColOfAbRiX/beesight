@@ -10,13 +10,13 @@ sealed trait StateTrait
 final case class FillingState(
   window: NonEmptyFilling[DetectionData],
   phase: FlightPhase,
-  focusIdx: Int
+  focusType: FocusPosition
 ) extends StateTrait
 
 final case class DetectionState(
   window: NonEmptyFilled[DetectionData],
   phase: FlightPhase,
-  focusIdx: Int
+  focusType: FocusPosition
 ) extends StateTrait
 
 final case class DetectionData(
@@ -25,6 +25,10 @@ final case class DetectionData(
   phase: FlightPhase,
   detectedEvents: FlightEvents,
 )
+
+enum FocusPosition {
+  case Zero, StageFocus
+}
 
 type Transition[S <: StateTrait, A] =
   IndexedState[S, StateTrait, A]

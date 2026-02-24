@@ -8,7 +8,6 @@ import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.colofabrix.scala.beesight.detection.math.*
 import com.colofabrix.scala.beesight.detection.model.*
 import com.colofabrix.scala.beesight.utils.*
-import monocle.syntax.all.*
 
 final private[detection] class PreprocessData private (config: DetectionConfig) {
 
@@ -45,8 +44,8 @@ final private[detection] class PreprocessData private (config: DetectionConfig) 
     }
 
   private def pushWindowData(currentData: SpikeWindowData): StreamState[Option[SpikeWindowData]] =
-    State { state =>
-      state.window match {
+    State {
+      _.window match {
         case None =>
           val newWindow = NonEmptyWindow(windowCapacity, currentData)
           (PreprocessState(Some(newWindow)), None)
@@ -61,7 +60,7 @@ final private[detection] class PreprocessData private (config: DetectionConfig) 
       state.window match {
         case Some(filled: NonEmptyFilled[SpikeWindowData]) =>
           val despiked = Despike.despike(config, filled)
-          state.focus(_.window).replace(Some(NonEmptyWindow.fromFilled(despiked)))
+          state.copy(window = Some(NonEmptyWindow.fromFilled(despiked)))
         case _ =>
           state
       }
