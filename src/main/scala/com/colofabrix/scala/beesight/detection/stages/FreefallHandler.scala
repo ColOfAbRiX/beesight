@@ -20,7 +20,7 @@ final class FreefallHandler private (config: FreefallConfig) extends StageHandle
       kinematics.speed.vertical > config.accelerationMinVelocity
 
     val isAboveMinAltitude =
-      kinematics.altitude > config.minAltitudeAbove
+      kinematics.altitude > config.minFreefallAltitude
 
     isAboveMinAltitude && (speedTrigger || accelerationTrigger)
 

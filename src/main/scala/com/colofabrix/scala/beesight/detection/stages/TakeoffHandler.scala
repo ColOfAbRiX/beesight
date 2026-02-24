@@ -11,10 +11,18 @@ import scala.annotation.nowarn
 final class TakeoffHandler private (@nowarn config: TakeoffConfig) extends StageHandler {
 
   protected def detectTrigger(window: NonEmptyFilled[DetectionData]): Boolean =
-    // state.kinematics.altitude < config.TakeoffMaxAltitude &&
-    // kinematics.horizontalSpeed > config.TakeoffSpeedThreshold &&
-    // kinematics.smoothedVerticalSpeed < config.TakeoffClimbRate
-    false
+    val kinematics = window.focus.kinematics
+
+    val speedTrigger =
+      kinematics.speed.vertical > config.verticalSpeedThreshold &&
+      kinematics.speed.horizontal > config.horizontalSpeedThreshold
+
+    val isAboveMinAltitude =
+      kinematics.altitude > config.maxTakeoffAltitude
+
+    println(s"  │  speedTrigger=${speedTrigger}, isAboveMinAltitude=${isAboveMinAltitude}")
+
+    isAboveMinAltitude && speedTrigger
 
   protected def validateTrigger(window: NonEmptyFilled[DetectionData]): Boolean =
     val focus  = window.focus.kinematics
@@ -23,7 +31,9 @@ final class TakeoffHandler private (@nowarn config: TakeoffConfig) extends Stage
 
     val validationDistance = config.validationVerticalSpeed * dt
 
-    newest.altitude < focus.altitude - validationDistance
+    val result = newest.altitude < focus.altitude - validationDistance
+    println(s"  │  trigger validation=${result}")
+    result
 
   protected def findInflection(window: NonEmptyFilled[DetectionData]): Option[Int] =
     Some(window.focusIndex)

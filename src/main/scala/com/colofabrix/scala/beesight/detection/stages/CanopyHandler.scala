@@ -16,10 +16,18 @@ final class CanopyHandler private (config: CanopyConfig) extends StageHandler {
       kinematics.speed.vertical > 0.0 &&
       kinematics.speed.vertical < config.verticalSpeedThreshold
 
-    // TODO: Check we are below freefall
-    // TODO: Check we are above minimum altitude for freefall
+    val freefallAltitude =
+      window
+        .focus
+        .detectedEvents
+        .freefall
+        .fold(100000.0)(_.altitude)
 
-    speedTrigger
+    val isBelowFreefall = kinematics.altitude < freefallAltitude
+
+    val isAboveMinAltitude = kinematics.altitude > config.minCanopyAltitude
+
+    speedTrigger && isBelowFreefall && isAboveMinAltitude
 
   protected def validateTrigger(window: NonEmptyFilled[DetectionData]): Boolean =
     val focus  = window.focus.kinematics

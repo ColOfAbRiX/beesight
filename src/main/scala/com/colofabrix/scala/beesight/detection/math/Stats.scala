@@ -26,4 +26,9 @@ object Stats {
       vertical = median(vertical),
     )
 
+  def stdDev(window: NEW[Double]): Double =
+    val mean   = window.toVector.sum / window.toVector.size
+    val variance            = window.toVector.map(v => Math.pow(v - mean, 2)).sum / window.toVector.size
+    Math.sqrt(variance)
+
 }

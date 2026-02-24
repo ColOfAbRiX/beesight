@@ -15,6 +15,10 @@ object DetectionConfigActions {
         case EventType.Landing  => self.landing
       }
 
+    def getBackwindowSize(eventType: EventType): Int =
+      val eventTypeConfig = getEventConfigs(eventType)
+      Math.max(eventTypeConfig.backtrackWindowSize, eventTypeConfig.smoothingWindowSize)
+
     def eventConfigsAsList: Vector[EventConfigs] =
       Vector(self.takeoff, self.freefall, self.canopy, self.landing)
 

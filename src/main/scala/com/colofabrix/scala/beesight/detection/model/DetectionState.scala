@@ -1,6 +1,6 @@
 package com.colofabrix.scala.beesight.detection.model
 
-import cats.data.State
+import cats.data.IndexedState
 import cats.syntax.all.*
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.*
 import com.colofabrix.scala.beesight.model.*
@@ -25,3 +25,9 @@ final case class DetectionData(
   phase: FlightPhase,
   detectedEvents: FlightEvents,
 )
+
+type Transition[S <: StateTrait, A] =
+  IndexedState[S, StateTrait, A]
+
+type KeepState[S <: StateTrait, A] =
+  IndexedState[S, S, A]
