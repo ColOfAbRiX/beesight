@@ -19,7 +19,7 @@ class FileDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues {
 
   "FlightStagesDetection" should {
 
-    "output the Phases at the point where they happen" in {
+    "output the same number of rows as the input" in {
       val inputData = Paths.get("src/test/resources/file_detection_spec/input_data.csv")
 
       val inputLineCount =
@@ -38,6 +38,25 @@ class FileDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues {
           .result()
 
       processedResults.size shouldBe inputLineCount
+    }
+
+    "output the Phases at the point where they happen" in {
+      val inputData = Paths.get("src/test/resources/file_detection_spec/input_data.csv")
+
+      val inputLineCount =
+        Source
+          .fromFile(inputData.toFile)
+          .getLines()
+          .drop(1)
+          .size
+
+      val processedResults =
+        CsvFileOps
+          .readCsv[FlysightPoint](inputData)
+          .through(FlightStagesDetection(DetectionConfig.default).streamDetect)
+          .compile
+          .toList
+          .result()
 
       processedResults
         .zipWithIndex

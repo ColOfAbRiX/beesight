@@ -64,7 +64,7 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
 
     }
 
-    "interpolate DataPoint" - {
+    "interpolate IndexedDataPoint" - {
 
       "should return p1 values when time equals p1.time" in {
         val p1 = point(1, verticalSpeed = 10.0)
@@ -178,9 +178,10 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
     northSpeed: Double = 0.0,
     eastSpeed: Double = 0.0,
     verticalSpeed: Double = 0.0,
-  ): DataPoint =
-    DataPoint(
+  ): IndexedDataPoint =
+    IndexedDataPoint(
       time = Instant.ofEpochSecond(seconds),
+      idx = 0L,
       altitude = altitude,
       speed = GeoVector(north = northSpeed, east = eastSpeed, vertical = verticalSpeed),
     )

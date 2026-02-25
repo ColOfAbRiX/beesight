@@ -1,5 +1,6 @@
 real_data/
 .cline*
+debug.log
 
 # macOS
 .DS_Store

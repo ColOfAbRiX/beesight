@@ -9,7 +9,7 @@ import fs2.Stream
 import java.time.Instant
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
-import com.colofabrix.scala.beesight.detection.model.DataPoint
+import com.colofabrix.scala.beesight.detection.model.IndexedDataPoint
 
 class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
 
@@ -69,14 +69,14 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
       }
 
       "should handle empty input" in {
-        val expected = List.empty[DataPoint]
+        val expected = List.empty[IndexedDataPoint]
         val actual   = runPreprocess(List.empty)
 
         actual shouldBe expected
       }
 
       "should handle single point input" in {
-        val expected = List.empty[DataPoint]
+        val expected = List.empty[IndexedDataPoint]
         val actual   = runPreprocess(List(point(1)))
 
         actual shouldBe expected
@@ -86,7 +86,7 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
         val config = buildConfig(preprocessWindowSize = 5)
         val points = List(point(1), point(2), point(3))
 
-        val expected = List.empty[DataPoint]
+        val expected = List.empty[IndexedDataPoint]
         val actual   = runPreprocess(points, config)
 
         actual shouldBe expected
@@ -96,7 +96,7 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
         val config = buildConfig(preprocessWindowSize = 3)
         val points = List(point(1), point(2), point(3))
 
-        val expected = List.empty[DataPoint]
+        val expected = List.empty[IndexedDataPoint]
         val actual   = runPreprocess(points, config)
 
         actual shouldBe expected
@@ -306,19 +306,20 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
     northSpeed: Double = 0.0,
     eastSpeed: Double = 0.0,
     verticalSpeed: Double = 0.0,
-  ): DataPoint =
-    DataPoint(
+  ): IndexedDataPoint =
+    IndexedDataPoint(
       time = Instant.ofEpochSecond(seconds),
+      idx = 0L,
       altitude = altitude,
       speed = GeoVector(north = northSpeed, east = eastSpeed, vertical = verticalSpeed),
     )
 
   private def runPreprocess(
-    points: List[DataPoint],
+    points: List[IndexedDataPoint],
     config: DetectionConfig = DetectionConfig.default,
-  ): List[DataPoint] =
+  ): List[IndexedDataPoint] =
     Stream
-      .emits[IO, DataPoint](points)
+      .emits[IO, IndexedDataPoint](points)
       .through(PreprocessData(config).preprocess)
       .compile
       .toList
