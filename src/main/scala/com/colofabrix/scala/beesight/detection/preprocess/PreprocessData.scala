@@ -1,9 +1,7 @@
 package com.colofabrix.scala.beesight.detection.preprocess
 
-import cats.data.State
-import cats.syntax.all.*
 import com.colofabrix.scala.beesight.collections.*
-import com.colofabrix.scala.beesight.collections.NonEmptyWindow.*
+import com.colofabrix.scala.beesight.collections.NEW.*
 import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.colofabrix.scala.beesight.detection.math.*
 import com.colofabrix.scala.beesight.detection.model.*
@@ -11,60 +9,36 @@ import com.colofabrix.scala.beesight.utils.*
 
 final private[detection] class PreprocessData private (config: DetectionConfig) {
 
-  private type StreamState[A] = State[PreprocessState, A]
-
   private val windowCapacity: Int =
     Math.max(2, config.global.preprocessWindowSize)
 
   def preprocess[F[_]]: fs2.Pipe[F, IndexedDataPoint, IndexedDataPoint] =
-    _.stateMapEmits(initialPreprocessState) { currentPoint =>
-      for {
-        currentData <- buildCurrentWindowData(currentPoint)
-        _           <- despikeSecondOldest()
-        oldestData  <- pushWindowData(currentData)
-      } yield oldestData.map(_.point)
+    _.statefulMapEmits(initialState, drainWindow) { (currentPoint, window) =>
+      val kinematics  = Kinematics.compute(window.newest.point, currentPoint)
+      val currentData = SpikeWindowData(currentPoint, Some(kinematics))
+
+      val despiked =
+        window match {
+          case filled: NonEmptyFilled[SpikeWindowData] =>
+            NEW.fromFilled(Despike.despike(config, filled))
+          case other =>
+            other
+        }
+
+      val (oldestData, newWindow) = despiked.push(currentData)
+
+      (newWindow, oldestData.map(_.point))
     }
 
-  private val initialPreprocessState: IndexedDataPoint => (PreprocessState, Option[IndexedDataPoint]) =
-    firstPoint =>
-      val windowData = SpikeWindowData(firstPoint, None)
-      val window     = NonEmptyWindow(windowCapacity, windowData)
-      PreprocessState(Some(window)) -> None
+  private def initialState(firstPoint: IndexedDataPoint): (NEW[SpikeWindowData], Option[IndexedDataPoint]) =
+    val windowData    = SpikeWindowData(firstPoint, None)
+    val initialWindow = NEW(windowCapacity, windowData)
+    (initialWindow, None)
 
-  private def buildCurrentWindowData(currentPoint: IndexedDataPoint): StreamState[SpikeWindowData] =
-    State.inspect { state =>
-      val kinematics =
-        state
-          .window
-          .map { window =>
-            Kinematics.compute(window.newest.point, currentPoint)
-          }
-
-      SpikeWindowData(currentPoint, kinematics)
-    }
-
-  private def pushWindowData(currentData: SpikeWindowData): StreamState[Option[SpikeWindowData]] =
-    State {
-      _.window match {
-        case None =>
-          val newWindow = NonEmptyWindow(windowCapacity, currentData)
-          (PreprocessState(Some(newWindow)), None)
-        case Some(window) =>
-          val (oldestData, newWindow) = window.push(currentData)
-          (PreprocessState(Some(newWindow)), oldestData)
-      }
-    }
-
-  private def despikeSecondOldest(): StreamState[Unit] =
-    State.modify { state =>
-      state.window match {
-        case Some(filled: NonEmptyFilled[SpikeWindowData]) =>
-          val despiked = Despike.despike(config, filled)
-          state.copy(window = Some(NonEmptyWindow.fromFilled(despiked)))
-        case _ =>
-          state
-      }
-    }
+  private def drainWindow(window: NEW[SpikeWindowData]): Vector[IndexedDataPoint] =
+    window
+      .toVector
+      .map(_.point)
 
 }
 

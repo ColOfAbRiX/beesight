@@ -21,7 +21,7 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
         val config = buildConfig(preprocessWindowSize = 3)
         val points = (1 to 5).map(i => point(i.toLong)).toList
 
-        val expected = List(point(1), point(2))
+        val expected = (1 to 5).map(i => point(i.toLong)).toList
         val actual   = runPreprocess(points, config)
 
         actual shouldBe expected
@@ -31,7 +31,7 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
         val config = buildConfig(preprocessWindowSize = 3)
         val points = (1 to 10).map(i => point(i.toLong)).toList
 
-        val expected = (1 to 7).map(i => point(i.toLong)).toList
+        val expected = (1 to 10).map(i => point(i.toLong)).toList
         val actual   = runPreprocess(points, config)
 
         actual shouldBe expected
@@ -41,7 +41,7 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
         val config = buildConfig(preprocessWindowSize = 1)
         val points = (1 to 5).map(i => point(i.toLong)).toList
 
-        val expected = List(point(1), point(2), point(3))
+        val expected = (1 to 5).map(i => point(i.toLong)).toList
         val actual   = runPreprocess(points, config)
 
         actual shouldBe expected
@@ -62,6 +62,9 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
           List(
             point(1, altitude = 1000.0, verticalSpeed = 10.0),
             point(2, altitude = 990.0, verticalSpeed = 10.0),
+            point(3, altitude = 980.0, verticalSpeed = 10.0),
+            point(4, altitude = 970.0, verticalSpeed = 10.0),
+            point(5, altitude = 960.0, verticalSpeed = 10.0),
           )
         val actual = runPreprocess(points, config)
 
@@ -76,7 +79,7 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
       }
 
       "should handle single point input" in {
-        val expected = List.empty[IndexedDataPoint]
+        val expected = List(point(1))
         val actual   = runPreprocess(List(point(1)))
 
         actual shouldBe expected
@@ -86,7 +89,7 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
         val config = buildConfig(preprocessWindowSize = 5)
         val points = List(point(1), point(2), point(3))
 
-        val expected = List.empty[IndexedDataPoint]
+        val expected = List(point(1), point(2), point(3))
         val actual   = runPreprocess(points, config)
 
         actual shouldBe expected
@@ -96,7 +99,7 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
         val config = buildConfig(preprocessWindowSize = 3)
         val points = List(point(1), point(2), point(3))
 
-        val expected = List.empty[IndexedDataPoint]
+        val expected = List(point(1), point(2), point(3))
         val actual   = runPreprocess(points, config)
 
         actual shouldBe expected
@@ -106,7 +109,7 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
         val config = buildConfig(preprocessWindowSize = 3)
         val points = List(point(1), point(2), point(3), point(4))
 
-        val expected = List(point(1))
+        val expected = List(point(1), point(2), point(3), point(4))
         val actual   = runPreprocess(points, config)
 
         actual shouldBe expected
@@ -128,12 +131,15 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
             point(6, altitude = 950.0, verticalSpeed = 10.0),
           )
 
-        // Point 2 spike is passed through (algorithm doesn't modify data in output)
+        // Point 2 spike is despiked via interpolation
         val expected =
           List(
             point(1, altitude = 1000.0, verticalSpeed = 10.0),
             point(2, altitude = 990.0, verticalSpeed = 10.0),
             point(3, altitude = 980.0, verticalSpeed = 10.0),
+            point(4, altitude = 970.0, verticalSpeed = 10.0),
+            point(5, altitude = 960.0, verticalSpeed = 10.0),
+            point(6, altitude = 950.0, verticalSpeed = 10.0),
           )
 
         val actual = runPreprocess(points, config)
@@ -156,6 +162,9 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
           List(
             point(1, altitude = 1000.0, verticalSpeed = 10.0),
             point(2, altitude = 990.0, verticalSpeed = 20.0),
+            point(3, altitude = 980.0, verticalSpeed = 10.0),
+            point(4, altitude = 970.0, verticalSpeed = 10.0),
+            point(5, altitude = 960.0, verticalSpeed = 10.0),
           )
 
         val actual = runPreprocess(points, config)
@@ -196,6 +205,11 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
             point(8, altitude = 930.0, verticalSpeed = 25.8692626953125),
             point(9, altitude = 920.0, verticalSpeed = 24.651947021484375),
             point(10, altitude = 910.0, verticalSpeed = 19.0),
+            point(11, altitude = 900.0, verticalSpeed = 20.0),
+            point(12, altitude = 890.0, verticalSpeed = 21.0),
+            point(13, altitude = 880.0, verticalSpeed = 22.0),
+            point(14, altitude = 870.0, verticalSpeed = 23.0),
+            point(15, altitude = 860.0, verticalSpeed = 24.0),
           )
 
         val actual = runPreprocess(points, config)
@@ -211,7 +225,7 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
         val config = buildConfig(preprocessWindowSize = 10)
         val points = (1 to 15).map(i => point(i.toLong)).toList
 
-        val expected = (1 to 5).map(i => point(i.toLong)).toList
+        val expected = (1 to 15).map(i => point(i.toLong)).toList
         val actual   = runPreprocess(points, config)
 
         actual shouldBe expected
@@ -221,7 +235,7 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
         val config = buildConfig(preprocessWindowSize = 2)
         val points = (1 to 5).map(i => point(i.toLong)).toList
 
-        val expected = List(point(1), point(2), point(3))
+        val expected = (1 to 5).map(i => point(i.toLong)).toList
         val actual   = runPreprocess(points, config)
 
         actual shouldBe expected
@@ -246,6 +260,9 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
           List(
             point(1, altitude = 5000.0),
             point(2, altitude = 4500.0),
+            point(3, altitude = 4000.0),
+            point(4, altitude = 3500.0),
+            point(5, altitude = 3000.0),
           )
 
         val actual = runPreprocess(points, config)
@@ -268,6 +285,9 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
           List(
             point(1, northSpeed = 10.0, eastSpeed = 5.0, verticalSpeed = -2.0),
             point(2, northSpeed = 15.0, eastSpeed = 8.0, verticalSpeed = -3.0),
+            point(3, northSpeed = 20.0, eastSpeed = 12.0, verticalSpeed = -5.0),
+            point(4, northSpeed = 25.0, eastSpeed = 15.0, verticalSpeed = -8.0),
+            point(5, northSpeed = 30.0, eastSpeed = 18.0, verticalSpeed = -10.0),
           )
 
         val actual = runPreprocess(points, config)
@@ -279,7 +299,7 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
         val config = buildConfig(preprocessWindowSize = 5)
         val points = (1 to 100).map(i => point(i.toLong, altitude = 1000.0 - i * 10)).toList
 
-        val expected = (1 to 95).map(i => point(i.toLong, altitude = 1000.0 - i * 10)).toList
+        val expected = (1 to 100).map(i => point(i.toLong, altitude = 1000.0 - i * 10)).toList
         val actual   = runPreprocess(points, config)
 
         actual shouldBe expected

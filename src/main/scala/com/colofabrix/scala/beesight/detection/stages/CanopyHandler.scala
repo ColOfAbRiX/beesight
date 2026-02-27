@@ -8,8 +8,9 @@ import com.colofabrix.scala.beesight.detection.math.Stats
 import com.colofabrix.scala.beesight.detection.model.{ DetectionData, IndexedDataPoint }
 import com.colofabrix.scala.beesight.model.EventType
 import java.time.Duration
+import com.colofabrix.scala.beesight.config.FreefallConfig
 
-final class CanopyHandler private (config: CanopyConfig) extends StageHandler {
+final class CanopyHandler private (config: CanopyConfig, freefallConfig: FreefallConfig) extends StageHandler {
 
   protected def detectTrigger(window: NonEmptyFilled[DetectionData]): Boolean =
     val kinematics = window.focus.kinematics
@@ -39,9 +40,16 @@ final class CanopyHandler private (config: CanopyConfig) extends StageHandler {
     val newest = window.newest.kinematics
     val dt     = Duration.between(focus.time, newest.time).toMillis / 1000.0
 
-    val validationDistance = config.validationVerticalSpeed * dt
+    val canopyDistance = config.validationVerticalSpeed * dt
+    val isBelowCanopy  = newest.altitude < focus.altitude - canopyDistance
 
-    newest.altitude < focus.altitude - validationDistance
+    val freefallDistance = freefallConfig.verticalSpeedThreshold * dt
+    val isAboveFreefall  = newest.altitude > focus.altitude - freefallDistance
+
+    DebugLog(s"  |  canopyDistance=${canopyDistance.fmt}, isBelowCanopy=${isBelowCanopy}")
+    DebugLog(s"  |  freefallDistance=${freefallDistance.fmt}, isAboveFreefall=$isAboveFreefall")
+
+    isBelowCanopy && isAboveFreefall
 
   protected def findInflection(window: NonEmptyFilled[DetectionData]): Option[Int] =
     Some(window.focusIndex)
@@ -50,7 +58,7 @@ final class CanopyHandler private (config: CanopyConfig) extends StageHandler {
 
 object CanopyHandler {
 
-  def apply(config: CanopyConfig): CanopyHandler =
-    new CanopyHandler(config)
+  def apply(config: CanopyConfig, freefallConfig: FreefallConfig): CanopyHandler =
+    new CanopyHandler(config, freefallConfig)
 
 }

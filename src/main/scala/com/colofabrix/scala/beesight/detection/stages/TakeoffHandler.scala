@@ -1,5 +1,6 @@
 package com.colofabrix.scala.beesight.detection.stages
 
+import cats.syntax.option.*
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
 import com.colofabrix.scala.beesight.config.TakeoffConfig
 import com.colofabrix.scala.beesight.detection.DebugLog
@@ -36,7 +37,14 @@ final class TakeoffHandler private (config: TakeoffConfig) extends StageHandler 
     newest.altitude > focus.altitude - validationDistance
 
   protected def findInflection(window: NonEmptyFilled[DetectionData]): Option[Int] =
-    Some(window.focusIndex)
+    val discoveredInflection =
+      for {
+        backWindow  <- window.left
+        speedsWindow = backWindow.map(_.kinematics.speed.vertical)
+        inflection  <- Stats.findInflection(speedsWindow)
+      } yield inflection
+
+    discoveredInflection orElse window.focusIndex.some
 
 }
 

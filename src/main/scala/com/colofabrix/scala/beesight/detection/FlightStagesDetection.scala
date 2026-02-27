@@ -18,6 +18,13 @@ import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.model.formats.FileFormatAdapter
 import com.colofabrix.scala.beesight.utils.*
 
+// TODO: General plan of things to do
+//  - Implement inflection point detection
+//  - Fix canopy being detected a handful of points after freefall
+//  - Implement detection in the remaining window when draining the stream
+//  - Improve performance
+//  - Parameter optimization search
+
 /**
  * Detects flight stages from flight data streams.
  */
@@ -54,7 +61,7 @@ final class FlightStagesDetection private (config: DetectionConfig) {
       pointStream
         .through(applyIndex)
         .through(preprocessor.preprocess)
-        .statefulMapEmits(initialStreamState) {
+        .statefulMapEmits(initialStreamState, drainState) {
           case (currentPoint, state: FillingState) =>
             handleFillingState(currentPoint)
               .as(Vector.empty[FlightEvents])
@@ -105,6 +112,17 @@ final class FlightStagesDetection private (config: DetectionConfig) {
         FillingState(window, FlightPhase.BeforeTakeoff, FocusPosition.Zero) -> Vector.empty
     }
 
+  private def drainState(state: StateTrait): Vector[FlightEvents] =
+    // TODO: To drain the state we should perform detection with an ever decreasing window
+    state match {
+      case FillingState(window, _, _) =>
+        val lastKnownDetectedEvents = window.oldest.detectedEvents
+        window.toVector.map(_ => lastKnownDetectedEvents)
+      case DetectionState(window, _, _) =>
+        val lastKnownDetectedEvents = window.oldest.detectedEvents
+        window.toVector.map(_ => lastKnownDetectedEvents)
+    }
+
   //  State Handlers  //
 
   private def handleFillingState(currentPoint: IndexedDataPoint): Transition[FillingState, Unit] =
@@ -148,8 +166,6 @@ final class FlightStagesDetection private (config: DetectionConfig) {
 
       currentState -> oldestData
     }
-
-  //  Detection Data  //
 
   private def buildCurrentDetectionData(
     previousWindow: NEW[DetectionData],

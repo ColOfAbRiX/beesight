@@ -7,36 +7,45 @@ private[utils] trait StreamAccumulators {
 
   extension [F[_], A](self: fs2.Stream[F, A]) {
 
-    def mapAccumulate1[S, B](init: A => (S, B))(f: (S, A) => (S, B)): fs2.Stream[F, (S, B)] =
+    def statefulMapEmits[G[_]: Foldable, SA, SB <: SA, B](
+      init: A => (SA, G[B]),
+      drain: SA => Vector[B] = (_: SA) => Vector.empty[B],
+    )(f: (A, SA) => (SB, G[B]),
+    ): fs2.Stream[F, B] =
+      def loop(state: SA, stream: fs2.Stream[F, A]): fs2.Pull[F, B, Unit] =
+        stream
+          .pull
+          .uncons1
+          .flatMap {
+            case Some((a, rest)) =>
+              val (newState, output) = f(a, state)
+              val items              = Foldable[G].toList(output)
+              val chunk = fs2.Chunk.from(items)
+              fs2.Pull.output(chunk) >> loop(newState: SA, rest)
+            case None =>
+              fs2.Pull.output(fs2.Chunk.from(drain(state)))
+          }
+
       self
         .pull
         .uncons1
         .flatMap {
           case Some((head, tail)) =>
-            val (initial, first) = init(head)
-            val firstStream      = fs2.Stream.emit((initial, first))
-            val tailStream       = tail.mapAccumulate(initial)(f)
-            (firstStream ++ tailStream).pull.echo
+            val (initState, initOutput) = init(head)
+            val items                   = Foldable[G].toList(initOutput)
+            val chunk = fs2.Chunk.from(items)
+            fs2.Pull.output(chunk) >> loop(initState, tail)
           case None =>
             fs2.Pull.done
         }
         .stream
 
-    def statefulMapEmits[G[_]: Foldable, SA, SB <: SA, B](
-      init: A => (SA, G[B]),
-    )(f: (A, SA) => (SB, G[B]),
+    def stateMapEmits[G[_]: Foldable, S, B](
+      init: A => (S, G[B]),
+      drain: S => Vector[B] = (_: S) => Vector.empty[B],
+    )(f: A => State[S, G[B]],
     ): fs2.Stream[F, B] =
-      self
-        .mapAccumulate1[SA, G[B]](init) { (s, a) =>
-          val (newState, output) = f(a, s)
-          (newState: SA, output)
-        }
-        .flatMap {
-          case (_, output) => fs2.Stream.emits(Foldable[G].toList(output))
-        }
-
-    def stateMapEmits[G[_]: Foldable, S, B](init: A => (S, G[B]))(f: A => State[S, G[B]]): fs2.Stream[F, B] =
-      self.statefulMapEmits[G, S, S, B](init) { (a, s) =>
+      self.statefulMapEmits[G, S, S, B](init, drain) { (a, s) =>
         f(a).run(s).value
       }
 

@@ -26,15 +26,19 @@ trait StageHandler {
 
 object StageHandler {
 
-  private val lookup: MMap[EventType, StageHandler] =
+  private val lookup: MMap[(EventType, DetectionConfig), StageHandler] =
     MMap.empty
 
   def apply(config: DetectionConfig, eventType: EventType): StageHandler =
     eventType match {
-      case EventType.Takeoff  => lookup.getOrElseUpdate(eventType, TakeoffHandler(config.takeoff))
-      case EventType.Freefall => lookup.getOrElseUpdate(eventType, FreefallHandler(config.freefall))
-      case EventType.Canopy   => lookup.getOrElseUpdate(eventType, CanopyHandler(config.canopy))
-      case EventType.Landing  => lookup.getOrElseUpdate(eventType, LandingHandler(config.landing))
+      case EventType.Takeoff =>
+        lookup.getOrElseUpdate((eventType, config), TakeoffHandler(config.takeoff))
+      case EventType.Freefall =>
+        lookup.getOrElseUpdate((eventType, config), FreefallHandler(config.freefall))
+      case EventType.Canopy =>
+        lookup.getOrElseUpdate((eventType, config), CanopyHandler(config.canopy, config.freefall))
+      case EventType.Landing =>
+        lookup.getOrElseUpdate((eventType, config), LandingHandler(config.landing))
     }
 
 }

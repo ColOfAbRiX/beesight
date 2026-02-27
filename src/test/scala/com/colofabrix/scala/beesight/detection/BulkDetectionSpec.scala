@@ -55,7 +55,7 @@ class BulkDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues wi
       if (failures.nonEmpty) {
         val successRate = 1.0 - (failures.size.toDouble / untaggedLines.size.toDouble)
         info(f"Success rate is ${successRate * 100.0}%.1f%%")
-        info(s"Test failed:\n${failures.mkString("\n\n")}")
+        info(s"Tests that failed:\n${failures.mkString("\n\n")}")
         successRate.should(be >= 0.95)
       }
 
@@ -91,8 +91,8 @@ class BulkDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues wi
       if (failures.nonEmpty) {
         val successRate = 1.0 - (failures.size.toDouble / untaggedLines.size.toDouble)
         info(f"Success rate is ${successRate * 100.0}%.1f%%")
-        info(s"Test failed:\n${failures.mkString("\n\n")}")
-        successRate.should(be >= 0.30)
+        info(s"Tests that failed:\n${failures.mkString("\n\n")}")
+        successRate.should(be >= 0.37)
       }
 
     }
