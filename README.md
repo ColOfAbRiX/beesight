@@ -24,8 +24,8 @@ support and optional GraalVM native image compilation.
 
 Beesight uses a three-step detection algorithm for each flight stage transition:
 
-| Step              | Description                                                                                        |
-|-------------------|----------------------------------------------------------------------------------------------------|
+| Step              | Description                                                                                         |
+|-------------------|-----------------------------------------------------------------------------------------------------|
 | **Trigger**       | Threshold-based checks on speed, acceleration, and altitude to identify candidate transition points |
 | **Validation**    | Forward-looking check that confirms the trajectory after the trigger matches the expected behaviour |
 | **Inflection**    | Backward-looking two-segment linear regression to pinpoint the exact transition point               |
@@ -36,13 +36,13 @@ with stage-specific thresholds and validation logic.
 
 ### Detected Flight Phases
 
-| Phase             | Description                                         |
-|-------------------|-----------------------------------------------------|
-| `BeforeTakeoff`   | On the ground or preparing for the jump             |
-| `Climbing`        | In the aircraft, gaining altitude                   |
-| `Freefall`        | After exit, in free fall                            |
-| `UnderCanopy`     | After deployment, descending under canopy           |
-| `Landed`          | On the ground after landing                         |
+| Phase             | Description                               |
+|-------------------|------------------------------------------ |
+| `BeforeTakeoff`   | On the ground or preparing for the jump   |
+| `Climbing`        | In the aircraft, gaining altitude         |
+| `Freefall`        | After exit, in free fall                  |
+| `UnderCanopy`     | After deployment, descending under canopy |
+| `Landed`          | On the ground after landing               |
 
 ## Installation
 
@@ -98,19 +98,19 @@ sbt "run -i /path/to/data/**/*.csv"
 
 ### CLI Options
 
-| Option                       | Short | Description                                                   | Default           |
-|------------------------------|-------|---------------------------------------------------------------|--------------------|
-| `--input`                    | `-i`  | Input path (file, directory, or glob pattern)                 | `.`                |
-| `--output`                   | `-o`  | Output directory for produced files                           | `../processed/`    |
-| `--limit`                    | `-l`  | Maximum number of files to process                            | No limit           |
-| `--parallelism`              |       | Number of concurrent threads for batch processing             | No limit           |
-| `--keep-before-takeoff`      |       | Number of data points to keep before detected takeoff         | `500`              |
-| `--keep-after-landing`       |       | Number of data points to keep after detected landing          | `500`              |
-| `--min-retain-points`        |       | Minimum percentage of data points to retain (0.0–1.0)        | `0.1`              |
-| `--dry-run`                  | `-n`  | Run without creating output files                             | `false`            |
-| `--toggle-write-csv`         |       | Toggle CSV output writing                                     | Enabled            |
-| `--toggle-create-graph`      |       | Toggle HTML chart generation                                  | Disabled           |
-| `--toggle-create-summary`    |       | Toggle summary CSV creation                                   | Disabled           |
+| Option                    | Short | Description                                           | Default         |
+|---------------------------|-------|-------------------------------------------------------|-----------------|
+| `--input`                 | `-i`  | Input path (file, directory, or glob pattern)         | `.`             |
+| `--output`                | `-o`  | Output directory for produced files                   | `../processed/` |
+| `--limit`                 | `-l`  | Maximum number of files to process                    | No limit        |
+| `--parallelism`           |       | Number of concurrent threads for batch processing     | No limit        |
+| `--keep-before-takeoff`   |       | Number of data points to keep before detected takeoff | `500`           |
+| `--keep-after-landing`    |       | Number of data points to keep after detected landing  | `500`           |
+| `--min-retain-points`     |       | Minimum percentage of data points to retain (0.0–1.0) | `0.1`           |
+| `--dry-run`               | `-n`  | Run without creating output files                     | `false`         |
+| `--toggle-write-csv`      |       | Toggle CSV output writing                             | Enabled         |
+| `--toggle-create-graph`   |       | Toggle HTML chart generation                          | Disabled        |
+| `--toggle-create-summary` |       | Toggle summary CSV creation                           | Disabled        |
 
 ### Examples
 
@@ -200,7 +200,7 @@ Beesight is released under the MIT license. See [LICENSE](LICENSE) for details.
 
 ## Documentation
 
-- [Detection Algorithm](DETECTION_ALGORITHM.md) — Detailed description of how the flight stage detection works
+- [Detection Algorithm](detection_algorithm.md) — Detailed description of how the flight stage detection works
 
 ## See Also
 

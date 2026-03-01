@@ -53,12 +53,12 @@ final private[beesight] class FlightStagesDetection private (config: DetectionCo
         .through(preprocessor.preprocess)
         .statefulMapEmits(initialStreamState, drainState) {
           case (currentPoint, state: FillingState) =>
-            handleFillingState(currentPoint)
+            handleFilling(currentPoint)
               .as(Vector.empty[FlightEvents])
               .run(state)
               .value
-          case (currentPoint, state: DetectionState) =>
-            handleDetectionState(currentPoint)
+          case (currentPoint, state: DetectingState) =>
+            handleDetecting(currentPoint)
               .run(state)
               .value
         }
@@ -71,7 +71,7 @@ final private[beesight] class FlightStagesDetection private (config: DetectionCo
           case (DataPoint(time, altitude, speed), idx) => IndexedDataPoint(time, idx, altitude, speed)
         }
 
-  private def initialStreamState(first: IndexedDataPoint): (StateTrait, Vector[FlightEvents]) =
+  private def initialStreamState(first: IndexedDataPoint): (DetectorState, Vector[FlightEvents]) =
     val firstKinematics =
       PointKinematics(
         time = first.time,
@@ -81,7 +81,7 @@ final private[beesight] class FlightStagesDetection private (config: DetectionCo
       )
 
     val firstData =
-      DetectionData(
+      WindowEntry(
         point = first,
         kinematics = firstKinematics,
         phase = FlightPhase.BeforeTakeoff,
@@ -90,14 +90,14 @@ final private[beesight] class FlightStagesDetection private (config: DetectionCo
 
     NEW(slidingWindowSize, firstData) match {
       case window: NonEmptyFilled[?] =>
-        DetectionState(window, FlightPhase.BeforeTakeoff, FocusPosition.Zero) -> Vector.empty
+        DetectingState(window, FlightPhase.BeforeTakeoff, FocusPosition.Zero) -> Vector.empty
       case window: NonEmptyFilling[?] =>
         FillingState(window, FlightPhase.BeforeTakeoff, FocusPosition.Zero) -> Vector.empty
     }
 
-  private def drainState(state: StateTrait): Vector[FlightEvents] =
+  private def drainState(state: DetectorState): Vector[FlightEvents] =
     @tailrec
-    def loop(state: DetectionState, iteration: Int, result: Vector[FlightEvents]): Vector[FlightEvents] =
+    def loop(state: DetectingState, iteration: Int, result: Vector[FlightEvents]): Vector[FlightEvents] =
       val (nextState, beforeDetectionEmits) =
         phaseDetector
           .detect()
@@ -106,8 +106,8 @@ final private[beesight] class FlightStagesDetection private (config: DetectionCo
 
       nextState match {
         case ns: FillingState =>
-          loop(ns.toDetectionState, iteration + 1, result ++ beforeDetectionEmits)
-        case ns: DetectionState =>
+          loop(ns.toDetecting, iteration + 1, result ++ beforeDetectionEmits)
+        case ns: DetectingState =>
           val (emitOldest, maybeShrunkWindow) = ns.window.shrinkReturning(1)
           maybeShrunkWindow match {
             case None =>
@@ -120,46 +120,46 @@ final private[beesight] class FlightStagesDetection private (config: DetectionCo
       }
 
     state match {
-      case s: FillingState   => loop(s.toDetectionState, 1, Vector.empty)
-      case s: DetectionState => loop(s, 1, Vector.empty)
+      case s: FillingState   => loop(s.toDetecting, 1, Vector.empty)
+      case s: DetectingState => loop(s, 1, Vector.empty)
     }
 
   //  State Handlers  //
 
-  private def handleFillingState(currentPoint: IndexedDataPoint): Transition[FillingState, Unit] =
+  private def handleFilling(currentPoint: IndexedDataPoint): Transition[FillingState, Unit] =
     IndexedState.modify { previousState =>
-      val currentData = buildCurrentDetectionData(previousState.window, currentPoint)
+      val currentData = buildCurrentWindowEntry(previousState.window, currentPoint)
       val window      = previousState.window.enqueue(currentData)
 
       window match {
         case currentWindow: NonEmptyFilling[?] =>
           FillingState(currentWindow, previousState.phase, previousState.focusType)
         case currentWindow: NonEmptyFilled[?] =>
-          DetectionState(currentWindow, previousState.phase, previousState.focusType)
+          DetectingState(currentWindow, previousState.phase, previousState.focusType)
       }
     }
 
-  private def handleDetectionState(currentPoint: IndexedDataPoint): Transition[DetectionState, Vector[FlightEvents]] =
+  private def handleDetecting(currentPoint: IndexedDataPoint): Transition[DetectingState, Vector[FlightEvents]] =
     for {
-      oldestData      <- pushCurrentDetectionState(currentPoint)
+      oldestData      <- pushCurrentWindowEntry(currentPoint)
       additionalEmits <- phaseDetector.detect()
       allToEmit        = oldestData.detectedEvents +: additionalEmits
     } yield allToEmit
 
   //  State Operations  //
 
-  private def pushCurrentDetectionState(currentPoint: IndexedDataPoint): KeepState[DetectionState, DetectionData] =
+  private def pushCurrentWindowEntry(currentPoint: IndexedDataPoint): Step[DetectingState, WindowEntry] =
     IndexedState { previousState =>
-      val currentData                 = buildCurrentDetectionData(previousState.window, currentPoint)
+      val currentData                 = buildCurrentWindowEntry(previousState.window, currentPoint)
       val (oldestData, currentWindow) = previousState.window.pushReturning(currentData)
       val currentState                = previousState.copy(window = currentWindow)
       currentState -> oldestData
     }
 
-  private def buildCurrentDetectionData(
-    previousWindow: NEW[DetectionData],
+  private def buildCurrentWindowEntry(
+    previousWindow: NEW[WindowEntry],
     currentPoint: IndexedDataPoint,
-  ): DetectionData =
+  ): WindowEntry =
     val smoothingWindowSize = config.freefall.smoothingWindowSize
 
     val smoothingWindow =
@@ -171,7 +171,7 @@ final private[beesight] class FlightStagesDetection private (config: DetectionCo
     val previousPhaseEvents    = previousWindow.oldest.phase
     val previousDetectedEvents = previousWindow.oldest.detectedEvents
 
-    DetectionData(
+    WindowEntry(
       point = currentPoint,
       kinematics = kinematics,
       phase = previousPhaseEvents,

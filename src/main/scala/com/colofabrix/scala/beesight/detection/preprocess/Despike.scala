@@ -10,10 +10,7 @@ import java.time.Instant
  */
 private[preprocess] object Despike {
 
-  def despike(
-    config: DetectionConfig,
-    currentWindow: NonEmptyFilled[SpikeWindowData],
-  ): NonEmptyFilled[SpikeWindowData] =
+  def despike(config: DetectionConfig, currentWindow: NonEmptyFilled[SpikeEntry]): NonEmptyFilled[SpikeEntry] =
     val oldest       = currentWindow.oldest
     val newest       = currentWindow.newest
     val focused      = currentWindow.focusAt(1)
@@ -31,7 +28,7 @@ private[preprocess] object Despike {
     else
       focused
 
-  private def interpolate(w1: SpikeWindowData, w2: SpikeWindowData, time: Instant): SpikeWindowData =
+  private def interpolate(w1: SpikeEntry, w2: SpikeEntry, time: Instant): SpikeEntry =
     val interpolatedKinematics =
       for {
         k1    <- w1.kinematics
@@ -39,7 +36,7 @@ private[preprocess] object Despike {
         result = Interpolation.interpolate(k1, k2, time)
       } yield result
 
-    SpikeWindowData(
+    SpikeEntry(
       point = Interpolation.interpolate(w1.point, w2.point, time),
       kinematics = interpolatedKinematics,
     )

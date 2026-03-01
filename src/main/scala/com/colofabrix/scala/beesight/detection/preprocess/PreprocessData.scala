@@ -18,11 +18,11 @@ final private[detection] class PreprocessData private (config: DetectionConfig) 
   def preprocess[F[_]]: fs2.Pipe[F, IndexedDataPoint, IndexedDataPoint] =
     _.statefulMapEmits(initialState, drainWindow) { (currentPoint, window) =>
       val kinematics  = Kinematics.compute(window.newest.point, currentPoint)
-      val currentData = SpikeWindowData(currentPoint, Some(kinematics))
+      val currentData = SpikeEntry(currentPoint, Some(kinematics))
 
       val despiked =
         window match {
-          case filled: NonEmptyFilled[SpikeWindowData] =>
+          case filled: NonEmptyFilled[SpikeEntry] =>
             Despike.despike(config, filled)
           case other =>
             other
@@ -33,12 +33,12 @@ final private[detection] class PreprocessData private (config: DetectionConfig) 
       (newWindow, oldestData.map(_.point))
     }
 
-  private def initialState(firstPoint: IndexedDataPoint): (NEW[SpikeWindowData], Option[IndexedDataPoint]) =
-    val windowData    = SpikeWindowData(firstPoint, None)
+  private def initialState(firstPoint: IndexedDataPoint): (NEW[SpikeEntry], Option[IndexedDataPoint]) =
+    val windowData    = SpikeEntry(firstPoint, None)
     val initialWindow = NEW(windowCapacity, windowData)
     (initialWindow, None)
 
-  private def drainWindow(window: NEW[SpikeWindowData]): Vector[IndexedDataPoint] =
+  private def drainWindow(window: NEW[SpikeEntry]): Vector[IndexedDataPoint] =
     window
       .toVector
       .map(_.point)

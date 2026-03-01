@@ -2,7 +2,7 @@ package com.colofabrix.scala.beesight.detection.stages
 
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
 import com.colofabrix.scala.beesight.config.DetectionConfig
-import com.colofabrix.scala.beesight.detection.model.*
+import com.colofabrix.scala.beesight.detection.model.{ IndexedDataPoint, WindowEntry }
 import com.colofabrix.scala.beesight.model.EventType
 
 /**
@@ -10,13 +10,13 @@ import com.colofabrix.scala.beesight.model.EventType
  */
 private[detection] trait StageHandler {
 
-  protected def detectTrigger(window: NonEmptyFilled[DetectionData]): Boolean
+  protected def detectTrigger(window: NonEmptyFilled[WindowEntry]): Boolean
 
-  protected def validateTrigger(window: NonEmptyFilled[DetectionData]): Boolean
+  protected def validateTrigger(window: NonEmptyFilled[WindowEntry]): Boolean
 
-  protected def findInflection(window: NonEmptyFilled[DetectionData]): Option[Int]
+  protected def findInflection(window: NonEmptyFilled[WindowEntry]): Option[Int]
 
-  def stageDetection(window: NonEmptyFilled[DetectionData]): Option[(Int, IndexedDataPoint)] =
+  def stageDetection(window: NonEmptyFilled[WindowEntry]): Option[(Int, IndexedDataPoint)] =
     for {
       detectionIdx  <- if (detectTrigger(window) && validateTrigger(window)) then findInflection(window) else None
       detectionPoint = window.focusAt(detectionIdx).focus.point

@@ -16,7 +16,7 @@ import scala.annotation.tailrec
  */
 final private[detection] class PhaseDetector private (config: DetectionConfig) {
 
-  def detect(): Transition[DetectionState, Vector[FlightEvents]] =
+  def detect(): Transition[DetectingState, Vector[FlightEvents]] =
     IndexedState { state =>
       detectors(state)
         .foldLeft(None: Detector)(_ <+> _)
@@ -27,29 +27,29 @@ final private[detection] class PhaseDetector private (config: DetectionConfig) {
         }
     }
 
-  private val detectors: DetectionState => List[Detector] = {
-    case state @ DetectionState(_, FlightPhase.BeforeTakeoff, _) =>
+  private val detectors: DetectingState => List[Detector] = {
+    case state @ DetectingState(_, FlightPhase.BeforeTakeoff, _) =>
       runDetectionOnWindow(state, EventType.Takeoff) ::
       runDetectionOnWindow(state, EventType.Freefall) ::
       Nil
-    case state @ DetectionState(_, FlightPhase.Climbing, _) =>
+    case state @ DetectingState(_, FlightPhase.Climbing, _) =>
       runDetectionOnWindow(state, EventType.Freefall) ::
       runDetectionOnWindow(state, EventType.Landing) ::
       Nil
-    case state @ DetectionState(_, FlightPhase.Freefall, _) =>
+    case state @ DetectingState(_, FlightPhase.Freefall, _) =>
       runDetectionOnWindow(state, EventType.Canopy) ::
       runDetectionOnWindow(state, EventType.Landing) ::
       Nil
-    case state @ DetectionState(_, FlightPhase.UnderCanopy, _) =>
+    case state @ DetectingState(_, FlightPhase.UnderCanopy, _) =>
       runDetectionOnWindow(state, EventType.Landing) ::
       Nil
-    case _ @DetectionState(_, FlightPhase.Landed, _) =>
+    case _ @DetectingState(_, FlightPhase.Landed, _) =>
       Nil
   }
 
   private def runDetectionOnWindow(
-    currentState: DetectionState,
-    eventType: EventType,
+    currentState: DetectingState,
+    eventType: EventType
   ): Option[(FillingState, Vector[FlightEvents])] =
     val stageConfig    = config.getEventConfigs(eventType)
     val eventTypeFocus = config.getBackwindowSize(eventType)
@@ -101,7 +101,7 @@ final private[detection] class PhaseDetector private (config: DetectionConfig) {
                 val eventPoint     = FlightEventPoint(detectedPoint.idx, detectedPoint.altitude)
                 val detectedEvents = data.detectedEvents.setEvent(state.eventType, eventPoint)
 
-                DetectionData(
+                WindowEntry(
                   point = data.point,
                   kinematics = data.kinematics,
                   phase = state.phase,
@@ -133,18 +133,18 @@ object PhaseDetector {
     stageHandler: StageHandler,
     maxFocus: Int,
     loopFocus: Int,
-    processingWindow: NonEmptyFilled[DetectionData],
+    processingWindow: NonEmptyFilled[WindowEntry],
     phase: FlightPhase,
   )
 
   final private case class LoopResult(
     emitEvents: Vector[FlightEvents],
-    remainingData: NonEmptyFilling[DetectionData],
+    remainingData: NonEmptyFilling[WindowEntry],
     nextPhase: FlightPhase,
   )
 
   private type Detector =
-    Option[(StateTrait, Vector[FlightEvents])]
+    Option[(DetectorState, Vector[FlightEvents])]
 
   private[detection] def apply(config: DetectionConfig): PhaseDetector =
     new PhaseDetector(config)
