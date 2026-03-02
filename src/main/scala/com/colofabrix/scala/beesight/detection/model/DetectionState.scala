@@ -10,13 +10,18 @@ sealed trait StateTrait
 final case class FillingState(
   window: NonEmptyFilling[DetectionData],
   phase: FlightPhase,
-  focusType: FocusPosition
+  focusType: FocusPosition,
 ) extends StateTrait
+
+object FillingState {
+  extension (self: FillingState) def toDetectionState =
+    DetectionState(self.window.toNonEmptyFilled, self.phase, self.focusType)
+}
 
 final case class DetectionState(
   window: NonEmptyFilled[DetectionData],
   phase: FlightPhase,
-  focusType: FocusPosition
+  focusType: FocusPosition,
 ) extends StateTrait
 
 final case class DetectionData(

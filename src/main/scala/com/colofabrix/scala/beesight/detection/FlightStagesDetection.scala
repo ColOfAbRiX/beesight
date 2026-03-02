@@ -17,11 +17,10 @@ import com.colofabrix.scala.beesight.detection.stages.*
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.model.formats.FileFormatAdapter
 import com.colofabrix.scala.beesight.utils.*
+import scala.annotation.tailrec
 
 // TODO: General plan of things to do
-//  - Implement inflection point detection
 //  - Fix canopy being detected a handful of points after freefall
-//  - Implement detection in the remaining window when draining the stream
 //  - Improve performance
 //  - Parameter optimization search
 
@@ -113,15 +112,52 @@ final class FlightStagesDetection private (config: DetectionConfig) {
     }
 
   private def drainState(state: StateTrait): Vector[FlightEvents] =
-    // TODO: To drain the state we should perform detection with an ever decreasing window
-    state match {
-      case FillingState(window, _, _) =>
-        val lastKnownDetectedEvents = window.oldest.detectedEvents
-        window.toVector.map(_ => lastKnownDetectedEvents)
-      case DetectionState(window, _, _) =>
-        val lastKnownDetectedEvents = window.oldest.detectedEvents
-        window.toVector.map(_ => lastKnownDetectedEvents)
+    @tailrec
+    def loop(state: DetectionState, iteration: Int, result: Vector[FlightEvents]): Vector[FlightEvents] =
+      DebugLog(s"  ┌─ Drain #$iteration: window ${DebugLog.windowSummary(state.window)}, phase: ${state.phase}")
+
+      val (nextState, beforeDetectionEmits) =
+        phaseDetector
+          .detect()
+          .run(state)
+          .value
+
+      nextState match {
+        case ns: FillingState =>
+          DebugLog(s"  │  Detection found! Emitting ${beforeDetectionEmits.size} events, new phase: ${ns.phase}")
+          DebugLog(s"  └─ Refilling window (${ns.window.length}/${ns.window.capacity} pts)")
+          loop(ns.toDetectionState, iteration + 1, result ++ beforeDetectionEmits)
+        case ns: DetectionState =>
+          val (emitOldest, maybeShrunkWindow) = ns.window.shrinkReturning(1)
+          maybeShrunkWindow match {
+            case None =>
+              DebugLog(s"  └─ Window exhausted, drain complete (${result.size} total events emitted)")
+              result ++ emitOldest.map(_.detectedEvents)
+            case Some(shrunkWindow) =>
+              val emittedEvents = emitOldest.map(_.detectedEvents)
+              DebugLog(s"  │  No detection, shrinking window → ${shrunkWindow.length} pts, emitting ${emittedEvents.size} events")
+              DebugLog(s"  └─ Events: ${emittedEvents.map(DebugLog.eventsSummary).mkString(", ")}")
+              val nextState = ns.copy(window = shrunkWindow)
+              loop(nextState, iteration + 1, result ++ emittedEvents)
+          }
+      }
+
+    DebugLog.section("DRAIN: Flushing remaining window") {
+      state match {
+        case s: FillingState =>
+          DebugLog(s"  Starting from FillingState (${s.window.length} pts, phase: ${s.phase})")
+        case s: DetectionState =>
+          DebugLog(s"  Starting from DetectionState (${s.window.length} pts, phase: ${s.phase})")
+      }
     }
+
+    val result = state match {
+      case s: FillingState   => loop(s.toDetectionState, 1, Vector.empty)
+      case s: DetectionState => loop(s, 1, Vector.empty)
+    }
+
+    DebugLog(s"DRAIN COMPLETE: Emitted ${result.size} events total")
+    result
 
   //  State Handlers  //
 

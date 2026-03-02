@@ -1,14 +1,14 @@
 package com.colofabrix.scala.beesight.detection.stages
 
+import cats.syntax.option.*
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
-import com.colofabrix.scala.beesight.config.CanopyConfig
+import com.colofabrix.scala.beesight.config.{CanopyConfig, FreefallConfig}
 import com.colofabrix.scala.beesight.detection.DebugLog
 import com.colofabrix.scala.beesight.detection.DebugLog.*
 import com.colofabrix.scala.beesight.detection.math.Stats
 import com.colofabrix.scala.beesight.detection.model.{ DetectionData, IndexedDataPoint }
 import com.colofabrix.scala.beesight.model.EventType
 import java.time.Duration
-import com.colofabrix.scala.beesight.config.FreefallConfig
 
 final class CanopyHandler private (config: CanopyConfig, freefallConfig: FreefallConfig) extends StageHandler {
 
@@ -52,7 +52,14 @@ final class CanopyHandler private (config: CanopyConfig, freefallConfig: Freefal
     isBelowCanopy && isAboveFreefall
 
   protected def findInflection(window: NonEmptyFilled[DetectionData]): Option[Int] =
-    Some(window.focusIndex)
+    val discoveredInflection =
+      for {
+        backWindow  <- window.left
+        speedsWindow = backWindow.map(_.kinematics.speed.vertical)
+        inflection  <- Stats.findInflection(speedsWindow)
+      } yield inflection
+
+    discoveredInflection orElse window.focusIndex.some
 
 }
 

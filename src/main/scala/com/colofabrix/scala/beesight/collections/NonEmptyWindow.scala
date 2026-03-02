@@ -83,6 +83,15 @@ object NonEmptyWindow {
         i       += 1
       builder.result()
 
+    def toNonEmptyFilled: NonEmptyFilled[A] =
+      val newBuffer = new Array[Any](len)
+      var i         = 0
+      while i < len do
+        newBuffer(i) = buffer((head + i) % capacity)
+        i += 1
+      val newFocusIdx = Math.min(focusIdx, len - 1)
+      new NonEmptyFilled(newBuffer, 0, newFocusIdx, len)
+
     def oldest: A =
       buffer(head).asInstanceOf[A]
 
@@ -232,6 +241,27 @@ object NonEmptyWindow {
       val newHead     = (head + 1) % capacity
       val newFocusIdx = Math.max(0, focusIdx - 1)
       (outgoing, new NonEmptyFilled(newBuffer, newHead, newFocusIdx, capacity))
+
+    def shrinkReturning(n: Int): (Vector[A], Option[NonEmptyFilled[A]]) =
+      val toRemove  = Math.max(0, Math.min(n, capacity))
+      val remaining = capacity - toRemove
+
+      val removed = Vector.newBuilder[A]
+      var i       = 0
+      while i < toRemove do
+        removed += buffer((head + i) % capacity).asInstanceOf[A]
+        i       += 1
+
+      if remaining <= 0 then
+        (removed.result(), None)
+      else
+        val newBuffer = new Array[Any](remaining)
+        var j         = 0
+        while j < remaining do
+          newBuffer(j) = buffer((head + toRemove + j) % capacity)
+          j += 1
+        val newFocusIdx = Math.max(0, Math.min(focusIdx - toRemove, remaining - 1))
+        (removed.result(), Some(new NonEmptyFilled(newBuffer, 0, newFocusIdx, remaining)))
 
     // ── Subwindows ───────────────────────────────────────────────────────────
 

@@ -1,9 +1,8 @@
 package com.colofabrix.scala.beesight.detection.stages
 
+import cats.syntax.option.*
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
 import com.colofabrix.scala.beesight.config.LandingConfig
-import com.colofabrix.scala.beesight.detection.DebugLog
-import com.colofabrix.scala.beesight.detection.DebugLog.*
 import com.colofabrix.scala.beesight.detection.math.Stats
 import com.colofabrix.scala.beesight.detection.model.{ DetectionData, IndexedDataPoint }
 import com.colofabrix.scala.beesight.model.EventType
@@ -31,8 +30,6 @@ final class LandingHandler private (config: LandingConfig) extends StageHandler 
     val isBelowCanopy = kinematics.altitude < canopyAltitude
 
     val stdev = Stats.stdDev(window.map(_.kinematics.speed.vertical))
-    DebugLog(s"  |  altitude=${kinematics.altitude.fmt}, verticalSpeed=${kinematics.speed.vertical.fmt}, horizontalSpeed=${kinematics.speed.horizontal.fmt} stdev=${stdev.fmt}")
-    DebugLog(s"  |  isVerticalSpeedStable=$isVerticalSpeedStable, speedTrigger=$speedTrigger, isBelowCanopy=$isBelowCanopy")
 
     isVerticalSpeedStable && speedTrigger && isBelowCanopy
 
@@ -46,7 +43,9 @@ final class LandingHandler private (config: LandingConfig) extends StageHandler 
       .getOrElse(false)
 
   protected def findInflection(window: NonEmptyFilled[DetectionData]): Option[Int] =
-    Some(window.focusIndex)
+    window
+      .focusIndex
+      .some
 
 }
 
