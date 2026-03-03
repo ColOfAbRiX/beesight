@@ -20,7 +20,6 @@ import com.colofabrix.scala.beesight.utils.*
 import scala.annotation.tailrec
 
 // TODO: General plan of things to do
-//  - Fix canopy being detected a handful of points after freefall
 //  - Improve performance
 //  - Parameter optimization search
 

@@ -19,6 +19,9 @@ final class CanopyHandler private (config: CanopyConfig, freefallConfig: Freefal
       kinematics.speed.vertical > 0.0 &&
       kinematics.speed.vertical < config.verticalSpeedThreshold
 
+    val accelerationTrigger =
+      kinematics.acceleration.vertical < 0.0
+
     val freefallAltitude =
       window
         .focus
@@ -30,10 +33,10 @@ final class CanopyHandler private (config: CanopyConfig, freefallConfig: Freefal
 
     val isAboveMinAltitude = kinematics.altitude > config.minCanopyAltitude
 
-    DebugLog(s"  |  altitude=${kinematics.altitude.fmt}, verticalSpeed=${kinematics.speed.vertical.fmt}")
+    DebugLog(s"  |  altitude=${kinematics.altitude.fmt}, verticalSpeed=${kinematics.speed.vertical.fmt}, verticalAcceleration=${kinematics.acceleration.vertical.fmt}")
     DebugLog(s"  |  speedTrigger=$speedTrigger, isBelowFreefall=$isBelowFreefall, isAboveMinAltitude=$isAboveMinAltitude")
 
-    speedTrigger && isBelowFreefall && isAboveMinAltitude
+    speedTrigger && accelerationTrigger && isBelowFreefall && isAboveMinAltitude
 
   protected def validateTrigger(window: NonEmptyFilled[DetectionData]): Boolean =
     val focus  = window.focus.kinematics

@@ -41,7 +41,7 @@ object DetectionConfig {
         smoothingWindowSize = 5,
         backtrackWindowSize = 10,
         validationWindowSize = 100,
-        verticalSpeedThreshold = 12.0,
+        verticalSpeedThreshold = 10.0,
         minCanopyAltitude = 600.0,
         validationVerticalSpeed = 6.713 * 0.2,
       ),

@@ -28,8 +28,9 @@ object Stats {
     )
 
   def stdDev(window: NEW[Double]): Double =
-    val mean     = window.toVector.sum / window.toVector.size
-    val variance = window.toVector.map(v => Math.pow(v - mean, 2)).sum / window.toVector.size
+    val vectorWindow = window.toVector
+    val mean     = vectorWindow.sum / vectorWindow.size
+    val variance = vectorWindow.map(v => Math.pow(v - mean, 2)).sum / vectorWindow.size
     Math.sqrt(variance)
 
   /**
@@ -57,7 +58,7 @@ object Stats {
 
       k += 1
 
-    if bestIdx >= 0 then Some(bestIdx) else None
+    Option.when(bestIdx >= 0)(bestIdx)
 
   private def segmentError(data: Vector[Double], start: Int, length: Int): Double =
     if length <= 1 then return 0.0
@@ -81,6 +82,7 @@ object Stats {
       i     += 1
 
     val denom = n * sumXX - sumX * sumX
+
     if Math.abs(denom) < 1e-12 then
       val mean = sumY / n
       Math.max(0.0, sumYY - n * mean * mean)
