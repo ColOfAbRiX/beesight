@@ -41,7 +41,9 @@ object Stats {
   def findInflection(window: NonEmptyFilled[Double]): Option[Int] =
     val data = window.toVector
     val n    = data.length
-    if n < 4 then return None
+
+    if n < 4 then
+      return None
 
     var bestIdx   = -1
     var bestError = Double.MaxValue
@@ -61,7 +63,8 @@ object Stats {
     Option.when(bestIdx >= 0)(bestIdx)
 
   private def segmentError(data: Vector[Double], start: Int, length: Int): Double =
-    if length <= 1 then return 0.0
+    if length <= 1 then
+      return 0.0
 
     val n     = length.toDouble
     var sumX  = 0.0

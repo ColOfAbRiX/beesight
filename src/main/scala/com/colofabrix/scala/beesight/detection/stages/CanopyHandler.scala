@@ -2,7 +2,7 @@ package com.colofabrix.scala.beesight.detection.stages
 
 import cats.syntax.option.*
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
-import com.colofabrix.scala.beesight.config.{CanopyConfig, FreefallConfig}
+import com.colofabrix.scala.beesight.config.{ CanopyConfig, FreefallConfig }
 import com.colofabrix.scala.beesight.detection.DebugLog
 import com.colofabrix.scala.beesight.detection.DebugLog.*
 import com.colofabrix.scala.beesight.detection.math.Stats
@@ -61,6 +61,8 @@ final class CanopyHandler private (config: CanopyConfig, freefallConfig: Freefal
         speedsWindow = backWindow.map(_.kinematics.speed.vertical)
         inflection  <- Stats.findInflection(speedsWindow)
       } yield inflection
+
+    DebugLog(s"  |  detectedInflection=${discoveredInflection}, focus=${window.focusIndex}")
 
     discoveredInflection orElse window.focusIndex.some
 

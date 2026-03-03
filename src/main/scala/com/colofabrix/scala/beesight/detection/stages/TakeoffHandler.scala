@@ -34,6 +34,9 @@ final class TakeoffHandler private (config: TakeoffConfig) extends StageHandler 
 
     val validationDistance = config.validationVerticalSpeed * dt
 
+    DebugLog(s"  |    altitude=${focus.altitude.fmt}, verticalSpeed=${focus.speed.vertical.fmt}, horizontalSpeed=${focus.speed.horizontal.fmt}")
+    DebugLog(s"  |    validationDistance=${validationDistance.fmt}")
+
     newest.altitude > focus.altitude - validationDistance
 
   protected def findInflection(window: NonEmptyFilled[DetectionData]): Option[Int] =

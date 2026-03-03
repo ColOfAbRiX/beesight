@@ -32,7 +32,7 @@ object Main extends IODeclineReaderApp[Config] {
       inputFiles     <- FileOps.discoverCsvFiles()
       filesToProcess <- applyLimit(inputFiles)
       _              <- s"Found ${inputFiles.size} CSV files, processing ${filesToProcess.size}".stdout
-      summaryRows    <- filesToProcess.parTraverseN(10)(processFile)
+      summaryRows    <- filesToProcess.parTraverse(processFile)
       _              <- ResultsSummary.writeSummaryCsv(summaryRows)
     yield ExitCode.Success
 
