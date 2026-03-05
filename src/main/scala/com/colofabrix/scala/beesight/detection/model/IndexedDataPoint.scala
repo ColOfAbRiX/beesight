@@ -1,7 +1,7 @@
 package com.colofabrix.scala.beesight.detection.model
 
-import java.time.Instant
 import com.colofabrix.scala.beesight.model.GeoVector
+import java.time.Instant
 
 /**
  * Internal representation of a flight data point with time, altitude, and velocity.

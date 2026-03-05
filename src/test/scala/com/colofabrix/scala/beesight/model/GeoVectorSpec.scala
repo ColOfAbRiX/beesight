@@ -111,7 +111,7 @@ class GeoVectorSpec extends AnyFreeSpec with Matchers {
       }
 
       "should produce Infinity when dividing by zero" in {
-        val v = GeoVector(1.0, 2.0, 3.0)
+        val v      = GeoVector(1.0, 2.0, 3.0)
         val result = v / 0.0
         result.north shouldBe Double.PositiveInfinity
       }

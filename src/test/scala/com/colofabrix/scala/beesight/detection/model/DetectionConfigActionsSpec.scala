@@ -30,36 +30,32 @@ class DetectionConfigActionsSpec extends AnyFreeSpec with Matchers {
         config.getEventConfigs(EventType.Landing) shouldBe config.landing
       }
 
-      "should return an EventConfigs for every EventType" in {
-        EventType.values.foreach { event =>
-          noException should be thrownBy config.getEventConfigs(event)
-        }
+      "should return an EventConfigs for every EventType" in
+      EventType.values.foreach { event =>
+        noException should be thrownBy config.getEventConfigs(event)
       }
 
     }
 
     "getBackwindowSize" - {
 
-      "should return maximum of backtrack and smoothing window sizes" in {
-        EventType.values.foreach { event =>
-          val eventConfig = config.getEventConfigs(event)
-          val expected = Math.max(eventConfig.backtrackWindowSize, eventConfig.smoothingWindowSize)
-          config.getBackwindowSize(event) shouldBe expected
-        }
+      "should return maximum of backtrack and smoothing window sizes" in
+      EventType.values.foreach { event =>
+        val eventConfig = config.getEventConfigs(event)
+        val expected    = Math.max(eventConfig.backtrackWindowSize, eventConfig.smoothingWindowSize)
+        config.getBackwindowSize(event) shouldBe expected
       }
 
-      "should return at least the smoothing window size" in {
-        EventType.values.foreach { event =>
-          val eventConfig = config.getEventConfigs(event)
-          config.getBackwindowSize(event) should be >= eventConfig.smoothingWindowSize
-        }
+      "should return at least the smoothing window size" in
+      EventType.values.foreach { event =>
+        val eventConfig = config.getEventConfigs(event)
+        config.getBackwindowSize(event) should be >= eventConfig.smoothingWindowSize
       }
 
-      "should return at least the backtrack window size" in {
-        EventType.values.foreach { event =>
-          val eventConfig = config.getEventConfigs(event)
-          config.getBackwindowSize(event) should be >= eventConfig.backtrackWindowSize
-        }
+      "should return at least the backtrack window size" in
+      EventType.values.foreach { event =>
+        val eventConfig = config.getEventConfigs(event)
+        config.getBackwindowSize(event) should be >= eventConfig.backtrackWindowSize
       }
 
     }

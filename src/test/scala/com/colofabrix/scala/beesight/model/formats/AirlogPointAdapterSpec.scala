@@ -14,20 +14,20 @@ class AirlogPointAdapterSpec extends AnyFreeSpec with Matchers {
     "toDataPoint field mapping" - {
 
       "should map time directly" in {
-        val time = Instant.parse("2024-06-15T12:30:00Z")
-        val point = airlogPoint(time = time)
+        val time   = Instant.parse("2024-06-15T12:30:00Z")
+        val point  = airlogPoint(time = time)
         val result = AirlogPoint.airlogFormatAdapter.toDataPoint(point)
         result.time shouldBe time
       }
 
       "should map GPS altitude" in {
-        val point = airlogPoint(gpsAlt = 4200.0)
+        val point  = airlogPoint(gpsAlt = 4200.0)
         val result = AirlogPoint.airlogFormatAdapter.toDataPoint(point)
         result.altitude shouldBe 4200.0
       }
 
       "should map sink rate to vertical speed" in {
-        val point = airlogPoint(sink = -15.0)
+        val point  = airlogPoint(sink = -15.0)
         val result = AirlogPoint.airlogFormatAdapter.toDataPoint(point)
         result.speed.vertical shouldBe -15.0
       }
@@ -37,36 +37,36 @@ class AirlogPointAdapterSpec extends AnyFreeSpec with Matchers {
     "heading decomposition into north and east" - {
 
       "heading 0° (north) should produce full north, zero east" in {
-        val point = airlogPoint(speed = 100.0, heading = 0.0)
+        val point  = airlogPoint(speed = 100.0, heading = 0.0)
         val result = AirlogPoint.airlogFormatAdapter.toDataPoint(point)
         result.speed.north shouldBe (100.0 +- tolerance)
         result.speed.east shouldBe (0.0 +- tolerance)
       }
 
       "heading 90° (east) should produce zero north, full east" in {
-        val point = airlogPoint(speed = 100.0, heading = 90.0)
+        val point  = airlogPoint(speed = 100.0, heading = 90.0)
         val result = AirlogPoint.airlogFormatAdapter.toDataPoint(point)
         result.speed.north shouldBe (0.0 +- tolerance)
         result.speed.east shouldBe (100.0 +- tolerance)
       }
 
       "heading 180° (south) should produce negative north, zero east" in {
-        val point = airlogPoint(speed = 100.0, heading = 180.0)
+        val point  = airlogPoint(speed = 100.0, heading = 180.0)
         val result = AirlogPoint.airlogFormatAdapter.toDataPoint(point)
         result.speed.north shouldBe (-100.0 +- tolerance)
         result.speed.east shouldBe (0.0 +- tolerance)
       }
 
       "heading 270° (west) should produce zero north, negative east" in {
-        val point = airlogPoint(speed = 100.0, heading = 270.0)
+        val point  = airlogPoint(speed = 100.0, heading = 270.0)
         val result = AirlogPoint.airlogFormatAdapter.toDataPoint(point)
         result.speed.north shouldBe (0.0 +- tolerance)
         result.speed.east shouldBe (-100.0 +- tolerance)
       }
 
       "heading 45° (northeast) should split speed equally between north and east" in {
-        val point = airlogPoint(speed = 100.0, heading = 45.0)
-        val result = AirlogPoint.airlogFormatAdapter.toDataPoint(point)
+        val point    = airlogPoint(speed = 100.0, heading = 45.0)
+        val result   = AirlogPoint.airlogFormatAdapter.toDataPoint(point)
         val expected = 100.0 * Math.cos(Math.toRadians(45.0))
         result.speed.north shouldBe (expected +- tolerance)
         result.speed.east shouldBe (expected +- tolerance)
@@ -77,7 +77,7 @@ class AirlogPointAdapterSpec extends AnyFreeSpec with Matchers {
     "zero speed" - {
 
       "should produce zero velocity regardless of heading" in {
-        val point = airlogPoint(speed = 0.0, heading = 123.0)
+        val point  = airlogPoint(speed = 0.0, heading = 123.0)
         val result = AirlogPoint.airlogFormatAdapter.toDataPoint(point)
         result.speed.north shouldBe (0.0 +- tolerance)
         result.speed.east shouldBe (0.0 +- tolerance)
@@ -90,7 +90,7 @@ class AirlogPointAdapterSpec extends AnyFreeSpec with Matchers {
       "horizontal magnitude should equal input speed for any heading" in {
         val headings = List(0.0, 30.0, 45.0, 90.0, 135.0, 180.0, 225.0, 270.0, 315.0)
         headings.foreach { heading =>
-          val point = airlogPoint(speed = 50.0, heading = heading)
+          val point  = airlogPoint(speed = 50.0, heading = heading)
           val result = AirlogPoint.airlogFormatAdapter.toDataPoint(point)
           withClue(s"heading=$heading: ") {
             result.speed.horizontal shouldBe (50.0 +- tolerance)

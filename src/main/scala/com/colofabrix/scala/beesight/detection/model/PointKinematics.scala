@@ -10,5 +10,5 @@ final case class PointKinematics(
   time: Instant,
   altitude: Double,
   speed: GeoVector,
-  acceleration: GeoVector
+  acceleration: GeoVector,
 )

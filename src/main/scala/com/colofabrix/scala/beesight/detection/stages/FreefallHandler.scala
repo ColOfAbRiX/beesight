@@ -40,12 +40,9 @@ final class FreefallHandler private (config: FreefallConfig) extends StageHandle
     newest.altitude < focus.altitude - validationDistance
 
   protected def findInflection(window: NonEmptyFilled[DetectionData]): Option[Int] =
-    val discoveredInflection =
-      for {
-        backWindow    = window.leftInclusive
-        speedsWindow  = backWindow.map(_.kinematics.speed.vertical)
-        inflection   <- Stats.findInflection(speedsWindow)
-      } yield inflection
+    val backWindow           = window.leftInclusive
+    val speedsWindow         = backWindow.map(_.kinematics.speed.vertical)
+    val discoveredInflection = Stats.findInflection(speedsWindow)
 
     discoveredInflection orElse window.focusIndex.some
 

@@ -295,8 +295,9 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
 
         val actual = runPreprocess(points, config)
 
-        actual.zip(points).foreach { case (a, e) =>
-          a.speed.vertical shouldBe e.speed.vertical
+        actual.zip(points).foreach {
+          case (a, e) =>
+            a.speed.vertical shouldBe e.speed.vertical
         }
       }
 
@@ -309,9 +310,9 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
         val points =
           List(
             point(1, verticalSpeed = 10.0),
-            point(3, verticalSpeed = 10.0),   // 2-second gap
-            point(10, verticalSpeed = 10.0),  // 7-second gap
-            point(11, verticalSpeed = 10.0),  // 1-second gap
+            point(3, verticalSpeed = 10.0),  // 2-second gap
+            point(10, verticalSpeed = 10.0), // 7-second gap
+            point(11, verticalSpeed = 10.0), // 1-second gap
             point(100, verticalSpeed = 10.0), // 89-second gap
           )
 

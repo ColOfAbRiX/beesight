@@ -1,10 +1,10 @@
 package com.colofabrix.scala.beesight.detection.stages
 
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
+import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.colofabrix.scala.beesight.detection.model.*
 import com.colofabrix.scala.beesight.model.EventType
-import scala.collection.mutable.{ Map => MMap }
-import com.colofabrix.scala.beesight.config.DetectionConfig
+import scala.collection.mutable.Map as MMap
 
 trait StageHandler {
 
@@ -16,8 +16,7 @@ trait StageHandler {
 
   def stageDetection(window: NonEmptyFilled[DetectionData]): Option[(Int, IndexedDataPoint)] =
     for {
-      isTrigger      = detectTrigger(window) && validateTrigger(window)
-      detectionIdx  <- if isTrigger then findInflection(window) else None
+      detectionIdx  <- if (detectTrigger(window) && validateTrigger(window)) then findInflection(window) else None
       detectionPoint = window.focusAt(detectionIdx).focus.point
       result         = (detectionIdx, detectionPoint)
     } yield result

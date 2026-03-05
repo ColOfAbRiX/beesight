@@ -14,8 +14,9 @@ final case class FillingState(
 ) extends StateTrait
 
 object FillingState {
-  extension (self: FillingState) def toDetectionState =
-    DetectionState(self.window.toNonEmptyFilled, self.phase, self.focusType)
+  extension (self: FillingState)
+    def toDetectionState =
+      DetectionState(self.window.toNonEmptyFilled, self.phase, self.focusType)
 }
 
 final case class DetectionState(

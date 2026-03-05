@@ -42,10 +42,9 @@ class FlightPhaseSpec extends AnyFreeSpec with Matchers {
         FlightPhase.fromEvent(EventType.Landing) shouldBe FlightPhase.Landed
       }
 
-      "should cover all EventType values" in {
-        EventType.values.foreach { event =>
-          noException should be thrownBy FlightPhase.fromEvent(event)
-        }
+      "should cover all EventType values" in
+      EventType.values.foreach { event =>
+        noException should be thrownBy FlightPhase.fromEvent(event)
       }
 
     }

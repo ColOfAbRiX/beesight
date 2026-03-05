@@ -17,7 +17,7 @@ object CliConfig {
       minPoints,
       writeCsv,
       createGraph,
-      createSummary
+      createSummary,
     ).mapN(Config.apply)
 
   lazy val input: Opts[Path] =

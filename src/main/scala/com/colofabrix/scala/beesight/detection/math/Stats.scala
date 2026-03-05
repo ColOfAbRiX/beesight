@@ -29,8 +29,8 @@ object Stats {
 
   def stdDev(window: NEW[Double]): Double =
     val vectorWindow = window.toVector
-    val mean     = vectorWindow.sum / vectorWindow.size
-    val variance = vectorWindow.map(v => Math.pow(v - mean, 2)).sum / vectorWindow.size
+    val mean         = vectorWindow.sum / vectorWindow.size
+    val variance     = vectorWindow.map(v => Math.pow(v - mean, 2)).sum / vectorWindow.size
     Math.sqrt(variance)
 
   /**

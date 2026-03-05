@@ -36,7 +36,7 @@ object Config {
       minRetainedPoints = 0.1,
       writeCsv = true,
       createGraph = false,
-      createSummary = false
+      createSummary = false,
     )
 
 }

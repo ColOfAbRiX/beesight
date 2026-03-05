@@ -20,7 +20,7 @@ private[utils] trait StreamAccumulators {
             case Some((a, rest)) =>
               val (newState, output) = f(a, state)
               val items              = Foldable[G].toList(output)
-              val chunk = fs2.Chunk.from(items)
+              val chunk              = fs2.Chunk.from(items)
               fs2.Pull.output(chunk) >> loop(newState: SA, rest)
             case None =>
               fs2.Pull.output(fs2.Chunk.from(drain(state)))
@@ -33,7 +33,7 @@ private[utils] trait StreamAccumulators {
           case Some((head, tail)) =>
             val (initState, initOutput) = init(head)
             val items                   = Foldable[G].toList(initOutput)
-            val chunk = fs2.Chunk.from(items)
+            val chunk                   = fs2.Chunk.from(items)
             fs2.Pull.output(chunk) >> loop(initState, tail)
           case None =>
             fs2.Pull.done

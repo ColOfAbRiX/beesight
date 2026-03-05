@@ -6,9 +6,9 @@ import com.colofabrix.scala.beesight.config.Config
 import com.colofabrix.scala.beesight.files.FileOps
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.model.formats.FileFormatAdapter
+import com.colofabrix.scala.beesight.utils.*
 import com.colofabrix.scala.beesight.{ IOConfig, * }
 import java.nio.file.*
-import com.colofabrix.scala.beesight.utils.*
 
 /**
  * Generates interactive HTML charts showing flight data and detected stages

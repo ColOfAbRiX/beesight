@@ -106,5 +106,5 @@ final case class LandingConfig(
   verticalSpeedThreshold: Double,
   stabilityThreshold: Double,
   validationVerticalSpeed: Double,
-  horizontalSpeedThreshold: Double
+  horizontalSpeedThreshold: Double,
 ) extends EventConfigs

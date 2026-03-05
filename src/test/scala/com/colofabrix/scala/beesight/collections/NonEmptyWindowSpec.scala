@@ -118,7 +118,7 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
       }
 
       "push should return None while filling" in {
-        val window = NonEmptyWindow[Int](5, 1)
+        val window          = NonEmptyWindow[Int](5, 1)
         val (evicted, next) = window.push(2)
 
         evicted shouldBe None
@@ -126,7 +126,7 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
       }
 
       "push should return oldest element when at capacity" in {
-        val window = filledWindow(1, 2, 3)
+        val window          = filledWindow(1, 2, 3)
         val (evicted, next) = window.push(4)
 
         evicted shouldBe Some(1)
@@ -166,7 +166,7 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
 
       "NonEmptyFilled should stay NonEmptyFilled after enqueue" in {
         val window = filledWindow(1, 2, 3)
-        val next = window.enqueue(4)
+        val next   = window.enqueue(4)
 
         next shouldBe a[NonEmptyFilled[?]]
       }
@@ -206,7 +206,7 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
       }
 
       "focusAt should clip negative index to 0" in {
-        val window = filledWindow(1, 2, 3, 4, 5)
+        val window  = filledWindow(1, 2, 3, 4, 5)
         val focused = window.focusAt(-5)
 
         focused.focusIndex shouldBe 0
@@ -214,7 +214,7 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
       }
 
       "focusAt should clip excessive index to last" in {
-        val window = filledWindow(1, 2, 3, 4, 5)
+        val window  = filledWindow(1, 2, 3, 4, 5)
         val focused = window.focusAt(100)
 
         focused.focusIndex shouldBe 4
@@ -222,7 +222,7 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
       }
 
       "focusAt should preserve all elements" in {
-        val window = filledWindow(1, 2, 3, 4, 5)
+        val window  = filledWindow(1, 2, 3, 4, 5)
         val focused = window.focusAt(2)
 
         focused.toVector shouldBe Vector(1, 2, 3, 4, 5)
@@ -233,7 +233,7 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
     "takeNewest" - {
 
       "should return newest n elements" in {
-        val window = filledWindow(1, 2, 3, 4, 5)
+        val window  = filledWindow(1, 2, 3, 4, 5)
         val newest3 = window.takeNewest(3)
 
         newest3.toVector shouldBe Vector(3, 4, 5)
@@ -241,7 +241,7 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
 
       "should return all elements when n >= length" in {
         val window = filledWindow(1, 2, 3)
-        val all = window.takeNewest(10)
+        val all    = window.takeNewest(10)
 
         all.toVector shouldBe Vector(1, 2, 3)
       }
@@ -271,7 +271,7 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
 
       "left should return elements before focus" in {
         val window = filledWindow(1, 2, 3, 4, 5).focusAt(2)
-        val left = window.left
+        val left   = window.left
 
         left.isDefined shouldBe true
         left.get.toVector shouldBe Vector(1, 2)
@@ -284,7 +284,7 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
 
       "right should return elements after focus" in {
         val window = filledWindow(1, 2, 3, 4, 5).focusAt(2)
-        val right = window.right
+        val right  = window.right
 
         right.isDefined shouldBe true
         right.get.toVector shouldBe Vector(4, 5)
@@ -296,21 +296,21 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
       }
 
       "leftInclusive should include focus" in {
-        val window = filledWindow(1, 2, 3, 4, 5).focusAt(2)
+        val window  = filledWindow(1, 2, 3, 4, 5).focusAt(2)
         val leftInc = window.leftInclusive
 
         leftInc.toVector shouldBe Vector(1, 2, 3)
       }
 
       "rightInclusive should include focus" in {
-        val window = filledWindow(1, 2, 3, 4, 5).focusAt(2)
+        val window   = filledWindow(1, 2, 3, 4, 5).focusAt(2)
         val rightInc = window.rightInclusive
 
         rightInc.toVector shouldBe Vector(3, 4, 5)
       }
 
       "modifyFocus should change focused element" in {
-        val window = filledWindow(1, 2, 3, 4, 5).focusAt(2)
+        val window   = filledWindow(1, 2, 3, 4, 5).focusAt(2)
         val modified = window.modifyFocus(_ * 10)
 
         modified.focus shouldBe 30
@@ -329,11 +329,11 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
       }
 
       "map should preserve structure" in {
-        val filling = NonEmptyWindow(5, 1).enqueue(2)
+        val filling       = NonEmptyWindow(5, 1).enqueue(2)
         val mappedFilling = filling.map(_.toString)
         mappedFilling shouldBe a[NonEmptyFilling[?]]
 
-        val filled = filledWindow(1, 2, 3)
+        val filled       = filledWindow(1, 2, 3)
         val mappedFilled = filled.map(_.toString)
         mappedFilled shouldBe a[NonEmptyFilled[?]]
       }
@@ -394,7 +394,7 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
     "dequeue" - {
 
       "should return oldest n elements and remaining window" in {
-        val window = filledWindow(1, 2, 3, 4, 5)
+        val window                = filledWindow(1, 2, 3, 4, 5)
         val (dequeued, remaining) = window.dequeue(2)
 
         dequeued shouldBe Vector(1, 2)
@@ -402,14 +402,14 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
       }
 
       "should return NonEmptyFilling" in {
-        val window = filledWindow(1, 2, 3, 4, 5)
+        val window         = filledWindow(1, 2, 3, 4, 5)
         val (_, remaining) = window.dequeue(2)
 
         remaining shouldBe a[NonEmptyFilling[?]]
       }
 
       "should preserve original capacity for refilling" in {
-        val window = filledWindow(1, 2, 3, 4, 5)
+        val window         = filledWindow(1, 2, 3, 4, 5)
         val (_, remaining) = window.dequeue(2)
 
         remaining.capacity shouldBe 5
@@ -417,7 +417,7 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
       }
 
       "should handle dequeue(0) by returning empty vector and all elements" in {
-        val window = filledWindow(1, 2, 3, 4, 5)
+        val window                = filledWindow(1, 2, 3, 4, 5)
         val (dequeued, remaining) = window.dequeue(0)
 
         dequeued shouldBe empty
@@ -425,7 +425,7 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
       }
 
       "should handle negative n as dequeue(0)" in {
-        val window = filledWindow(1, 2, 3, 4, 5)
+        val window                = filledWindow(1, 2, 3, 4, 5)
         val (dequeued, remaining) = window.dequeue(-5)
 
         dequeued shouldBe empty
@@ -433,7 +433,7 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
       }
 
       "should keep at least one element when n >= capacity" in {
-        val window = filledWindow(1, 2, 3, 4, 5)
+        val window                = filledWindow(1, 2, 3, 4, 5)
         val (dequeued, remaining) = window.dequeue(10)
 
         dequeued shouldBe Vector(1, 2, 3, 4)
@@ -442,7 +442,7 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
       }
 
       "should keep at least one element when n == capacity" in {
-        val window = filledWindow(1, 2, 3, 4, 5)
+        val window                = filledWindow(1, 2, 3, 4, 5)
         val (dequeued, remaining) = window.dequeue(5)
 
         dequeued shouldBe Vector(1, 2, 3, 4)
@@ -450,7 +450,7 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
       }
 
       "should work with capacity 2 window" in {
-        val window = filledWindow(1, 2)
+        val window                = filledWindow(1, 2)
         val (dequeued, remaining) = window.dequeue(1)
 
         dequeued shouldBe Vector(1)
@@ -479,7 +479,7 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
       }
 
       "should support refilling after dequeue" in {
-        val window = filledWindow(1, 2, 3, 4, 5)
+        val window         = filledWindow(1, 2, 3, 4, 5)
         val (_, remaining) = window.dequeue(3)
 
         remaining.length shouldBe 2
@@ -492,7 +492,7 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
       }
 
       "dequeued elements should be in FIFO order" in {
-        val window = filledWindow(10, 20, 30, 40, 50)
+        val window        = filledWindow(10, 20, 30, 40, 50)
         val (dequeued, _) = window.dequeue(3)
 
         dequeued shouldBe Vector(10, 20, 30)
@@ -506,7 +506,7 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
 
       "should extract sub-window centered on focus with left and right counts" in {
         val window = filledWindow(10, 20, 30, 40, 50, 60, 70, 80, 90, 100)
-        val sub = window.subwindowAt(2, 5, 3)
+        val sub    = window.subwindowAt(2, 5, 3)
 
         sub.toVector shouldBe Vector(40, 50, 60, 70, 80, 90)
         sub.focusIndex shouldBe 2
@@ -515,7 +515,7 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
 
       "should clip left when it exceeds available elements before focus" in {
         val window = filledWindow(10, 20, 30, 40, 50)
-        val sub = window.subwindowAt(10, 1, 2)
+        val sub    = window.subwindowAt(10, 1, 2)
 
         sub.toVector shouldBe Vector(10, 20, 30, 40)
         sub.focusIndex shouldBe 1
@@ -524,7 +524,7 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
 
       "should clip right when it exceeds available elements after focus" in {
         val window = filledWindow(10, 20, 30, 40, 50)
-        val sub = window.subwindowAt(1, 3, 10)
+        val sub    = window.subwindowAt(1, 3, 10)
 
         sub.toVector shouldBe Vector(30, 40, 50)
         sub.focusIndex shouldBe 1
@@ -533,7 +533,7 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
 
       "should handle focus at first position" in {
         val window = filledWindow(10, 20, 30, 40, 50)
-        val sub = window.subwindowAt(2, 0, 3)
+        val sub    = window.subwindowAt(2, 0, 3)
 
         sub.toVector shouldBe Vector(10, 20, 30, 40)
         sub.focusIndex shouldBe 0
@@ -542,7 +542,7 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
 
       "should handle focus at last position" in {
         val window = filledWindow(10, 20, 30, 40, 50)
-        val sub = window.subwindowAt(2, 4, 2)
+        val sub    = window.subwindowAt(2, 4, 2)
 
         sub.toVector shouldBe Vector(30, 40, 50)
         sub.focusIndex shouldBe 2
@@ -551,7 +551,7 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
 
       "should preserve element ordering" in {
         val window = filledWindow(1, 2, 3, 4, 5, 6, 7, 8, 9)
-        val sub = window.subwindowAt(3, 4, 3)
+        val sub    = window.subwindowAt(3, 4, 3)
 
         sub.toVector shouldBe Vector(2, 3, 4, 5, 6, 7, 8)
         sub.oldest shouldBe 2
@@ -563,7 +563,7 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
     "shrinkReturning" - {
 
       "should return oldest elements and remaining filled window" in {
-        val window = filledWindow(1, 2, 3, 4, 5)
+        val window               = filledWindow(1, 2, 3, 4, 5)
         val (removed, remaining) = window.shrinkReturning(2)
 
         removed shouldBe Vector(1, 2)
@@ -572,7 +572,7 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
       }
 
       "should return None when shrinking removes all elements" in {
-        val window = filledWindow(1, 2, 3)
+        val window               = filledWindow(1, 2, 3)
         val (removed, remaining) = window.shrinkReturning(3)
 
         removed shouldBe Vector(1, 2, 3)
@@ -580,7 +580,7 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
       }
 
       "should return None when shrinking exceeds capacity" in {
-        val window = filledWindow(1, 2, 3)
+        val window               = filledWindow(1, 2, 3)
         val (removed, remaining) = window.shrinkReturning(10)
 
         removed shouldBe Vector(1, 2, 3)
@@ -588,7 +588,7 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
       }
 
       "should reduce capacity of remaining window" in {
-        val window = filledWindow(1, 2, 3, 4, 5)
+        val window         = filledWindow(1, 2, 3, 4, 5)
         val (_, remaining) = window.shrinkReturning(2)
 
         remaining.get.capacity shouldBe 3
@@ -596,7 +596,7 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
       }
 
       "should handle shrinking by 0" in {
-        val window = filledWindow(1, 2, 3, 4, 5)
+        val window               = filledWindow(1, 2, 3, 4, 5)
         val (removed, remaining) = window.shrinkReturning(0)
 
         removed shouldBe empty
@@ -609,14 +609,14 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
     "pushReturning (NonEmptyFilled)" - {
 
       "should always return the evicted element" in {
-        val window = filledWindow(1, 2, 3)
+        val window       = filledWindow(1, 2, 3)
         val (evicted, _) = window.pushReturning(4)
 
         evicted shouldBe 1
       }
 
       "should return a NonEmptyFilled after push" in {
-        val window = filledWindow(1, 2, 3)
+        val window    = filledWindow(1, 2, 3)
         val (_, next) = window.pushReturning(4)
 
         next shouldBe a[NonEmptyFilled[?]]
@@ -624,7 +624,7 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
       }
 
       "should maintain capacity after push" in {
-        val window = filledWindow(1, 2, 3, 4, 5)
+        val window    = filledWindow(1, 2, 3, 4, 5)
         val (_, next) = window.pushReturning(6)
 
         next.capacity shouldBe 5
@@ -632,7 +632,7 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
       }
 
       "should evict elements in FIFO order across multiple pushes" in {
-        val window = filledWindow(1, 2, 3)
+        val window   = filledWindow(1, 2, 3)
         val (e1, w1) = window.pushReturning(4)
         val (e2, w2) = w1.pushReturning(5)
         val (e3, _)  = w2.pushReturning(6)
@@ -656,14 +656,14 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
 
       "should preserve existing elements" in {
         val filling = NonEmptyWindow(5, 10).enqueue(20).enqueue(30)
-        val filled = filling.asInstanceOf[NonEmptyFilling[Int]].toNonEmptyFilled
+        val filled  = filling.asInstanceOf[NonEmptyFilling[Int]].toNonEmptyFilled
 
         filled.toVector shouldBe Vector(10, 20, 30)
       }
 
       "should set capacity to current length" in {
         val filling = NonEmptyWindow(10, 1).enqueue(2).enqueue(3)
-        val filled = filling.asInstanceOf[NonEmptyFilling[Int]].toNonEmptyFilled
+        val filled  = filling.asInstanceOf[NonEmptyFilling[Int]].toNonEmptyFilled
 
         filled.capacity shouldBe 3
         filled.isAtCapacity shouldBe true
@@ -694,7 +694,7 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
       }
 
       "takeNewest should support smoothing window extraction" in {
-        val window = filledWindow(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+        val window          = filledWindow(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
         val smoothingWindow = window.takeNewest(5)
 
         smoothingWindow.toVector shouldBe Vector(6, 7, 8, 9, 10)
