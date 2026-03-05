@@ -8,7 +8,17 @@ import java.nio.file.{ Path, Paths }
 object CliConfig {
 
   lazy val allOptions: Opts[Config] =
-    (input, output, limit, dryRun, buffer, minPoints).mapN(Config.apply)
+    (
+      input,
+      output,
+      limit,
+      dryRun,
+      buffer,
+      minPoints,
+      writeCsv,
+      createGraph,
+      createSummary
+    ).mapN(Config.apply)
 
   lazy val input: Opts[Path] =
     Opts
@@ -47,7 +57,8 @@ object CliConfig {
         short = "n",
         help = "Shows the list of files that will be processed",
       )
-      .orFalse
+      .map(_ => true)
+      .withDefault(Config.default.dryRun)
 
   lazy val buffer: Opts[Int] =
     Opts
@@ -68,5 +79,34 @@ object CliConfig {
       )
       .map(d => Math.min(1.0, Math.max(0.0, d)))
       .withDefault(Config.default.minRetainedPoints)
+
+  lazy val writeCsv: Opts[Boolean] =
+    Opts
+      .flag(
+        long = "write-csv",
+        short = "c",
+        help = "Shows the list of files that will be processed",
+      )
+      .map(_ => true)
+      .withDefault(Config.default.writeCsv)
+
+  lazy val createGraph: Opts[Boolean] =
+    Opts
+      .flag(
+        long = "create-graph",
+        short = "g",
+        help = "Creates an output graph of the CSV data",
+      )
+      .map(_ => true)
+      .withDefault(Config.default.createGraph)
+
+  lazy val createSummary: Opts[Boolean] =
+    Opts
+      .flag(
+        long = "create-summary",
+        help = "Creates an output summary of all the provessed CSV files",
+      )
+      .map(_ => true)
+      .withDefault(Config.default.createSummary)
 
 }

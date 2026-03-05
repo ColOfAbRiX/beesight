@@ -502,6 +502,175 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
 
     }
 
+    "subwindowAt" - {
+
+      "should extract sub-window centered on focus with left and right counts" in {
+        val window = filledWindow(10, 20, 30, 40, 50, 60, 70, 80, 90, 100)
+        val sub = window.subwindowAt(2, 5, 3)
+
+        sub.toVector shouldBe Vector(40, 50, 60, 70, 80, 90)
+        sub.focusIndex shouldBe 2
+        sub.focus shouldBe 60
+      }
+
+      "should clip left when it exceeds available elements before focus" in {
+        val window = filledWindow(10, 20, 30, 40, 50)
+        val sub = window.subwindowAt(10, 1, 2)
+
+        sub.toVector shouldBe Vector(10, 20, 30, 40)
+        sub.focusIndex shouldBe 1
+        sub.focus shouldBe 20
+      }
+
+      "should clip right when it exceeds available elements after focus" in {
+        val window = filledWindow(10, 20, 30, 40, 50)
+        val sub = window.subwindowAt(1, 3, 10)
+
+        sub.toVector shouldBe Vector(30, 40, 50)
+        sub.focusIndex shouldBe 1
+        sub.focus shouldBe 40
+      }
+
+      "should handle focus at first position" in {
+        val window = filledWindow(10, 20, 30, 40, 50)
+        val sub = window.subwindowAt(2, 0, 3)
+
+        sub.toVector shouldBe Vector(10, 20, 30, 40)
+        sub.focusIndex shouldBe 0
+        sub.focus shouldBe 10
+      }
+
+      "should handle focus at last position" in {
+        val window = filledWindow(10, 20, 30, 40, 50)
+        val sub = window.subwindowAt(2, 4, 2)
+
+        sub.toVector shouldBe Vector(30, 40, 50)
+        sub.focusIndex shouldBe 2
+        sub.focus shouldBe 50
+      }
+
+      "should preserve element ordering" in {
+        val window = filledWindow(1, 2, 3, 4, 5, 6, 7, 8, 9)
+        val sub = window.subwindowAt(3, 4, 3)
+
+        sub.toVector shouldBe Vector(2, 3, 4, 5, 6, 7, 8)
+        sub.oldest shouldBe 2
+        sub.newest shouldBe 8
+      }
+
+    }
+
+    "shrinkReturning" - {
+
+      "should return oldest elements and remaining filled window" in {
+        val window = filledWindow(1, 2, 3, 4, 5)
+        val (removed, remaining) = window.shrinkReturning(2)
+
+        removed shouldBe Vector(1, 2)
+        remaining shouldBe defined
+        remaining.get.toVector shouldBe Vector(3, 4, 5)
+      }
+
+      "should return None when shrinking removes all elements" in {
+        val window = filledWindow(1, 2, 3)
+        val (removed, remaining) = window.shrinkReturning(3)
+
+        removed shouldBe Vector(1, 2, 3)
+        remaining shouldBe None
+      }
+
+      "should return None when shrinking exceeds capacity" in {
+        val window = filledWindow(1, 2, 3)
+        val (removed, remaining) = window.shrinkReturning(10)
+
+        removed shouldBe Vector(1, 2, 3)
+        remaining shouldBe None
+      }
+
+      "should reduce capacity of remaining window" in {
+        val window = filledWindow(1, 2, 3, 4, 5)
+        val (_, remaining) = window.shrinkReturning(2)
+
+        remaining.get.capacity shouldBe 3
+        remaining.get.isAtCapacity shouldBe true
+      }
+
+      "should handle shrinking by 0" in {
+        val window = filledWindow(1, 2, 3, 4, 5)
+        val (removed, remaining) = window.shrinkReturning(0)
+
+        removed shouldBe empty
+        remaining shouldBe defined
+        remaining.get.toVector shouldBe Vector(1, 2, 3, 4, 5)
+      }
+
+    }
+
+    "pushReturning (NonEmptyFilled)" - {
+
+      "should always return the evicted element" in {
+        val window = filledWindow(1, 2, 3)
+        val (evicted, _) = window.pushReturning(4)
+
+        evicted shouldBe 1
+      }
+
+      "should return a NonEmptyFilled after push" in {
+        val window = filledWindow(1, 2, 3)
+        val (_, next) = window.pushReturning(4)
+
+        next shouldBe a[NonEmptyFilled[?]]
+        next.toVector shouldBe Vector(2, 3, 4)
+      }
+
+      "should maintain capacity after push" in {
+        val window = filledWindow(1, 2, 3, 4, 5)
+        val (_, next) = window.pushReturning(6)
+
+        next.capacity shouldBe 5
+        next.length shouldBe 5
+      }
+
+      "should evict elements in FIFO order across multiple pushes" in {
+        val window = filledWindow(1, 2, 3)
+        val (e1, w1) = window.pushReturning(4)
+        val (e2, w2) = w1.pushReturning(5)
+        val (e3, _)  = w2.pushReturning(6)
+
+        e1 shouldBe 1
+        e2 shouldBe 2
+        e3 shouldBe 3
+      }
+
+    }
+
+    "toNonEmptyFilled (NonEmptyFilling)" - {
+
+      "should create a filled window from partially filled data" in {
+        val filling = NonEmptyWindow(5, 1).enqueue(2).enqueue(3)
+        filling shouldBe a[NonEmptyFilling[?]]
+
+        val filled = filling.asInstanceOf[NonEmptyFilling[Int]].toNonEmptyFilled
+        filled shouldBe a[NonEmptyFilled[?]]
+      }
+
+      "should preserve existing elements" in {
+        val filling = NonEmptyWindow(5, 10).enqueue(20).enqueue(30)
+        val filled = filling.asInstanceOf[NonEmptyFilling[Int]].toNonEmptyFilled
+
+        filled.toVector shouldBe Vector(10, 20, 30)
+      }
+
+      "should set capacity to current length" in {
+        val filling = NonEmptyWindow(10, 1).enqueue(2).enqueue(3)
+        val filled = filling.asInstanceOf[NonEmptyFilling[Int]].toNonEmptyFilled
+
+        filled.capacity shouldBe 3
+        filled.isAtCapacity shouldBe true
+      }
+
+    }
+
     "detection pipeline scenario" - {
 
       case class DataPoint(time: Int, value: Double)

@@ -26,6 +26,8 @@ class BulkDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues wi
   "FlightStagesDetection" should {
 
     "detect all flight stages correctly for untagged files" in {
+      val expectedSuccessRate = 99.0
+
       val untaggedLines = loadSummary(resultsFile.toFile).filter(_.tag.isEmpty)
 
       val failures =
@@ -34,7 +36,8 @@ class BulkDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues wi
           .parFlatTraverse {
             case (expected, idx) =>
               val filename = expected.filename
-              val filePath = flysightDir.resolve(filename)
+              val zipName  = filename.replaceAll("(?i)\\.csv$", ".zip")
+              val filePath = flysightDir.resolve(zipName)
               val points   = CsvFileOps.readCsv[FlysightPoint](filePath)
 
               Tools
@@ -60,21 +63,24 @@ class BulkDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues wi
         info(f"    Failed files:          ${failures.size}\n")
         info(s"Failing tests summary:\n${failures.mkString("\n\n")}")
 
-        successRate.should(be >= 0.95)
+        successRate.should(be >= expectedSuccessRate / 100.0)
       }
 
     }
 
     "detect all flight stages correctly for PROBLEMATIC files" in {
-      val untaggedLines = loadSummary(resultsFile.toFile).filter(_.tag.nonEmpty)
+      val expectedSuccessRate = 54.0
+
+      val taggedLines = loadSummary(resultsFile.toFile).filter(_.tag.nonEmpty)
 
       val failures =
-        untaggedLines
+        taggedLines
           .zipWithIndex
           .parFlatTraverse {
             case (expected, idx) =>
               val filename = expected.filename
-              val filePath = flysightDir.resolve(filename)
+              val zipName  = filename.replaceAll("(?i)\\.csv$", ".zip")
+              val filePath = flysightDir.resolve(zipName)
               val points   = CsvFileOps.readCsv[FlysightPoint](filePath)
 
               Tools
@@ -93,14 +99,14 @@ class BulkDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues wi
           .result(timeout = 5.minutes)
 
       if (failures.nonEmpty) {
-        val successRate = 1.0 - (failures.size.toDouble / untaggedLines.size.toDouble)
+        val successRate = 1.0 - (failures.size.toDouble / taggedLines.size.toDouble)
 
         info(f"Success rate is ${successRate * 100.0}%.1f%%")
-        info(f"    Total number of files: ${untaggedLines.size}")
+        info(f"    Total number of files: ${taggedLines.size}")
         info(f"    Failed files:          ${failures.size}\n")
         info(s"Failing tests summary:\n${failures.mkString("\n\n")}")
 
-        successRate.should(be >= 0.45)
+        successRate.should(be >= expectedSuccessRate / 100.0)
       }
 
     }

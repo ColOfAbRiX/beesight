@@ -1,0 +1,124 @@
+package com.colofabrix.scala.beesight.model.formats
+
+import com.colofabrix.scala.beesight.model.GeoVector
+import java.time.*
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.should.Matchers
+
+class AirlogPointAdapterSpec extends AnyFreeSpec with Matchers {
+
+  private val tolerance = 1e-10
+
+  "AirlogPoint FileFormatAdapter" - {
+
+    "toDataPoint field mapping" - {
+
+      "should map time directly" in {
+        val time = Instant.parse("2024-06-15T12:30:00Z")
+        val point = airlogPoint(time = time)
+        val result = AirlogPoint.airlogFormatAdapter.toDataPoint(point)
+        result.time shouldBe time
+      }
+
+      "should map GPS altitude" in {
+        val point = airlogPoint(gpsAlt = 4200.0)
+        val result = AirlogPoint.airlogFormatAdapter.toDataPoint(point)
+        result.altitude shouldBe 4200.0
+      }
+
+      "should map sink rate to vertical speed" in {
+        val point = airlogPoint(sink = -15.0)
+        val result = AirlogPoint.airlogFormatAdapter.toDataPoint(point)
+        result.speed.vertical shouldBe -15.0
+      }
+
+    }
+
+    "heading decomposition into north and east" - {
+
+      "heading 0° (north) should produce full north, zero east" in {
+        val point = airlogPoint(speed = 100.0, heading = 0.0)
+        val result = AirlogPoint.airlogFormatAdapter.toDataPoint(point)
+        result.speed.north shouldBe (100.0 +- tolerance)
+        result.speed.east shouldBe (0.0 +- tolerance)
+      }
+
+      "heading 90° (east) should produce zero north, full east" in {
+        val point = airlogPoint(speed = 100.0, heading = 90.0)
+        val result = AirlogPoint.airlogFormatAdapter.toDataPoint(point)
+        result.speed.north shouldBe (0.0 +- tolerance)
+        result.speed.east shouldBe (100.0 +- tolerance)
+      }
+
+      "heading 180° (south) should produce negative north, zero east" in {
+        val point = airlogPoint(speed = 100.0, heading = 180.0)
+        val result = AirlogPoint.airlogFormatAdapter.toDataPoint(point)
+        result.speed.north shouldBe (-100.0 +- tolerance)
+        result.speed.east shouldBe (0.0 +- tolerance)
+      }
+
+      "heading 270° (west) should produce zero north, negative east" in {
+        val point = airlogPoint(speed = 100.0, heading = 270.0)
+        val result = AirlogPoint.airlogFormatAdapter.toDataPoint(point)
+        result.speed.north shouldBe (0.0 +- tolerance)
+        result.speed.east shouldBe (-100.0 +- tolerance)
+      }
+
+      "heading 45° (northeast) should split speed equally between north and east" in {
+        val point = airlogPoint(speed = 100.0, heading = 45.0)
+        val result = AirlogPoint.airlogFormatAdapter.toDataPoint(point)
+        val expected = 100.0 * Math.cos(Math.toRadians(45.0))
+        result.speed.north shouldBe (expected +- tolerance)
+        result.speed.east shouldBe (expected +- tolerance)
+      }
+
+    }
+
+    "zero speed" - {
+
+      "should produce zero velocity regardless of heading" in {
+        val point = airlogPoint(speed = 0.0, heading = 123.0)
+        val result = AirlogPoint.airlogFormatAdapter.toDataPoint(point)
+        result.speed.north shouldBe (0.0 +- tolerance)
+        result.speed.east shouldBe (0.0 +- tolerance)
+      }
+
+    }
+
+    "magnitude preservation" - {
+
+      "horizontal magnitude should equal input speed for any heading" in {
+        val headings = List(0.0, 30.0, 45.0, 90.0, 135.0, 180.0, 225.0, 270.0, 315.0)
+        headings.foreach { heading =>
+          val point = airlogPoint(speed = 50.0, heading = heading)
+          val result = AirlogPoint.airlogFormatAdapter.toDataPoint(point)
+          withClue(s"heading=$heading: ") {
+            result.speed.horizontal shouldBe (50.0 +- tolerance)
+          }
+        }
+      }
+
+    }
+
+  }
+
+  private def airlogPoint(
+    time: Instant = Instant.parse("2024-01-01T00:00:00Z"),
+    gpsAlt: Double = 1000.0,
+    speed: Double = 0.0,
+    sink: Double = 0.0,
+    heading: Double = 0.0,
+  ): AirlogPoint =
+    AirlogPoint(
+      time = time,
+      coordinates = Coordinates(0.0, 0.0),
+      altitude = Altitude(1000.0, gpsAlt),
+      motion = Motion(speed, sink, heading, 0.0),
+      orientation = Quaternion(1.0, 0.0, 0.0, 0.0),
+      acceleration = Acceleration(0.0, 0.0, 0.0),
+      angularVelocity = AngularVelocity(0.0, 0.0, 0.0),
+      metadata = Metadata(0, 10, 0),
+      extra = List.empty,
+    )
+
+}

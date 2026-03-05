@@ -9,6 +9,64 @@ class StatsSpec extends AnyFreeSpec with Matchers {
 
   "Stats" - {
 
+    "median" - {
+
+      "should return the middle value for odd-sized collection" in {
+        Stats.median(List(3.0, 1.0, 5.0, 2.0, 4.0)) shouldBe 3.0
+      }
+
+      "should return average of two middle values for even-sized collection" in {
+        Stats.median(List(3.0, 1.0, 4.0, 2.0)) shouldBe 2.5
+      }
+
+      "should return the element for single-element collection" in {
+        Stats.median(List(42.0)) shouldBe 42.0
+      }
+
+      "should return the correct median for already-sorted data" in {
+        Stats.median(List(1.0, 2.0, 3.0, 4.0, 5.0)) shouldBe 3.0
+      }
+
+      "should return the correct median for reverse-sorted data" in {
+        Stats.median(List(5.0, 4.0, 3.0, 2.0, 1.0)) shouldBe 3.0
+      }
+
+      "should handle identical values" in {
+        Stats.median(List(7.0, 7.0, 7.0, 7.0, 7.0)) shouldBe 7.0
+      }
+
+      "should handle negative values" in {
+        Stats.median(List(-5.0, -1.0, -3.0)) shouldBe -3.0
+      }
+
+    }
+
+    "stdDev" - {
+
+      "should return 0 for identical values" in {
+        val window = filledWindow(5.0, 5.0, 5.0, 5.0)
+        Stats.stdDev(window) shouldBe 0.0
+      }
+
+      "should compute standard deviation for known data" in {
+        // values: 2, 4, 4, 4, 5, 5, 7, 9 → mean=5, variance=4, stddev=2
+        val window = filledWindow(2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0)
+        Stats.stdDev(window) shouldBe (2.0 +- 0.01)
+      }
+
+      "should return 0 for single element" in {
+        val window = filledWindow(42.0)
+        Stats.stdDev(window) shouldBe 0.0
+      }
+
+      "should handle negative values" in {
+        val window = filledWindow(-3.0, -1.0, 1.0, 3.0)
+        val result = Stats.stdDev(window)
+        result should be > 0.0
+      }
+
+    }
+
     "findInflection" - {
 
       "decreasing then stable" - {

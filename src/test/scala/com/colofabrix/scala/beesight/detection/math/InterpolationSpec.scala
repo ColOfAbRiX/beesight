@@ -143,6 +143,83 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
 
     }
 
+    "interpolate GeoVector directly" - {
+
+      "should interpolate all three components" in {
+        val v1   = GeoVector(0.0, 0.0, 0.0)
+        val v2   = GeoVector(100.0, 50.0, -20.0)
+        val t1   = Instant.ofEpochSecond(0)
+        val t2   = Instant.ofEpochSecond(10)
+        val time = Instant.ofEpochSecond(5)
+
+        val result = Interpolation.interpolate(v1, v2)(t1, t2, time)
+
+        result.north shouldBe 50.0
+        result.east shouldBe 25.0
+        result.vertical shouldBe -10.0
+      }
+
+      "should return v1 at t1" in {
+        val v1 = GeoVector(10.0, 20.0, 30.0)
+        val v2 = GeoVector(50.0, 60.0, 70.0)
+        val t1 = Instant.ofEpochSecond(0)
+        val t2 = Instant.ofEpochSecond(10)
+
+        val result = Interpolation.interpolate(v1, v2)(t1, t2, t1)
+
+        result shouldBe v1
+      }
+
+      "should return v2 at t2" in {
+        val v1 = GeoVector(10.0, 20.0, 30.0)
+        val v2 = GeoVector(50.0, 60.0, 70.0)
+        val t1 = Instant.ofEpochSecond(0)
+        val t2 = Instant.ofEpochSecond(10)
+
+        val result = Interpolation.interpolate(v1, v2)(t1, t2, t2)
+
+        result shouldBe v2
+      }
+
+    }
+
+    "extrapolation beyond time range" - {
+
+      "should extrapolate when time is before t1" in {
+        val t1   = Instant.ofEpochSecond(10)
+        val t2   = Instant.ofEpochSecond(20)
+        val time = Instant.ofEpochSecond(0)
+
+        val result = Interpolation.interpolate(10.0, 20.0)(t1, t2, time)
+
+        result shouldBe 0.0
+      }
+
+      "should extrapolate when time is after t2" in {
+        val t1   = Instant.ofEpochSecond(0)
+        val t2   = Instant.ofEpochSecond(10)
+        val time = Instant.ofEpochSecond(20)
+
+        val result = Interpolation.interpolate(10.0, 20.0)(t1, t2, time)
+
+        result shouldBe 30.0
+      }
+
+    }
+
+    "zero time delta" - {
+
+      "should produce NaN when t1 equals t2 for Double interpolation" in {
+        val t1   = Instant.ofEpochSecond(5)
+        val time = Instant.ofEpochSecond(5)
+
+        val result = Interpolation.interpolate(10.0, 20.0)(t1, t1, time)
+
+        result.isNaN shouldBe true
+      }
+
+    }
+
     "interpolate PointKinematics" - {
 
       "should interpolate kinematics at midpoint" in {

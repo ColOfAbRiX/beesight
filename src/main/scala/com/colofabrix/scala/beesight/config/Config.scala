@@ -19,6 +19,9 @@ final case class Config(
   dryRun: Boolean,
   bufferPoints: Int,
   minRetainedPoints: Double,
+  writeCsv: Boolean,
+  createGraph: Boolean,
+  createSummary: Boolean,
 )
 
 object Config {
@@ -31,6 +34,9 @@ object Config {
       dryRun = false,
       bufferPoints = 500,
       minRetainedPoints = 0.1,
+      writeCsv = true,
+      createGraph = false,
+      createSummary = false
     )
 
 }

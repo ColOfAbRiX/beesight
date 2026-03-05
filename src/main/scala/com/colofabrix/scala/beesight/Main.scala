@@ -47,16 +47,14 @@ object Main extends IODeclineReaderApp[Config] {
     for
       outputFile <- FileOps.createProcessedDirectory(inputFile)
       _          <- s"Processing: $inputFile -> $outputFile".stdout
-      dataCutter <- DataCutter()
       csvStream   = CsvFileOps.readCsv[FlysightPoint](inputFile)
-      pipeline   <- buildPipeline(csvStream, dataCutter, outputFile)
+      pipeline   <- buildPipeline(csvStream, outputFile)
       lastPoint  <- pipeline.compile.last
       _          <- s"DONE: $inputFile\n".stdout
     yield (inputFile, lastPoint)
 
   private def buildPipeline(
     csvStream: fs2.Stream[IOConfig, FlysightPoint],
-    dataCutter: DataCutter,
     outputCsvFile: Path,
   ): IOConfig[fs2.Stream[IOConfig, OutputFlightPoint[FlysightPoint]]] =
     IOConfig
@@ -64,11 +62,11 @@ object Main extends IODeclineReaderApp[Config] {
       .map { config =>
         csvStream
           .through(FlightStagesDetection(DetectionConfig.default).streamDetect)
-          .through(dataCutter.cutPipe)
+          .through(DataCutter(config).cutPipe)
           .broadcastThrough(
-            CsvFileOps.writeCsvPipe(outputCsvFile, config.dryRun),
-            ChartGenerator.chartPipe(outputCsvFile),
-            ResultPrinter.printStagesPipe,
+            CsvResultWriter(config).writePipe(outputCsvFile),
+            ChartGenerator(config).chartPipe(outputCsvFile),
+            ResultPrinter(config).printStagesPipe,
             identity,
           )
       }

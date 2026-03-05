@@ -19,10 +19,6 @@ import com.colofabrix.scala.beesight.model.formats.FileFormatAdapter
 import com.colofabrix.scala.beesight.utils.*
 import scala.annotation.tailrec
 
-// TODO: General plan of things to do
-//  - Improve performance
-//  - Parameter optimization search
-
 /**
  * Detects flight stages from flight data streams.
  */

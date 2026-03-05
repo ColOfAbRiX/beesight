@@ -8,4 +8,5 @@ import com.colofabrix.scala.beesight.model.*
 package object utils
   extends StreamBypass
     with StreamAccumulators
+    with StreamUtils
     with IndexedStateUtils

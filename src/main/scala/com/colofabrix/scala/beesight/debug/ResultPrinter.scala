@@ -4,11 +4,13 @@ import cats.Show
 import cats.effect.IO
 import cats.implicits.given
 import com.colofabrix.scala.beesight.*
+import com.colofabrix.scala.beesight.config.Config
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.model.formats.FlysightPoint
+import com.colofabrix.scala.beesight.utils.*
 import scala.io.AnsiColor.*
 
-object ResultPrinter {
+final class ResultPrinter private (config: Config) {
 
   def printStagesPipe: fs2.Pipe[IOConfig, OutputFlightPoint[FlysightPoint], Nothing] =
     data =>
@@ -20,7 +22,7 @@ object ResultPrinter {
           case Some(stages) => IOConfig.stdout(stages.show)
           case None         => IOConfig.stdout(s"${YELLOW}WARNING!${RESET} No data processed.")
         }
-        .drain
+        .drainWhen(config.writeCsv)
 
   private def extractStages(point: OutputFlightPoint[FlysightPoint]): FlightEvents =
     FlightEvents(
@@ -50,4 +52,9 @@ object ResultPrinter {
          |    Landing:  ${flightPoints.landing.show}
          |""".stripMargin
 
+}
+
+object ResultPrinter {
+  def apply(config: Config): ResultPrinter =
+    new ResultPrinter(config)
 }

@@ -219,6 +219,111 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
 
     }
 
+    "consecutive spikes" - {
+
+      "should handle two adjacent spikes" in {
+        val config = buildConfig(preprocessWindowSize = 3, accelerationClip = 5.0)
+        val points =
+          List(
+            point(1, verticalSpeed = 10.0),
+            point(2, verticalSpeed = 100.0), // Spike 1
+            point(3, verticalSpeed = 100.0), // Spike 2
+            point(4, verticalSpeed = 10.0),
+            point(5, verticalSpeed = 10.0),
+            point(6, verticalSpeed = 10.0),
+          )
+
+        val actual = runPreprocess(points, config)
+
+        // Spiked points should be smoothed toward neighbors
+        actual(1).speed.vertical should be < 100.0
+        actual(2).speed.vertical should be < 100.0
+        // Non-spike points should be preserved
+        actual(0).speed.vertical shouldBe 10.0
+      }
+
+    }
+
+    "spike at stream boundaries" - {
+
+      "should handle spike as first point" in {
+        val config = buildConfig(preprocessWindowSize = 3, accelerationClip = 5.0)
+        val points =
+          List(
+            point(1, verticalSpeed = 100.0), // Spike at start
+            point(2, verticalSpeed = 10.0),
+            point(3, verticalSpeed = 10.0),
+            point(4, verticalSpeed = 10.0),
+            point(5, verticalSpeed = 10.0),
+          )
+
+        val actual = runPreprocess(points, config)
+
+        actual.size shouldBe 5
+      }
+
+      "should handle spike as last point" in {
+        val config = buildConfig(preprocessWindowSize = 3, accelerationClip = 5.0)
+        val points =
+          List(
+            point(1, verticalSpeed = 10.0),
+            point(2, verticalSpeed = 10.0),
+            point(3, verticalSpeed = 10.0),
+            point(4, verticalSpeed = 10.0),
+            point(5, verticalSpeed = 100.0), // Spike at end
+          )
+
+        val actual = runPreprocess(points, config)
+
+        actual.size shouldBe 5
+      }
+
+    }
+
+    "negative speeds" - {
+
+      "should preserve negative speeds without despiking when below threshold" in {
+        val config = buildConfig(preprocessWindowSize = 3, accelerationClip = 1000.0)
+        val points =
+          List(
+            point(1, verticalSpeed = -10.0),
+            point(2, verticalSpeed = -20.0),
+            point(3, verticalSpeed = -30.0),
+            point(4, verticalSpeed = -40.0),
+            point(5, verticalSpeed = -50.0),
+          )
+
+        val actual = runPreprocess(points, config)
+
+        actual.zip(points).foreach { case (a, e) =>
+          a.speed.vertical shouldBe e.speed.vertical
+        }
+      }
+
+    }
+
+    "non-uniform time spacing" - {
+
+      "should handle irregular time intervals" in {
+        val config = buildConfig(preprocessWindowSize = 3, accelerationClip = 1000.0)
+        val points =
+          List(
+            point(1, verticalSpeed = 10.0),
+            point(3, verticalSpeed = 10.0),   // 2-second gap
+            point(10, verticalSpeed = 10.0),  // 7-second gap
+            point(11, verticalSpeed = 10.0),  // 1-second gap
+            point(100, verticalSpeed = 10.0), // 89-second gap
+          )
+
+        val actual = runPreprocess(points, config)
+
+        actual.size shouldBe 5
+        // All have the same speed, so no despiking needed
+        actual.foreach(_.speed.vertical shouldBe 10.0)
+      }
+
+    }
+
     "window sizes" - {
 
       "should work with large window size" in {

@@ -131,6 +131,53 @@ class KinematicsSpec extends AnyFreeSpec with Matchers {
 
     }
 
+    "zero time delta" - {
+
+      "should produce Infinity acceleration when two points have the same time" in {
+        val prev = point(5, verticalSpeed = 10.0)
+        val curr = point(5, verticalSpeed = 20.0)
+
+        val result = Kinematics.compute(prev, curr)
+
+        result.acceleration.vertical.isInfinity shouldBe true
+      }
+
+    }
+
+    "multi-axis kinematics" - {
+
+      "acceleration should use all three axes independently" in {
+        val prev = point(0, northSpeed = 0.0, eastSpeed = 0.0, verticalSpeed = 0.0)
+        val curr = point(2, northSpeed = 20.0, eastSpeed = 40.0, verticalSpeed = 60.0)
+
+        val result = Kinematics.compute(prev, curr)
+
+        result.acceleration.north shouldBe 10.0
+        result.acceleration.east shouldBe 20.0
+        result.acceleration.vertical shouldBe 30.0
+      }
+
+    }
+
+    "even-sized smoothing window" - {
+
+      "should compute kinematics from even number of points" in {
+        val window = filledWindowOfDataPoints(
+          point(0, verticalSpeed = 10.0),
+          point(1, verticalSpeed = 20.0),
+          point(2, verticalSpeed = 30.0),
+          point(3, verticalSpeed = 40.0),
+        )
+        val curr = point(4, verticalSpeed = 50.0)
+
+        val result = Kinematics.computeSmoothed(window, curr)
+
+        // After enqueue: [20, 30, 40, 50], median is 35
+        result.speed.vertical shouldBe 35.0
+      }
+
+    }
+
     "computeSmoothed" - {
 
       "should use median speed from window" in {

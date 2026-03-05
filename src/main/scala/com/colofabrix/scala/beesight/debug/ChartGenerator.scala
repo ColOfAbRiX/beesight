@@ -2,33 +2,37 @@ package com.colofabrix.scala.beesight.debug
 
 import cats.effect.implicits.given
 import cats.syntax.all.*
+import com.colofabrix.scala.beesight.config.Config
 import com.colofabrix.scala.beesight.files.FileOps
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.model.formats.FileFormatAdapter
 import com.colofabrix.scala.beesight.{ IOConfig, * }
 import java.nio.file.*
+import com.colofabrix.scala.beesight.utils.*
 
 /**
  * Generates interactive HTML charts showing flight data and detected stages
  */
-object ChartGenerator {
+final class ChartGenerator private (config: Config) {
 
   /**
    * Returns a pipe that generates an HTML chart from the stream of OutputFlightPoints
    */
   def chartPipe[A: FileFormatAdapter](outputCsvFile: Path): fs2.Pipe[IOConfig, OutputFlightPoint[A], Nothing] =
-    _.zipWithIndex
-      .fold(ChartState[A]()) {
-        case (state, (point, idx)) => updateChartState(state, point, idx)
-      }
-      .evalMap { state =>
-        for
-          outputPath <- computeChartPath(outputCsvFile)
-          html        = createHtmlFromState(state)
-          _          <- writeHtmlFile(html, outputPath)
-        yield ()
-      }
-      .drain
+    stream =>
+      stream
+        .zipWithIndex
+        .fold(ChartState[A]()) {
+          case (state, (point, idx)) => updateChartState(state, point, idx)
+        }
+        .evalMap { state =>
+          for
+            outputPath <- computeChartPath(outputCsvFile)
+            html        = createHtmlFromState(state)
+            _          <- writeHtmlFile(html, outputPath)
+          yield ()
+        }
+        .drainWhen(config.createGraph && !config.dryRun)
 
   private def updateChartState[A: FileFormatAdapter](
     state: ChartState[A],
@@ -209,5 +213,12 @@ object ChartGenerator {
     prevPhase: FlightPhase = FlightPhase.BeforeTakeoff,
     lastStages: FlightEvents = FlightEvents.empty,
   )
+
+}
+
+object ChartGenerator {
+
+  def apply(config: Config): ChartGenerator =
+    new ChartGenerator(config)
 
 }
