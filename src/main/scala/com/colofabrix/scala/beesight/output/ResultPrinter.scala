@@ -1,4 +1,4 @@
-package com.colofabrix.scala.beesight.debug
+package com.colofabrix.scala.beesight.output
 
 import cats.Show
 import cats.effect.IO

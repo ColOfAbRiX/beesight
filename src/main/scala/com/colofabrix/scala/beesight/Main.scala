@@ -4,7 +4,7 @@ import cats.effect.*
 import cats.effect.implicits.given
 import cats.implicits.given
 import com.colofabrix.scala.beesight.config.*
-import com.colofabrix.scala.beesight.debug.*
+import com.colofabrix.scala.beesight.output.*
 import com.colofabrix.scala.beesight.detection.*
 import com.colofabrix.scala.beesight.files.*
 import com.colofabrix.scala.beesight.model.*
@@ -28,19 +28,20 @@ object Main extends IODeclineReaderApp[Config] {
     CliConfig.allOptions
 
   override def runWithReader: IOConfig[ExitCode] =
-    for
-      inputFiles     <- FileOps.discoverCsvFiles()
-      filesToProcess <- applyLimit(inputFiles)
-      _              <- s"Found ${inputFiles.size} CSV files, processing ${filesToProcess.size}".stdout
-      summaryRows    <- filesToProcess.parTraverse(processFile)
-      _              <- ResultsSummary.writeSummaryCsv(summaryRows)
-    yield ExitCode.Success
+    IOConfig.timed("total") {
+      for
+        inputFiles  <- FileOps.discoverCsvFiles()
+        _           <- s"Processing ${inputFiles.size} CSV files".stdout
+        summaryRows <- runParallel(inputFiles)
+        _           <- ResultsSummary.writeSummaryCsv(summaryRows)
+      yield ExitCode.Success
+    }
 
-  private def applyLimit(files: List[Path]): IOConfig[List[Path]] =
-    IOConfig.ask.map { config =>
+  private def runParallel(inputFiles: List[Path]): IOConfig[List[(Path, Option[OutputFlightPoint[FlysightPoint]])]] =
+    IOConfig.ask.flatMap { config =>
       config
-        .processLimit
-        .fold(files)(limit => files.take(limit))
+        .parallelism
+        .fold(inputFiles.parTraverse(processFile))(inputFiles.parTraverseN(_)(processFile))
     }
 
   private def processFile(inputFile: Path): IOConfig[(Path, Option[OutputFlightPoint[FlysightPoint]])] =
@@ -50,7 +51,6 @@ object Main extends IODeclineReaderApp[Config] {
       csvStream   = CsvFileOps.readCsv[FlysightPoint](inputFile)
       pipeline   <- buildPipeline(csvStream, outputFile)
       lastPoint  <- pipeline.compile.last
-      _          <- s"DONE: $inputFile\n".stdout
     yield (inputFile, lastPoint)
 
   private def buildPipeline(

@@ -1,11 +1,10 @@
-package com.colofabrix.scala.beesight.debug
+package com.colofabrix.scala.beesight.output
 
 import cats.effect.IO
 import cats.implicits.*
 import com.colofabrix.scala.beesight.config.*
-import com.colofabrix.scala.beesight.debug.DataCutter.*
 import com.colofabrix.scala.beesight.model.*
-import fs2.*
+import com.colofabrix.scala.beesight.output.DataCutter.*
 import scala.collection.immutable.Queue
 
 /**
@@ -29,7 +28,7 @@ final class DataCutter private (config: Config) {
             (newState, newState.preBuffer.toVector ++ toEmit)
         }
         .flatMap {
-          case (state, pointsToEmit) => Stream.emits(pointsToEmit)
+          case (state, pointsToEmit) => fs2.Stream.emits(pointsToEmit)
         }
 
   private def processPoint[A](state: CutState[A], point: OutputFlightPoint[A], index: Long): StreamState[A] =

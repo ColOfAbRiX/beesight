@@ -13,19 +13,25 @@ object FileOps {
       val (baseDir, glob) = parseInputAsGlob(config.input)
       val matcher         = FileSystems.getDefault.getPathMatcher(s"glob:${glob.toLowerCase}")
 
-      IOConfig.blocking {
-        Files
-          .walk(baseDir)
-          .iterator()
-          .asScala
-          .filter(Files.isRegularFile(_))
-          .filter { p =>
-            val rel = baseDir.relativize(p)
-            matcher.matches(Paths.get(rel.toString.toLowerCase))
-          }
-          .toList
-          .sorted
-      }
+      IOConfig
+        .blocking {
+          Files
+            .walk(baseDir)
+            .iterator()
+            .asScala
+            .filter(Files.isRegularFile(_))
+            .filter { p =>
+              val rel = baseDir.relativize(p)
+              matcher.matches(Paths.get(rel.toString.toLowerCase))
+            }
+            .toList
+            .sorted
+        }
+        .map { files =>
+          config
+            .processLimit
+            .fold(files)(limit => files.take(limit))
+        }
     }
 
   /**

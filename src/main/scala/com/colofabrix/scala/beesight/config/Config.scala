@@ -22,6 +22,8 @@ final case class Config(
   writeCsv: Boolean,
   createGraph: Boolean,
   createSummary: Boolean,
+  parallelism: Option[Int],
+  detectionConfig: DetectionConfig,
 )
 
 object Config {
@@ -37,6 +39,8 @@ object Config {
       writeCsv = true,
       createGraph = false,
       createSummary = false,
+      parallelism = None,
+      detectionConfig = DetectionConfig.default
     )
 
 }

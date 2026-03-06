@@ -1,4 +1,4 @@
-package com.colofabrix.scala.beesight.debug
+package com.colofabrix.scala.beesight.output
 
 import cats.effect.IO
 import com.colofabrix.scala.beesight.IOConfig
@@ -21,14 +21,15 @@ final class CsvResultWriter private (config: Config) {
    */
   def writePipe[A](
     filePath: Path,
-  )(using CsvRowEncoder[OutputFlightPoint[A], String],
+  )(using
+    CsvRowEncoder[OutputFlightPoint[A], String],
   ): fs2.Pipe[IOConfig, OutputFlightPoint[A], Nothing] =
     stream =>
       stream
         .through(encodeUsingFirstHeaders(fullRows = true))
         .through(fs2.text.utf8.encode)
         .through(Files[IOConfig].writeAll(Fs2Path.fromNioPath(filePath)))
-        .drainWhen(!config.dryRun)
+        .drainWhen(!config.dryRun && config.writeCsv)
 
 }
 

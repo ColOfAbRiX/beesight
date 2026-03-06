@@ -15,6 +15,15 @@ extension (self: ReaderT.type) {
   def unit: IOConfig[Unit] =
     ReaderT.liftF(IO.unit)
 
+  def timed[A](label: String)(fa: IOConfig[A]): IOConfig[A] =
+    for
+      start   <- ReaderT.liftF(IO.monotonic)
+      result  <- fa
+      end     <- ReaderT.liftF(IO.monotonic)
+      elapsed  = (end - start).toMillis
+      _       <- s"TIMING $label: ${elapsed}ms".stdout
+    yield result
+
   def stdout[A](a: A): IOConfig[Unit] =
     ReaderT.liftF(Console[IO].println(a))
 
