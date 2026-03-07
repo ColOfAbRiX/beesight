@@ -3,13 +3,17 @@ package com.colofabrix.scala.beesight.model
 import cats.implicits.given
 import fs2.data.csv.*
 import java.time.*
+import java.time.format.DateTimeFormatter
 
 package object derivation {
+
+  private val offsetDateTimeFormatter: DateTimeFormatter =
+    DateTimeFormatter.ISO_OFFSET_DATE_TIME
 
   given CellDecoder[OffsetDateTime] =
     CellDecoder[String].emap { value =>
       Either
-        .catchNonFatal(OffsetDateTime.parse(value))
+        .catchNonFatal(OffsetDateTime.parse(value, offsetDateTimeFormatter))
         .leftMap(t => new DecoderError(t.getMessage()))
     }
 

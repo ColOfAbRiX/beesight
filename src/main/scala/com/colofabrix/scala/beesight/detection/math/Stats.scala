@@ -17,12 +17,16 @@ object Stats {
     if arr.isEmpty then 0.0 else breezeMedian(DenseVector(arr))
 
   def median(window: NEW[GeoVector]): GeoVector =
+    medianBy(window)(identity)
+
+  def medianBy[A](window: NEW[A])(f: A => GeoVector): GeoVector =
     val n        = window.length
     val eastArr  = new Array[Double](n)
     val northArr = new Array[Double](n)
     val vertArr  = new Array[Double](n)
     var i        = 0
-    window.foldLeft(()) { (_, v) =>
+    window.foldLeft(()) { (_, a) =>
+      val v = f(a)
       eastArr(i) = v.east
       northArr(i) = v.north
       vertArr(i) = v.vertical
@@ -35,10 +39,27 @@ object Stats {
     )
 
   def stdDev(window: NEW[Double]): Double =
-    val vectorWindow = window.toVector
-    val mean         = vectorWindow.sum / vectorWindow.size
-    val variance     = vectorWindow.map(v => Math.pow(v - mean, 2)).sum / vectorWindow.size
-    Math.sqrt(variance)
+    val n    = window.length
+    var sum  = 0.0
+    var sumSq = 0.0
+    window.foldLeft(()) { (_, v) =>
+      sum += v
+      sumSq += v * v
+    }
+    val mean = sum / n
+    Math.sqrt(Math.max(0.0, sumSq / n - mean * mean))
+
+  def stdDevBy[A](window: NEW[A])(f: A => Double): Double =
+    val n     = window.length
+    var sum   = 0.0
+    var sumSq = 0.0
+    window.foldLeft(()) { (_, a) =>
+      val v = f(a)
+      sum += v
+      sumSq += v * v
+    }
+    val mean = sum / n
+    Math.sqrt(Math.max(0.0, sumSq / n - mean * mean))
 
   /**
    * Finds the inflection point where a signal transitions between a trend (increasing/decreasing) and a stable region,
@@ -46,19 +67,35 @@ object Stats {
    * both segments.
    */
   def findInflection(window: NonEmptyFilled[Double]): Option[Int] =
-    val data = window.toVector
-    val n    = data.length
+    val n = window.length
+    if n < 4 then return None
+    val data = new Array[Double](n)
+    var idx  = 0
+    window.foldLeft(()) { (_, v) =>
+      data(idx) = v
+      idx += 1
+    }
+    findInflectionFromArray(data, n)
 
-    if n < 4 then
-      return None
+  def findInflectionBy[A](window: NonEmptyFilled[A])(f: A => Double): Option[Int] =
+    val n = window.length
+    if n < 4 then return None
+    val data = new Array[Double](n)
+    var idx  = 0
+    window.foldLeft(()) { (_, a) =>
+      data(idx) = f(a)
+      idx += 1
+    }
+    findInflectionFromArray(data, n)
 
+  private def findInflectionFromArray(data: Array[Double], n: Int): Option[Int] =
     var bestIdx   = -1
     var bestError = Double.MaxValue
 
     var k = 2
     while k < n - 1 do
-      val leftError  = segmentError(data, 0, k)
-      val rightError = segmentError(data, k, n - k)
+      val leftError  = segmentErrorArr(data, 0, k)
+      val rightError = segmentErrorArr(data, k, n - k)
       val totalError = leftError + rightError
 
       if totalError < bestError then
@@ -69,7 +106,7 @@ object Stats {
 
     Option.when(bestIdx >= 0)(bestIdx)
 
-  private def segmentError(data: Vector[Double], start: Int, length: Int): Double =
+  private def segmentErrorArr(data: Array[Double], start: Int, length: Int): Double =
     if length <= 1 then
       return 0.0
 

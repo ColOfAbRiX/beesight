@@ -34,9 +34,8 @@ final class TakeoffHandler private (config: TakeoffConfig) extends StageHandler 
   protected def findInflection(window: NonEmptyFilled[DetectionData]): Option[Int] =
     val discoveredInflection =
       for {
-        backWindow  <- window.left
-        speedsWindow = backWindow.map(_.kinematics.speed.vertical)
-        inflection  <- Stats.findInflection(speedsWindow)
+        backWindow <- window.left
+        inflection <- Stats.findInflectionBy(backWindow)(_.kinematics.speed.vertical)
       } yield inflection
 
     discoveredInflection orElse window.focusIndex.some

@@ -30,8 +30,8 @@ object Kinematics {
   ): PointKinematics =
     val previousPoint = previousWindow.newest
 
-    val currentWindow = previousWindow.enqueue(currentPoint).map(_.speed)
-    val currentSpeed  = Stats.median(currentWindow)
+    val currentWindow = previousWindow.enqueue(currentPoint)
+    val currentSpeed  = Stats.medianBy(currentWindow)(_.speed)
 
     val dt                  = Duration.between(previousPoint.time, currentPoint.time).toMillis / 1000.0
     val currentAcceleration = (currentPoint.speed - previousPoint.speed) / dt

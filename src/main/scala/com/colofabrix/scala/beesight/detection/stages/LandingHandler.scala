@@ -14,7 +14,7 @@ final class LandingHandler private (config: LandingConfig) extends StageHandler 
     val kinematics = window.focus.kinematics
 
     val isVerticalSpeedStable =
-      Stats.stdDev(window.map(_.kinematics.speed.vertical)) < config.stabilityThreshold
+      Stats.stdDevBy(window)(_.kinematics.speed.vertical) < config.stabilityThreshold
 
     val speedTrigger =
       Math.abs(kinematics.speed.vertical) < config.verticalSpeedThreshold &&
@@ -35,8 +35,7 @@ final class LandingHandler private (config: LandingConfig) extends StageHandler 
     window
       .right
       .map { stabilityWindow =>
-        val speeds = stabilityWindow.map(_.kinematics.speed.vertical)
-        Stats.stdDev(speeds) < config.stabilityThreshold
+        Stats.stdDevBy(stabilityWindow)(_.kinematics.speed.vertical) < config.stabilityThreshold
       }
       .getOrElse(false)
 

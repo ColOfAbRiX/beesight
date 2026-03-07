@@ -234,13 +234,13 @@ object NonEmptyWindow {
       val (out, window) = pushReturning(a)
       (Some(out), window)
 
+    /** NOTE: Mutates buffer in-place for performance. The previous window instance becomes stale after this call. */
     def pushReturning(a: A): (A, NonEmptyFilled[A]) =
-      val outgoing  = buffer(head).asInstanceOf[A]
-      val newBuffer = buffer.clone()
-      newBuffer(head) = a
+      val outgoing = buffer(head).asInstanceOf[A]
+      buffer(head) = a
       val newHead     = (head + 1) % capacity
       val newFocusIdx = Math.max(0, focusIdx - 1)
-      (outgoing, new NonEmptyFilled(newBuffer, newHead, newFocusIdx, capacity))
+      (outgoing, new NonEmptyFilled(buffer, newHead, newFocusIdx, capacity))
 
     def shrinkReturning(n: Int): (Vector[A], Option[NonEmptyFilled[A]]) =
       val toRemove  = Math.max(0, Math.min(n, capacity))

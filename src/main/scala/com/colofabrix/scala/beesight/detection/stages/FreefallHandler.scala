@@ -36,8 +36,7 @@ final class FreefallHandler private (config: FreefallConfig) extends StageHandle
 
   protected def findInflection(window: NonEmptyFilled[DetectionData]): Option[Int] =
     val backWindow           = window.leftInclusive
-    val speedsWindow         = backWindow.map(_.kinematics.speed.vertical)
-    val discoveredInflection = Stats.findInflection(speedsWindow)
+    val discoveredInflection = Stats.findInflectionBy(backWindow)(_.kinematics.speed.vertical)
 
     discoveredInflection orElse window.focusIndex.some
 
