@@ -29,8 +29,6 @@ final class LandingHandler private (config: LandingConfig) extends StageHandler 
 
     val isBelowCanopy = kinematics.altitude < canopyAltitude
 
-    val stdev = Stats.stdDev(window.map(_.kinematics.speed.vertical))
-
     isVerticalSpeedStable && speedTrigger && isBelowCanopy
 
   protected def validateTrigger(window: NonEmptyFilled[DetectionData]): Boolean =

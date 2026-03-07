@@ -5,7 +5,7 @@ import cats.effect.unsafe.implicits.global
 import cats.effect.unsafe.IORuntime
 import cats.syntax.all.given
 import com.colofabrix.scala.beesight.*
-import com.colofabrix.scala.beesight.files.CsvFileOps
+import com.colofabrix.scala.beesight.files.CsvFileReader
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.model.formats.FlysightPoint
 import java.io.File
@@ -26,7 +26,7 @@ class FileDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues {
       val inputLineCount = countCsvLinesInZip(inputData.toFile)
 
       val processedResults =
-        CsvFileOps
+        CsvFileReader
           .readCsv[FlysightPoint](inputData)
           .through(FlightStagesDetection(DetectionConfig.default).streamDetect)
           .compile
@@ -38,7 +38,7 @@ class FileDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues {
 
     "output the Phases at the point where they happen" in {
       val processedResults =
-        CsvFileOps
+        CsvFileReader
           .readCsv[FlysightPoint](inputData)
           .through(FlightStagesDetection(DetectionConfig.default).streamDetect)
           .compile
@@ -62,7 +62,7 @@ class FileDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues {
 
     "produce phases in monotonically non-decreasing sequence order" in {
       val processedResults =
-        CsvFileOps
+        CsvFileReader
           .readCsv[FlysightPoint](inputData)
           .through(FlightStagesDetection(DetectionConfig.default).streamDetect)
           .compile
@@ -82,7 +82,7 @@ class FileDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues {
 
     "detect all expected flight phases" in {
       val processedResults =
-        CsvFileOps
+        CsvFileReader
           .readCsv[FlysightPoint](inputData)
           .through(FlightStagesDetection(DetectionConfig.default).streamDetect)
           .compile
@@ -100,7 +100,7 @@ class FileDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues {
 
     "start with BeforeTakeoff phase" in {
       val processedResults =
-        CsvFileOps
+        CsvFileReader
           .readCsv[FlysightPoint](inputData)
           .through(FlightStagesDetection(DetectionConfig.default).streamDetect)
           .compile
@@ -112,7 +112,7 @@ class FileDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues {
 
     "end with Landed phase" in {
       val processedResults =
-        CsvFileOps
+        CsvFileReader
           .readCsv[FlysightPoint](inputData)
           .through(FlightStagesDetection(DetectionConfig.default).streamDetect)
           .compile

@@ -5,7 +5,7 @@ import cats.effect.unsafe.implicits.global
 import cats.effect.unsafe.IORuntime
 import cats.syntax.all.given
 import com.colofabrix.scala.beesight.*
-import com.colofabrix.scala.beesight.files.CsvFileOps
+import com.colofabrix.scala.beesight.files.CsvFileReader
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.model.formats.FlysightPoint
 import java.io.File
@@ -38,7 +38,7 @@ class BulkDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues wi
               val filename = expected.filename
               val zipName  = filename.replaceAll("(?i)\\.csv$", ".zip")
               val filePath = flysightDir.resolve(zipName)
-              val points   = CsvFileOps.readCsv[FlysightPoint](filePath)
+              val points   = CsvFileReader.readCsv[FlysightPoint](filePath)
 
               Tools
                 .detectPoints(points)
@@ -81,7 +81,7 @@ class BulkDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues wi
               val filename = expected.filename
               val zipName  = filename.replaceAll("(?i)\\.csv$", ".zip")
               val filePath = flysightDir.resolve(zipName)
-              val points   = CsvFileOps.readCsv[FlysightPoint](filePath)
+              val points   = CsvFileReader.readCsv[FlysightPoint](filePath)
 
               Tools
                 .detectPoints(points)

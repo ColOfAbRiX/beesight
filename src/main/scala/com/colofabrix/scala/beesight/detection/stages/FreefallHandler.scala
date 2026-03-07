@@ -3,8 +3,6 @@ package com.colofabrix.scala.beesight.detection.stages
 import cats.syntax.option.*
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
 import com.colofabrix.scala.beesight.config.FreefallConfig
-import com.colofabrix.scala.beesight.detection.DebugLog
-import com.colofabrix.scala.beesight.detection.DebugLog.*
 import com.colofabrix.scala.beesight.detection.math.Stats
 import com.colofabrix.scala.beesight.detection.model.{ DetectionData, IndexedDataPoint }
 import com.colofabrix.scala.beesight.model.EventType
@@ -24,9 +22,6 @@ final class FreefallHandler private (config: FreefallConfig) extends StageHandle
 
     val isAboveMinAltitude =
       kinematics.altitude > config.minFreefallAltitude
-
-    DebugLog(s"  |  altitude=${kinematics.altitude.fmt}, verticalSpeed=${kinematics.speed.vertical.fmt}, acceleration=${kinematics.acceleration.magnitude.fmt}")
-    DebugLog(s"  |  speedTrigger=$speedTrigger, accelerationTrigger=$accelerationTrigger, isAboveMinAltitude=$isAboveMinAltitude")
 
     isAboveMinAltitude && (speedTrigger || accelerationTrigger)
 

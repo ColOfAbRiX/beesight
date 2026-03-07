@@ -134,8 +134,6 @@ object FlysightPoint {
       .appendList(row.extra)
 
   private def formatDouble(value: Double, precision: Int): String =
-    BigDecimal(value)
-      .setScale(precision, BigDecimal.RoundingMode.HALF_UP)
-      .toString()
+    String.format(s"%.${precision}f", value)
 
 }

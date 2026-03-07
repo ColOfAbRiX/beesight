@@ -75,7 +75,7 @@ object NonEmptyWindow {
 
     // ── Accessors ────────────────────────────────────────────────────────────
 
-    lazy val toVector: Vector[A] =
+    def toVector: Vector[A] =
       val builder = Vector.newBuilder[A]
       var i       = 0
       while i < len do
@@ -83,7 +83,7 @@ object NonEmptyWindow {
         i       += 1
       builder.result()
 
-    lazy val toNonEmptyFilled: NonEmptyFilled[A] =
+    def toNonEmptyFilled: NonEmptyFilled[A] =
       val newBuffer = new Array[Any](len)
       var i         = 0
       while i < len do
@@ -211,7 +211,7 @@ object NonEmptyWindow {
 
     // ── Accessors ────────────────────────────────────────────────────────────
 
-    lazy val toVector: Vector[A] =
+    def toVector: Vector[A] =
       val builder = Vector.newBuilder[A]
       var i       = 0
       while i < capacity do

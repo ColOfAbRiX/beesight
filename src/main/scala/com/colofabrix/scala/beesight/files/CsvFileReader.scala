@@ -13,7 +13,7 @@ import java.nio.file.Path
 /**
  * Aggregations of operations on files using fs2
  */
-object CsvFileOps {
+object CsvFileReader {
 
   private given ZipUnarchiver[IOConfig] =
     ZipUnarchiver.make[IOConfig]()
@@ -36,25 +36,6 @@ object CsvFileOps {
       .collect {
         case Right(decoded) => decoded
       }
-
-  /**
-   * Returns a pipe that writes OutputFlightPoint to a CSV file (includes phase column)
-   */
-  def writeCsvPipe[A](
-    filePath: Path,
-    config: Config,
-  )(using CsvRowEncoder[OutputFlightPoint[A], String],
-  ): fs2.Pipe[IOConfig, OutputFlightPoint[A], Nothing] =
-    stream =>
-      stream
-        .through { s =>
-          if !config.dryRun then s else fs2.Stream.empty
-        }
-        .through(encodeUsingFirstHeaders(fullRows = true))
-        .through(fs2.text.utf8.encode)
-        .through(Files[IOConfig].writeAll(Fs2Path.fromNioPath(filePath)))
-        .as(())
-        .drain
 
   private def isZipFile(filePath: Path): Boolean =
     filePath

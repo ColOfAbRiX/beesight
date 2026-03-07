@@ -3,8 +3,6 @@ package com.colofabrix.scala.beesight.detection.stages
 import cats.syntax.option.*
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
 import com.colofabrix.scala.beesight.config.{ CanopyConfig, FreefallConfig }
-import com.colofabrix.scala.beesight.detection.DebugLog
-import com.colofabrix.scala.beesight.detection.DebugLog.*
 import com.colofabrix.scala.beesight.detection.math.Stats
 import com.colofabrix.scala.beesight.detection.model.{ DetectionData, IndexedDataPoint }
 import com.colofabrix.scala.beesight.model.EventType
@@ -33,9 +31,6 @@ final class CanopyHandler private (config: CanopyConfig, freefallConfig: Freefal
 
     val isAboveMinAltitude = kinematics.altitude > config.minCanopyAltitude
 
-    DebugLog(s"  |  altitude=${kinematics.altitude.fmt}, verticalSpeed=${kinematics.speed.vertical.fmt}, verticalAcceleration=${kinematics.acceleration.vertical.fmt}")
-    DebugLog(s"  |  speedTrigger=$speedTrigger, isBelowFreefall=$isBelowFreefall, isAboveMinAltitude=$isAboveMinAltitude")
-
     speedTrigger && accelerationTrigger && isBelowFreefall && isAboveMinAltitude
 
   protected def validateTrigger(window: NonEmptyFilled[DetectionData]): Boolean =
@@ -49,9 +44,6 @@ final class CanopyHandler private (config: CanopyConfig, freefallConfig: Freefal
     val freefallDistance = freefallConfig.verticalSpeedThreshold * dt
     val isAboveFreefall  = newest.altitude > focus.altitude - freefallDistance
 
-    DebugLog(s"  |  canopyDistance=${canopyDistance.fmt}, isBelowCanopy=${isBelowCanopy}")
-    DebugLog(s"  |  freefallDistance=${freefallDistance.fmt}, isAboveFreefall=$isAboveFreefall")
-
     isBelowCanopy && isAboveFreefall
 
   protected def findInflection(window: NonEmptyFilled[DetectionData]): Option[Int] =
@@ -61,8 +53,6 @@ final class CanopyHandler private (config: CanopyConfig, freefallConfig: Freefal
         speedsWindow = backWindow.map(_.kinematics.speed.vertical)
         inflection  <- Stats.findInflection(speedsWindow)
       } yield inflection
-
-    DebugLog(s"  |  detectedInflection=${discoveredInflection}, focus=${window.focusIndex}")
 
     discoveredInflection orElse window.focusIndex.some
 

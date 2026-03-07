@@ -5,8 +5,6 @@ import cats.syntax.all.*
 import com.colofabrix.scala.beesight.collections.NEW
 import com.colofabrix.scala.beesight.collections.NEW.*
 import com.colofabrix.scala.beesight.config.*
-import com.colofabrix.scala.beesight.detection.DebugLog
-import com.colofabrix.scala.beesight.detection.DebugLog.*
 import com.colofabrix.scala.beesight.detection.PhaseDetector.*
 import com.colofabrix.scala.beesight.detection.model.*
 import com.colofabrix.scala.beesight.detection.model.DetectionConfigActions.*
@@ -54,6 +52,8 @@ final class PhaseDetector private (config: DetectionConfig) {
   ): Option[(FillingState, Vector[FlightEvents])] =
     val stageConfig    = config.getEventConfigs(eventType)
     val eventTypeFocus = config.getBackwindowSize(eventType)
+    val phase          = FlightPhase.fromEvent(eventType)
+    val stageHandler   = StageHandler(config, eventType)
 
     val initialFocus =
       currentState.focusType match {
@@ -61,55 +61,37 @@ final class PhaseDetector private (config: DetectionConfig) {
         case FocusPosition.StageFocus => config.getBackwindowSize(eventType)
       }
 
-    DebugLog(s"  ┌─ runDetection: Looking for $eventType")
-    DebugLog(s"  │  backwindow=$initialFocus, validation=${stageConfig.validationWindowSize}")
-    DebugLog(s"  │  startFocus=${currentState.focusType}, maxFocus=$initialFocus")
-
     val initialState =
       LoopState(
         eventType = eventType,
         leftElements = initialFocus,
         rightElements = stageConfig.validationWindowSize,
+        stageHandler = stageHandler,
         maxFocus = eventTypeFocus,
         loopFocus = initialFocus,
         processingWindow = currentState.window,
-        phase = FlightPhase.fromEvent(eventType),
+        phase = phase,
       )
 
     loop(initialState).map { loopResult =>
-      DebugLog(s"  │  ★★★ DETECTION FOUND! ★★★")
-      DebugLog(s"  │  Emitting ${loopResult.emitEvents.size} events")
-      DebugLog(s"  │  Remaining: ${DebugLog.windowSummary(loopResult.remainingData)}")
-      DebugLog(s"  │  Next phase: ${loopResult.nextPhase}, nextFocus: 0")
-      DebugLog(s"  └─ → FillingState, emitting ${loopResult.emitEvents.size} events")
       val nextState = FillingState(loopResult.remainingData, loopResult.nextPhase, FocusPosition.Zero)
-      Some((nextState, loopResult.emitEvents))
-    }.getOrElse {
-      DebugLog(s"  └─ → No detection, state unchanged")
-      None
+      (nextState, loopResult.emitEvents)
     }
 
   @tailrec
   private def loop(state: LoopState): Option[LoopResult] =
-    val stageHandler = StageHandler(config, state.eventType)
-    val stageConfig  = config.getEventConfigs(state.eventType)
-
     val focusedWindow =
       state
         .processingWindow
         .subwindowAt(state.leftElements, state.loopFocus, state.rightElements)
 
-    DebugLog(s"  │  Loop@${state.loopFocus}: subwindow ${DebugLog.windowSummary(focusedWindow)}")
-
     val detectionResult =
-      stageHandler
+      state
+        .stageHandler
         .stageDetection(focusedWindow)
         .map {
           case (focusedWindowDetectedIdx, detectedPoint) =>
             val (beforeDetection, afterDetection) = focusedWindow.dequeue(focusedWindowDetectedIdx)
-
-            DebugLog(s"  │    ✓ Found at subwindow idx $focusedWindowDetectedIdx (P${detectedPoint.idx}, alt=${detectedPoint.altitude.fmt})")
-            DebugLog(s"  │  Split: before=${beforeDetection.size} pts, after=${afterDetection.length} pts")
 
             val emitEvents = beforeDetection.map(_.detectedEvents)
 
@@ -133,10 +115,8 @@ final class PhaseDetector private (config: DetectionConfig) {
       case Some(nextDetection) =>
         Some(nextDetection)
       case None if state.loopFocus == state.maxFocus =>
-        DebugLog(s"  │  Loop: focus ${state.loopFocus} > expected ${state.maxFocus}, no detection")
         None
       case None =>
-        DebugLog(s"  │    × No detection at focus ${state.loopFocus}, trying ${state.loopFocus + 1}")
         val nextState = state.copy(loopFocus = state.loopFocus + 1)
         loop(nextState)
     }
@@ -149,7 +129,7 @@ object PhaseDetector {
     eventType: EventType,
     leftElements: Int,
     rightElements: Int,
-    // TODO: Static data shouldn't be in this case class
+    stageHandler: StageHandler,
     maxFocus: Int,
     loopFocus: Int,
     processingWindow: NonEmptyFilled[DetectionData],

@@ -5,8 +5,6 @@ import cats.syntax.all.*
 import com.colofabrix.scala.beesight.collections.*
 import com.colofabrix.scala.beesight.collections.NEW.*
 import com.colofabrix.scala.beesight.config.{ DetectionConfig, EventConfigs }
-import com.colofabrix.scala.beesight.detection.DebugLog
-import com.colofabrix.scala.beesight.detection.DebugLog.*
 import com.colofabrix.scala.beesight.detection.FlightStagesDetection.*
 import com.colofabrix.scala.beesight.detection.FlightStagesDetection.given
 import com.colofabrix.scala.beesight.detection.math.*
@@ -76,11 +74,6 @@ final class FlightStagesDetection private (config: DetectionConfig) {
         }
 
   private def initialStreamState(first: IndexedDataPoint): (StateTrait, Vector[FlightEvents]) =
-    DebugLog.section(s"INIT: First point P${first.idx}") {
-      DebugLog(s"  Window size: $slidingWindowSize")
-      DebugLog(s"  Altitude: ${first.altitude.fmt}, Speed: ${first.speed.fmt}")
-    }
-
     val firstKinematics =
       PointKinematics(
         time = first.time,
@@ -99,18 +92,14 @@ final class FlightStagesDetection private (config: DetectionConfig) {
 
     NEW(slidingWindowSize, firstData) match {
       case window: NonEmptyFilled[?] =>
-        DebugLog(s"  → Started as DetectionState")
         DetectionState(window, FlightPhase.BeforeTakeoff, FocusPosition.Zero) -> Vector.empty
       case window: NonEmptyFilling[?] =>
-        DebugLog(s"  → Started as FillingState (need ${slidingWindowSize - 1} more points)")
         FillingState(window, FlightPhase.BeforeTakeoff, FocusPosition.Zero) -> Vector.empty
     }
 
   private def drainState(state: StateTrait): Vector[FlightEvents] =
     @tailrec
     def loop(state: DetectionState, iteration: Int, result: Vector[FlightEvents]): Vector[FlightEvents] =
-      DebugLog(s"  ┌─ Drain #$iteration: window ${DebugLog.windowSummary(state.window)}, phase: ${state.phase}")
-
       val (nextState, beforeDetectionEmits) =
         phaseDetector
           .detect()
@@ -119,56 +108,35 @@ final class FlightStagesDetection private (config: DetectionConfig) {
 
       nextState match {
         case ns: FillingState =>
-          DebugLog(s"  │  Detection found! Emitting ${beforeDetectionEmits.size} events, new phase: ${ns.phase}")
-          DebugLog(s"  └─ Refilling window (${ns.window.length}/${ns.window.capacity} pts)")
           loop(ns.toDetectionState, iteration + 1, result ++ beforeDetectionEmits)
         case ns: DetectionState =>
           val (emitOldest, maybeShrunkWindow) = ns.window.shrinkReturning(1)
           maybeShrunkWindow match {
             case None =>
-              DebugLog(s"  └─ Window exhausted, drain complete (${result.size} total events emitted)")
               result ++ emitOldest.map(_.detectedEvents)
             case Some(shrunkWindow) =>
               val emittedEvents = emitOldest.map(_.detectedEvents)
-              DebugLog(s"  │  No detection, shrinking window → ${shrunkWindow.length} pts, emitting ${emittedEvents.size} events")
-              DebugLog(s"  └─ Events: ${emittedEvents.map(DebugLog.eventsSummary).mkString(", ")}")
-              val nextState = ns.copy(window = shrunkWindow)
+              val nextState     = ns.copy(window = shrunkWindow)
               loop(nextState, iteration + 1, result ++ emittedEvents)
           }
       }
 
-    DebugLog.section("DRAIN: Flushing remaining window") {
-      state match {
-        case s: FillingState =>
-          DebugLog(s"  Starting from FillingState (${s.window.length} pts, phase: ${s.phase})")
-        case s: DetectionState =>
-          DebugLog(s"  Starting from DetectionState (${s.window.length} pts, phase: ${s.phase})")
-      }
-    }
-
-    val result = state match {
+    state match {
       case s: FillingState   => loop(s.toDetectionState, 1, Vector.empty)
       case s: DetectionState => loop(s, 1, Vector.empty)
     }
-
-    DebugLog(s"DRAIN COMPLETE: Emitted ${result.size} events total")
-    result
 
   //  State Handlers  //
 
   private def handleFillingState(currentPoint: IndexedDataPoint): Transition[FillingState, Unit] =
     IndexedState.modify { previousState =>
-      DebugLog(s"FILL: P${currentPoint.idx} → Window ${DebugLog.windowSummary(previousState.window)} (phase: ${previousState.phase})")
-
       val currentData = buildCurrentDetectionData(previousState.window, currentPoint)
       val window      = previousState.window.enqueue(currentData)
 
       window match {
         case currentWindow: NonEmptyFilling[?] =>
-          DebugLog(s"      Still filling: ${currentWindow.length}/${currentWindow.capacity}")
           FillingState(currentWindow, previousState.phase, previousState.focusType)
         case currentWindow: NonEmptyFilled[?] =>
-          DebugLog(s"      ★ Window FULL → DetectionState")
           DetectionState(currentWindow, previousState.phase, previousState.focusType)
       }
     }
@@ -184,17 +152,9 @@ final class FlightStagesDetection private (config: DetectionConfig) {
 
   private def pushCurrentDetectionState(currentPoint: IndexedDataPoint): KeepState[DetectionState, DetectionData] =
     IndexedState { previousState =>
-      DebugLog.section(s"DETECT: P${currentPoint.idx} arrives (phase: ${previousState.phase}, focusType: ${previousState.focusType})") {
-        DebugLog(s"  Window: ${DebugLog.windowSummary(previousState.window)}")
-      }
-
       val currentData                 = buildCurrentDetectionData(previousState.window, currentPoint)
       val (oldestData, currentWindow) = previousState.window.pushReturning(currentData)
       val currentState                = previousState.copy(window = currentWindow)
-
-      DebugLog(s"  Push: P${currentPoint.idx} in, P${oldestData.point.idx} out")
-      DebugLog(s"  Oldest events: ${DebugLog.eventsSummary(oldestData.detectedEvents)}")
-
       currentState -> oldestData
     }
 

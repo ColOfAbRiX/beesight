@@ -2,6 +2,7 @@ package com.colofabrix.scala.beesight.detection.math
 
 import breeze.linalg.DenseVector
 import breeze.stats.median as breezeMedian
+import breeze.stats.stddev as breezeStdDev
 import cats.data.NonEmptyVector
 import cats.syntax.all.*
 import com.colofabrix.scala.beesight.collections.NEW
@@ -16,15 +17,21 @@ object Stats {
     if arr.isEmpty then 0.0 else breezeMedian(DenseVector(arr))
 
   def median(window: NEW[GeoVector]): GeoVector =
-    val (east, north, vertical) =
-      window.foldMap { vector =>
-        (List(vector.east), List(vector.north), List(vector.vertical))
-      }
-
+    val n        = window.length
+    val eastArr  = new Array[Double](n)
+    val northArr = new Array[Double](n)
+    val vertArr  = new Array[Double](n)
+    var i        = 0
+    window.foldLeft(()) { (_, v) =>
+      eastArr(i) = v.east
+      northArr(i) = v.north
+      vertArr(i) = v.vertical
+      i += 1
+    }
     GeoVector(
-      north = median(north),
-      east = median(east),
-      vertical = median(vertical),
+      north = breezeMedian(DenseVector(northArr)),
+      east = breezeMedian(DenseVector(eastArr)),
+      vertical = breezeMedian(DenseVector(vertArr)),
     )
 
   def stdDev(window: NEW[Double]): Double =

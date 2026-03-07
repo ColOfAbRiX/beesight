@@ -48,12 +48,12 @@ object Main extends IODeclineReaderApp[Config] {
     for
       outputFile <- FileOps.createProcessedDirectory(inputFile)
       _          <- s"Processing: $inputFile -> $outputFile".stdout
-      csvStream   = CsvFileOps.readCsv[FlysightPoint](inputFile)
-      pipeline   <- buildPipeline(csvStream, outputFile)
+      csvStream   = CsvFileReader.readCsv[FlysightPoint](inputFile)
+      pipeline   <- processingPipeline(csvStream, outputFile)
       lastPoint  <- pipeline.compile.last
     yield (inputFile, lastPoint)
 
-  private def buildPipeline(
+  private def processingPipeline(
     csvStream: fs2.Stream[IOConfig, FlysightPoint],
     outputCsvFile: Path,
   ): IOConfig[fs2.Stream[IOConfig, OutputFlightPoint[FlysightPoint]]] =
