@@ -2,29 +2,20 @@ package com.colofabrix.scala.beesight.detection.math
 
 import breeze.linalg.DenseVector
 import breeze.stats.median as breezeMedian
-import breeze.stats.stddev as breezeStdDev
-import cats.data.NonEmptyVector
-import cats.syntax.all.*
 import com.colofabrix.scala.beesight.collections.NEW
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
 import com.colofabrix.scala.beesight.model.GeoVector
 
 object Stats {
 
-  def median(xs: IterableOnce[Double]): Double =
-    val iter = xs.iterator
-    val arr  = iter.toArray
-    if arr.isEmpty then 0.0 else breezeMedian(DenseVector(arr))
-
-  def median(window: NEW[GeoVector]): GeoVector =
-    medianBy(window)(identity)
-
+  /** Component-wise median of GeoVectors extracted from a window. */
   def medianBy[A](window: NEW[A])(f: A => GeoVector): GeoVector =
     val n        = window.length
     val eastArr  = new Array[Double](n)
     val northArr = new Array[Double](n)
     val vertArr  = new Array[Double](n)
     var i        = 0
+
     window.foldLeft(()) { (_, a) =>
       val v = f(a)
       eastArr(i) = v.east
@@ -32,60 +23,45 @@ object Stats {
       vertArr(i) = v.vertical
       i += 1
     }
+
     GeoVector(
       north = breezeMedian(DenseVector(northArr)),
       east = breezeMedian(DenseVector(eastArr)),
       vertical = breezeMedian(DenseVector(vertArr)),
     )
 
-  def stdDev(window: NEW[Double]): Double =
-    val n    = window.length
-    var sum  = 0.0
-    var sumSq = 0.0
-    window.foldLeft(()) { (_, v) =>
-      sum += v
-      sumSq += v * v
-    }
-    val mean = sum / n
-    Math.sqrt(Math.max(0.0, sumSq / n - mean * mean))
-
+  /** Population standard deviation of values extracted from a window. */
   def stdDevBy[A](window: NEW[A])(f: A => Double): Double =
     val n     = window.length
     var sum   = 0.0
     var sumSq = 0.0
+
     window.foldLeft(()) { (_, a) =>
       val v = f(a)
-      sum += v
+      sum   += v
       sumSq += v * v
     }
+
     val mean = sum / n
     Math.sqrt(Math.max(0.0, sumSq / n - mean * mean))
 
   /**
-   * Finds the inflection point where a signal transitions between a trend (increasing/decreasing) and a stable region,
-   * or vice versa. Uses two-segment linear regression, returning the index that minimizes total squared error across
-   * both segments.
+   * Finds the inflection point where a signal transitions between a changing region and a stable one (or vice versa).
+   *
+   * Fits two-segment linear regressions for every candidate split point and returns the index that minimises total
+   * squared error. Requires at least 4 elements; returns None otherwise.
    */
-  def findInflection(window: NonEmptyFilled[Double]): Option[Int] =
-    val n = window.length
-    if n < 4 then return None
-    val data = new Array[Double](n)
-    var idx  = 0
-    window.foldLeft(()) { (_, v) =>
-      data(idx) = v
-      idx += 1
-    }
-    findInflectionFromArray(data, n)
-
   def findInflectionBy[A](window: NonEmptyFilled[A])(f: A => Double): Option[Int] =
     val n = window.length
     if n < 4 then return None
     val data = new Array[Double](n)
-    var idx  = 0
+
+    var idx = 0
     window.foldLeft(()) { (_, a) =>
       data(idx) = f(a)
       idx += 1
     }
+
     findInflectionFromArray(data, n)
 
   private def findInflectionFromArray(data: Array[Double], n: Int): Option[Int] =

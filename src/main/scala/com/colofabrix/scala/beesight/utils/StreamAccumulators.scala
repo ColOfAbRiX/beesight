@@ -1,7 +1,6 @@
 package com.colofabrix.scala.beesight.utils
 
 import cats.Foldable
-import cats.data.State
 
 private[utils] trait StreamAccumulators {
 
@@ -39,15 +38,6 @@ private[utils] trait StreamAccumulators {
             fs2.Pull.done
         }
         .stream
-
-    def stateMapEmits[G[_]: Foldable, S, B](
-      init: A => (S, G[B]),
-      drain: S => Vector[B] = (_: S) => Vector.empty[B],
-    )(f: A => State[S, G[B]],
-    ): fs2.Stream[F, B] =
-      self.statefulMapEmits[G, S, S, B](init, drain) { (a, s) =>
-        f(a).run(s).value
-      }
 
   }
 

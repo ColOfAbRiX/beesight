@@ -1,4 +1,4 @@
-package com.colofabrix.scala.beesight.files
+package com.colofabrix.scala.beesight.input
 
 import cats.effect.*
 import cats.implicits.*

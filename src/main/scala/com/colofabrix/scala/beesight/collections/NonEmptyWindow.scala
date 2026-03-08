@@ -1,8 +1,5 @@
 package com.colofabrix.scala.beesight.collections
 
-import breeze.linalg.DenseVector
-import cats.*
-import cats.syntax.all.*
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.*
 
 type NEW[A] = NonEmptyWindow[A]
@@ -10,45 +7,122 @@ val NEW = NonEmptyWindow
 
 /**
  * A non-empty sliding window - guaranteed to have at least one element.
- *
- * Starts as `NonEmptyFilling` (partially filled) and transitions to `NonEmptyFilled`
- * once capacity is reached. This is a self-contained implementation without wrappers.
  */
 sealed trait NonEmptyWindow[A] {
 
-  // ── Capacity & Size ────────────────────────────────────────────────────────
+  // Internal state //
+
+  protected def buffer: Array[Any]
+  protected def head: Int
+  protected def focusIdx: Int
+
+  // Capacity & Size //
 
   def capacity: Int
   def length: Int
   def isAtCapacity: Boolean
 
-  // ── Accessors ──────────────────────────────────────────────────────────────
+  // Buffer Helpers //
 
-  def toVector: Vector[A]
-  def oldest: A
-  def newest: A
+  /** Read a single element from the circular buffer at a logical index. */
+  protected inline def readAt(index: Int): A =
+    buffer((head + index) % capacity).asInstanceOf[A]
 
-  // ── Mutations ──────────────────────────────────────────────────────────────
+  /** Copy a slice from the circular buffer into a new Array. */
+  protected def sliceBuffer(start: Int, count: Int): Array[Any] =
+    val newBuffer = new Array[Any](count)
+    var i         = 0
+    while i < count do
+      newBuffer(i) = buffer((head + start + i) % capacity)
+      i += 1
+    newBuffer
+
+  /** Copy a slice from the circular buffer into a Vector. */
+  protected def sliceToVector(start: Int, count: Int): Vector[A] =
+    val builder = Vector.newBuilder[A]
+    var i       = 0
+    while i < count do
+      builder += buffer((head + start + i) % capacity).asInstanceOf[A]
+      i       += 1
+    builder.result()
+
+  // Accessors //
+
+  def toVector: Vector[A] =
+    sliceToVector(0, length)
+
+  def oldest: A =
+    readAt(0)
+
+  def newest: A =
+    readAt(length - 1)
+
+  // Mutations //
 
   def enqueue(a: A): NonEmptyWindow[A]
-  def dequeue(n: Int): (Vector[A], NonEmptyFilling[A])
   def push(a: A): (Option[A], NonEmptyWindow[A])
 
-  // ── Subwindows ─────────────────────────────────────────────────────────────
+  def dequeue(n: Int): (Vector[A], NonEmptyFilling[A]) =
+    val maxDequeue  = Math.max(0, Math.min(n, capacity - 1))
+    val remaining   = capacity - maxDequeue
+    val newCapacity = capacity
+    val newBuffer   = new Array[Any](newCapacity)
+    val slice       = sliceBuffer(maxDequeue, remaining)
+    System.arraycopy(slice, 0, newBuffer, 0, remaining)
+    val dequeued    = sliceToVector(0, maxDequeue)
+    val newFocusIdx = Math.max(0, Math.min(focusIdx - maxDequeue, remaining - 1))
+    (dequeued, new NonEmptyFilling(newBuffer, 0, remaining, newFocusIdx, newCapacity))
 
-  def takeNewest(i: Int): NonEmptyFilled[A]
+  // Subwindows //
 
-  // ── Focus (Zipper) ─────────────────────────────────────────────────────────
+  def takeNewest(i: Int): NonEmptyFilled[A] =
+    val count     = Math.max(1, Math.min(i, length))
+    val start     = length - count
+    val newBuffer = sliceBuffer(start, count)
+    new NonEmptyFilled(newBuffer, 0, count - 1, count)
 
-  def focus: A
-  def focusIndex: Int
+  // Focus (Zipper) //
+
+  def focus: A =
+    readAt(focusIdx)
+
+  def focusIndex: Int =
+    focusIdx
+
   def focusAt(index: Int): NonEmptyWindow[A]
 
-  // ── Transformations ────────────────────────────────────────────────────────
+  // Transformations //
 
   def map[B](f: A => B): NonEmptyWindow[B]
-  def foldLeft[B](z: B)(f: (B, A) => B): B
-  def foldRight[B](z: B)(f: (A, B) => B): B
+
+  def foldLeft[B](z: B)(f: (B, A) => B): B =
+    var acc = z
+    var i   = 0
+    while i < length do
+      acc = f(acc, readAt(i))
+      i += 1
+    acc
+
+  def foldRight[B](z: B)(f: (A, B) => B): B =
+    var acc = z
+    var i   = length - 1
+    while i >= 0 do
+      acc = f(readAt(i), acc)
+      i -= 1
+    acc
+
+  // Display //
+
+  protected def label: String
+
+  override def toString: String =
+    val elements =
+      toVector
+        .zipWithIndex
+        .map { case (e, i) => if i == focusIdx then s"[$e]" else e.toString }
+        .mkString(", ")
+
+    s"$label($elements)"
 
 }
 
@@ -58,14 +132,14 @@ object NonEmptyWindow {
    * A non-empty window that is still being filled (1 ≤ length < capacity).
    */
   final class NonEmptyFilling[A] private[NonEmptyWindow] (
-    private val buffer: Array[Any],
-    private val head: Int,
+    protected val buffer: Array[Any],
+    protected val head: Int,
     private val len: Int,
-    private val focusIdx: Int,
+    protected val focusIdx: Int,
     val capacity: Int,
   ) extends NonEmptyWindow[A] {
 
-    // ── Capacity & Size ──────────────────────────────────────────────────────
+    // Capacity & Size //
 
     def length: Int =
       len
@@ -73,121 +147,50 @@ object NonEmptyWindow {
     def isAtCapacity: Boolean =
       len == capacity
 
-    // ── Accessors ────────────────────────────────────────────────────────────
-
-    def toVector: Vector[A] =
-      val builder = Vector.newBuilder[A]
-      var i       = 0
-      while i < len do
-        builder += buffer((head + i) % capacity).asInstanceOf[A]
-        i       += 1
-      builder.result()
+    // Accessors //
 
     def toNonEmptyFilled: NonEmptyFilled[A] =
-      val newBuffer = new Array[Any](len)
-      var i         = 0
-      while i < len do
-        newBuffer(i) = buffer((head + i) % capacity)
-        i += 1
+      val newBuffer   = sliceBuffer(0, len)
       val newFocusIdx = Math.min(focusIdx, len - 1)
       new NonEmptyFilled(newBuffer, 0, newFocusIdx, len)
 
-    def oldest: A =
-      buffer(head).asInstanceOf[A]
-
-    def newest: A =
-      buffer((head + len - 1) % capacity).asInstanceOf[A]
-
-    // ── Mutations ────────────────────────────────────────────────────────────
+    // Mutations //
 
     def enqueue(a: A): NonEmptyWindow[A] =
       push(a)._2
 
     def push(a: A): (Option[A], NonEmptyWindow[A]) =
-      val newLen = len + 1
-      val tail   = (head + len) % capacity
-      buffer(tail) = a
+      val newLen    = len + 1
+      val newBuffer = buffer.clone()
+      val tail      = (head + len) % capacity
+      newBuffer(tail) = a
 
       if newLen >= capacity then
         val newFocusIdx = Math.min(focusIdx, capacity - 1)
-        (None, new NonEmptyFilled(buffer.clone(), head, newFocusIdx, capacity))
+        (None, new NonEmptyFilled(newBuffer, head, newFocusIdx, capacity))
       else
-        (None, new NonEmptyFilling(buffer, head, newLen, focusIdx, capacity))
+        (None, new NonEmptyFilling(newBuffer, head, newLen, focusIdx, capacity))
 
-    // ── Subwindows ───────────────────────────────────────────────────────────
-
-    def takeNewest(i: Int): NonEmptyFilled[A] =
-      val count     = Math.max(1, Math.min(i, len))
-      val start     = len - count
-      val newBuffer = new Array[Any](count)
-      var idx       = 0
-      while idx < count do
-        newBuffer(idx) = buffer((head + start + idx) % capacity)
-        idx += 1
-      new NonEmptyFilled(newBuffer, 0, count - 1, count)
-
-    def dequeue(n: Int): (Vector[A], NonEmptyFilling[A]) =
-      val maxDequeue  = Math.max(0, Math.min(n, capacity - 1))
-      val remaining   = capacity - maxDequeue
-      val newCapacity = capacity
-      val newBuffer   = new Array[Any](newCapacity)
-      val dequeued    = Vector.newBuilder[A]
-
-      var i = 0
-      while i < maxDequeue do
-        dequeued += buffer((head + i) % capacity).asInstanceOf[A]
-        i        += 1
-
-      var j = 0
-      while j < remaining do
-        newBuffer(j) = buffer((head + maxDequeue + j) % capacity)
-        j += 1
-
-      val newFocusIdx = Math.max(0, Math.min(focusIdx - maxDequeue, remaining - 1))
-      (dequeued.result(), new NonEmptyFilling(newBuffer, 0, remaining, newFocusIdx, newCapacity))
-
-    // ── Focus (Zipper) ───────────────────────────────────────────────────────
-
-    def focus: A =
-      buffer((head + focusIdx) % capacity).asInstanceOf[A]
-
-    def focusIndex: Int =
-      focusIdx
+    // Focus (Zipper) //
 
     def focusAt(index: Int): NonEmptyFilling[A] =
       val clipped = Math.max(0, Math.min(index, len - 1))
       new NonEmptyFilling(buffer, head, len, clipped, capacity)
 
-    // ── Transformations ──────────────────────────────────────────────────────
+    // Transformations //
 
     def map[B](f: A => B): NonEmptyFilling[B] =
       val newBuffer = new Array[Any](capacity)
       var i         = 0
       while i < len do
-        newBuffer(i) = f(buffer((head + i) % capacity).asInstanceOf[A])
+        newBuffer(i) = f(readAt(i))
         i += 1
       new NonEmptyFilling(newBuffer, 0, len, focusIdx, capacity)
 
-    def foldLeft[B](z: B)(f: (B, A) => B): B =
-      var acc = z
-      var i   = 0
-      while i < len do
-        acc = f(acc, buffer((head + i) % capacity).asInstanceOf[A])
-        i += 1
-      acc
+    // Display //
 
-    def foldRight[B](z: B)(f: (A, B) => B): B =
-      var acc = z
-      var i   = len - 1
-      while i >= 0 do
-        acc = f(buffer((head + i) % capacity).asInstanceOf[A], acc)
-        i -= 1
-      acc
-
-    override def toString: String =
-      val vec      = toVector
-      val elements = vec.zipWithIndex.map { case (e, i) => if i == focusIdx then s"[$e]" else e.toString }.mkString(", ")
-      s"NonEmptyFilling[$len/$capacity]($elements)"
+    protected def label: String =
+      s"NonEmptyFilling[$len/$capacity]"
 
   }
 
@@ -195,13 +198,13 @@ object NonEmptyWindow {
    * A non-empty window that has reached capacity (length == capacity).
    */
   final class NonEmptyFilled[A] private[NonEmptyWindow] (
-    private val buffer: Array[Any],
-    private val head: Int,
-    private val focusIdx: Int,
+    protected val buffer: Array[Any],
+    protected val head: Int,
+    protected val focusIdx: Int,
     val capacity: Int,
   ) extends NonEmptyWindow[A] {
 
-    // ── Capacity & Size ──────────────────────────────────────────────────────
+    // Capacity & Size //
 
     def length: Int =
       capacity
@@ -209,23 +212,7 @@ object NonEmptyWindow {
     def isAtCapacity: Boolean =
       true
 
-    // ── Accessors ────────────────────────────────────────────────────────────
-
-    def toVector: Vector[A] =
-      val builder = Vector.newBuilder[A]
-      var i       = 0
-      while i < capacity do
-        builder += buffer((head + i) % capacity).asInstanceOf[A]
-        i       += 1
-      builder.result()
-
-    def oldest: A =
-      buffer(head).asInstanceOf[A]
-
-    def newest: A =
-      buffer((head + capacity - 1) % capacity).asInstanceOf[A]
-
-    // ── Mutations ────────────────────────────────────────────────────────────
+    // Mutations //
 
     def enqueue(a: A): NonEmptyFilled[A] =
       pushReturning(a)._2
@@ -234,41 +221,28 @@ object NonEmptyWindow {
       val (out, window) = pushReturning(a)
       (Some(out), window)
 
-    /** NOTE: Mutates buffer in-place for performance. The previous window instance becomes stale after this call. */
     def pushReturning(a: A): (A, NonEmptyFilled[A]) =
-      val outgoing = buffer(head).asInstanceOf[A]
-      buffer(head) = a
+      val outgoing  = buffer(head).asInstanceOf[A]
+      val newBuffer = buffer.clone()
+      newBuffer(head) = a
       val newHead     = (head + 1) % capacity
       val newFocusIdx = Math.max(0, focusIdx - 1)
-      (outgoing, new NonEmptyFilled(buffer, newHead, newFocusIdx, capacity))
+      (outgoing, new NonEmptyFilled(newBuffer, newHead, newFocusIdx, capacity))
 
     def shrinkReturning(n: Int): (Vector[A], Option[NonEmptyFilled[A]]) =
       val toRemove  = Math.max(0, Math.min(n, capacity))
       val remaining = capacity - toRemove
 
-      val removed = Vector.newBuilder[A]
-      var i       = 0
-      while i < toRemove do
-        removed += buffer((head + i) % capacity).asInstanceOf[A]
-        i       += 1
+      val removed = sliceToVector(0, toRemove)
 
       if remaining <= 0 then
-        (removed.result(), None)
+        (removed, None)
       else
-        val newBuffer = new Array[Any](remaining)
-        var j         = 0
-        while j < remaining do
-          newBuffer(j) = buffer((head + toRemove + j) % capacity)
-          j += 1
+        val newBuffer   = sliceBuffer(toRemove, remaining)
         val newFocusIdx = Math.max(0, Math.min(focusIdx - toRemove, remaining - 1))
-        (removed.result(), Some(new NonEmptyFilled(newBuffer, 0, newFocusIdx, remaining)))
+        (removed, Some(new NonEmptyFilled(newBuffer, 0, newFocusIdx, remaining)))
 
-    // ── Subwindows ───────────────────────────────────────────────────────────
-
-    def takeNewest(i: Int): NonEmptyFilled[A] =
-      val count = Math.max(1, Math.min(i, capacity))
-      val start = capacity - count
-      filledSubwindow(start, count)
+    // Subwindows //
 
     def filledSubwindow(start: Int, count: Int): NonEmptyFilled[A] =
       val sliceLen =
@@ -277,11 +251,7 @@ object NonEmptyWindow {
 
       val safeLen    = Math.max(1, sliceLen)
       val sliceStart = if count >= 0 then start else start - safeLen + 1
-      val newBuffer  = new Array[Any](safeLen)
-      var i          = 0
-      while i < safeLen do
-        newBuffer(i) = buffer((head + sliceStart + i) % capacity)
-        i += 1
+      val newBuffer  = sliceBuffer(sliceStart, safeLen)
 
       new NonEmptyFilled(newBuffer, 0, safeLen - 1, safeLen)
 
@@ -297,41 +267,11 @@ object NonEmptyWindow {
       val startIdx = clampedFocus - actualLeft
       val sliceLen = actualLeft + 1 + actualRight
 
-      val newBuffer = new Array[Any](sliceLen)
-      var i         = 0
-      while i < sliceLen do
-        newBuffer(i) = buffer((head + startIdx + i) % capacity)
-        i += 1
+      val newBuffer = sliceBuffer(startIdx, sliceLen)
 
       new NonEmptyFilled(newBuffer, 0, actualLeft, sliceLen)
 
-    def dequeue(n: Int): (Vector[A], NonEmptyFilling[A]) =
-      val maxDequeue  = Math.max(0, Math.min(n, capacity - 1))
-      val remaining   = capacity - maxDequeue
-      val newCapacity = capacity
-      val newBuffer   = new Array[Any](newCapacity)
-      val dequeued    = Vector.newBuilder[A]
-
-      var i = 0
-      while i < maxDequeue do
-        dequeued += buffer((head + i) % capacity).asInstanceOf[A]
-        i        += 1
-
-      var j = 0
-      while j < remaining do
-        newBuffer(j) = buffer((head + maxDequeue + j) % capacity)
-        j += 1
-
-      val newFocusIdx = Math.max(0, Math.min(focusIdx - maxDequeue, remaining - 1))
-      (dequeued.result(), new NonEmptyFilling(newBuffer, 0, remaining, newFocusIdx, newCapacity))
-
-    // ── Focus (Zipper) ───────────────────────────────────────────────────────
-
-    def focus: A =
-      buffer((head + focusIdx) % capacity).asInstanceOf[A]
-
-    def focusIndex: Int =
-      focusIdx
+    // Focus (Zipper) //
 
     def focusAt(index: Int): NonEmptyFilled[A] =
       val clipped = Math.max(0, Math.min(index, capacity - 1))
@@ -357,40 +297,24 @@ object NonEmptyWindow {
     def rightInclusive: NonEmptyFilled[A] =
       filledSubwindow(focusIdx, capacity - focusIdx)
 
-    // ── Transformations ──────────────────────────────────────────────────────
+    // Transformations //
 
     def map[B](f: A => B): NonEmptyFilled[B] =
       val newBuffer = new Array[Any](capacity)
       var i         = 0
       while i < capacity do
-        newBuffer(i) = f(buffer((head + i) % capacity).asInstanceOf[A])
+        newBuffer(i) = f(readAt(i))
         i += 1
       new NonEmptyFilled(newBuffer, 0, focusIdx, capacity)
 
-    def foldLeft[B](z: B)(f: (B, A) => B): B =
-      var acc = z
-      var i   = 0
-      while i < capacity do
-        acc = f(acc, buffer((head + i) % capacity).asInstanceOf[A])
-        i += 1
-      acc
+    // Display //
 
-    def foldRight[B](z: B)(f: (A, B) => B): B =
-      var acc = z
-      var i   = capacity - 1
-      while i >= 0 do
-        acc = f(buffer((head + i) % capacity).asInstanceOf[A], acc)
-        i -= 1
-      acc
-
-    override def toString: String =
-      val vec      = toVector
-      val elements = vec.zipWithIndex.map { case (e, i) => if i == focusIdx then s"[$e]" else e.toString }.mkString(", ")
-      s"NonEmptyFilled[$capacity]($elements)"
+    protected def label: String =
+      s"NonEmptyFilled[$capacity]"
 
   }
 
-  // ── Factory Methods ────────────────────────────────────────────────────────
+  // Factory Methods //
 
   def apply[A](capacity: Int, first: A): NonEmptyWindow[A] =
     val cap    = Math.max(1, capacity)
@@ -401,49 +325,5 @@ object NonEmptyWindow {
       new NonEmptyFilled(buffer, 0, 0, cap)
     else
       new NonEmptyFilling(buffer, 0, 1, 0, cap)
-
-  def fromFilled[A](filled: NonEmptyFilled[A]): NonEmptyFilled[A] =
-    filled
-
-  // ── Type Class Instances ───────────────────────────────────────────────────
-
-  given Functor[NonEmptyWindow] with
-    def map[A, B](fa: NonEmptyWindow[A])(f: A => B): NonEmptyWindow[B] =
-      fa.map(f)
-
-  given Traverse[NonEmptyWindow] with {
-
-    def traverse[G[_]: Applicative, A, B](fa: NonEmptyWindow[A])(f: A => G[B]): G[NonEmptyWindow[B]] =
-      val G   = Applicative[G]
-      var acc = G.pure(Vector.newBuilder[B])
-
-      var i = 0
-      while i < fa.length do
-        val elem = fa.toVector(i)
-        acc = G.map2(acc, f(elem))((builder, b) => builder += b)
-        i += 1
-
-      G.map(acc) { builder =>
-        val vec       = builder.result()
-        val newBuffer = new Array[Any](fa.capacity)
-        val _         = vec.copyToArray(newBuffer)
-
-        fa match {
-          case filling: NonEmptyFilling[A] =>
-            new NonEmptyFilling[B](newBuffer, 0, vec.length, filling.focusIndex, fa.capacity)
-          case filled: NonEmptyFilled[A] =>
-            new NonEmptyFilled[B](newBuffer, 0, filled.focusIndex, fa.capacity)
-        }
-      }
-
-    def foldLeft[A, B](fa: NonEmptyWindow[A], b: B)(f: (B, A) => B): B =
-      fa.foldLeft(b)(f)
-
-    def foldRight[A, B](fa: NonEmptyWindow[A], lb: Eval[B])(f: (A, Eval[B]) => Eval[B]): Eval[B] =
-      Eval.defer {
-        fa.foldRight(lb)((a, evalB) => f(a, evalB))
-      }
-
-  }
 
 }

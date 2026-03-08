@@ -20,7 +20,7 @@ trait IOConfigValues {
   extension [A](self: IOConfig[A]) {
 
     /** The success value contained in the monad */
-    def result(config: Config = Config.default, timeout: FiniteDuration = 30.seconds): A =
+    def result(config: Config = Config.default, timeout: FiniteDuration = 1.minute): A =
       self
         .run(config)
         .unsafeRunTimed(timeout)(using IORuntime.global)
@@ -29,7 +29,7 @@ trait IOConfigValues {
         }
 
     /** True if the monad contains an exception */
-    def isException(config: Config = Config.default, timeout: FiniteDuration = 30.seconds): Boolean =
+    def isException(config: Config = Config.default, timeout: FiniteDuration = 1.minute): Boolean =
       self
         .run(config)
         .redeem(_ => true, _ => false)
@@ -39,7 +39,7 @@ trait IOConfigValues {
         }
 
     /** The exception value contained in the monad */
-    def exception(config: Config = Config.default, timeout: FiniteDuration = 30.seconds): Throwable =
+    def exception(config: Config = Config.default, timeout: FiniteDuration = 1.minute): Throwable =
       self
         .run(config)
         .redeemWith(

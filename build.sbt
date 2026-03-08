@@ -13,8 +13,8 @@ Global / tpolecatExcludeOptions ++=
   )
 Test / tpolecatScalacOptions := Set.empty
 
-addCommandAlias("styleApply", "; scalafix OrganizeImports; scalafmtAll")
-addCommandAlias("styleCheck", "; scalafix --check; scalafmtCheckAll")
+addCommandAlias("styleApply", "; scalafixAll ExplicitResultTypes; scalafixAll OrganizeImports; scalafixAll RedundantSyntax; scalafixAll RemoveUnused; scalafmtAll")
+addCommandAlias("styleCheck", "; scalafixAll --check ExplicitResultTypes; scalafixAll --check OrganizeImports; scalafixAll --check RedundantSyntax; scalafixAll --check RemoveUnused; scalafmtCheckAll")
 
 lazy val root =
   project
@@ -31,12 +31,14 @@ lazy val root =
       libraryDependencies ++= List(
         "co.fs2"               %% "fs2-core"                      % "3.10.2",
         "co.fs2"               %% "fs2-io"                        % "3.10.2",
-        "de.lhns"              %% "fs2-compress-zip"              % "2.3.2",
         "com.colofabrix.scala" %% "declinio"                      % "1.0.0",
         "com.monovore"         %% "decline"                       % "2.4.1",
+        "de.lhns"              %% "fs2-compress-zip"              % "2.3.2",
         "io.github.pityka"     %% "nspl-awt"                      % "0.10.0",
         "org.gnieh"            %% "fs2-data-csv-generic"          % "1.11.1",
         "org.gnieh"            %% "fs2-data-csv"                  % "1.11.1",
+        "org.scalameta"        %% "metaconfig-core"               % "0.18.2",
+        "org.scalameta"        %% "metaconfig-typesafe-config"    % "0.18.2",
         "org.scalanlp"         %% "breeze"                        % "2.1.0",
         "org.scalatest"        %% "scalatest"                     % "3.2.18" % Test,
         "org.typelevel"        %% "cats-core"                     % "2.12.0",

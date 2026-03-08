@@ -20,7 +20,7 @@ final private[detection] class PreprocessData private (config: DetectionConfig) 
       val despiked =
         window match {
           case filled: NonEmptyFilled[SpikeWindowData] =>
-            NEW.fromFilled(Despike.despike(config, filled))
+            Despike.despike(config, filled)
           case other =>
             other
         }

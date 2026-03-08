@@ -4,11 +4,11 @@ import cats.effect.*
 import cats.effect.implicits.given
 import cats.implicits.given
 import com.colofabrix.scala.beesight.config.*
-import com.colofabrix.scala.beesight.output.*
 import com.colofabrix.scala.beesight.detection.*
-import com.colofabrix.scala.beesight.files.*
+import com.colofabrix.scala.beesight.input.*
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.model.formats.FlysightPoint
+import com.colofabrix.scala.beesight.output.*
 import com.colofabrix.scala.declinio.*
 import com.monovore.decline.Opts
 import java.nio.file.*
@@ -28,14 +28,12 @@ object Main extends IODeclineReaderApp[Config] {
     CliConfig.allOptions
 
   override def runWithReader: IOConfig[ExitCode] =
-    IOConfig.timed("total") {
-      for
-        inputFiles  <- FileOps.discoverCsvFiles()
-        _           <- s"Processing ${inputFiles.size} CSV files".stdout
-        summaryRows <- runParallel(inputFiles)
-        _           <- ResultsSummary.writeSummaryCsv(summaryRows)
-      yield ExitCode.Success
-    }
+    for
+      inputFiles  <- FileOps.discoverCsvFiles()
+      _           <- s"Processing ${inputFiles.size} CSV files".stdout
+      summaryRows <- runParallel(inputFiles)
+      _           <- ResultsSummary.writeSummaryCsv(summaryRows)
+    yield ExitCode.Success
 
   private def runParallel(inputFiles: List[Path]): IOConfig[List[(Path, Option[OutputFlightPoint[FlysightPoint]])]] =
     IOConfig.ask.flatMap { config =>

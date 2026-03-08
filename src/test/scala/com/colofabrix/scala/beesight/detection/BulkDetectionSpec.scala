@@ -5,7 +5,7 @@ import cats.effect.unsafe.implicits.global
 import cats.effect.unsafe.IORuntime
 import cats.syntax.all.given
 import com.colofabrix.scala.beesight.*
-import com.colofabrix.scala.beesight.files.CsvFileReader
+import com.colofabrix.scala.beesight.input.CsvFileReader
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.model.formats.FlysightPoint
 import java.io.File

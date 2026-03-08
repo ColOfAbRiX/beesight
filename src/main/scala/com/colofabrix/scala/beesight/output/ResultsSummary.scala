@@ -2,7 +2,7 @@ package com.colofabrix.scala.beesight.output
 
 import cats.effect.IO
 import com.colofabrix.scala.beesight.*
-import com.colofabrix.scala.beesight.files.FileOps
+import com.colofabrix.scala.beesight.input.FileOps
 import com.colofabrix.scala.beesight.model.*
 import java.nio.file.{ Files as JFiles, Path }
 

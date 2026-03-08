@@ -9,72 +9,40 @@ class StatsSpec extends AnyFreeSpec with Matchers {
 
   "Stats" - {
 
-    "median" - {
-
-      "should return the middle value for odd-sized collection" in {
-        Stats.median(List(3.0, 1.0, 5.0, 2.0, 4.0)) shouldBe 3.0
-      }
-
-      "should return average of two middle values for even-sized collection" in {
-        Stats.median(List(3.0, 1.0, 4.0, 2.0)) shouldBe 2.5
-      }
-
-      "should return the element for single-element collection" in {
-        Stats.median(List(42.0)) shouldBe 42.0
-      }
-
-      "should return the correct median for already-sorted data" in {
-        Stats.median(List(1.0, 2.0, 3.0, 4.0, 5.0)) shouldBe 3.0
-      }
-
-      "should return the correct median for reverse-sorted data" in {
-        Stats.median(List(5.0, 4.0, 3.0, 2.0, 1.0)) shouldBe 3.0
-      }
-
-      "should handle identical values" in {
-        Stats.median(List(7.0, 7.0, 7.0, 7.0, 7.0)) shouldBe 7.0
-      }
-
-      "should handle negative values" in {
-        Stats.median(List(-5.0, -1.0, -3.0)) shouldBe -3.0
-      }
-
-    }
-
-    "stdDev" - {
+    "stdDevBy" - {
 
       "should return 0 for identical values" in {
         val window = filledWindow(5.0, 5.0, 5.0, 5.0)
-        Stats.stdDev(window) shouldBe 0.0
+        Stats.stdDevBy(window)(identity) shouldBe 0.0
       }
 
       "should compute standard deviation for known data" in {
         // values: 2, 4, 4, 4, 5, 5, 7, 9 → mean=5, variance=4, stddev=2
         val window = filledWindow(2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0)
-        Stats.stdDev(window) shouldBe (2.0 +- 0.01)
+        Stats.stdDevBy(window)(identity) shouldBe (2.0 +- 0.01)
       }
 
       "should return 0 for single element" in {
         val window = filledWindow(42.0)
-        Stats.stdDev(window) shouldBe 0.0
+        Stats.stdDevBy(window)(identity) shouldBe 0.0
       }
 
       "should handle negative values" in {
         val window = filledWindow(-3.0, -1.0, 1.0, 3.0)
-        val result = Stats.stdDev(window)
+        val result = Stats.stdDevBy(window)(identity)
         result should be > 0.0
       }
 
     }
 
-    "findInflection" - {
+    "findInflectionBy" - {
 
       "decreasing then stable" - {
 
         "should find transition point with clean data" in {
           //  10, 8, 6, 4, [2], 2, 2, 2, 2
           val window = filledWindow(10.0, 8.0, 6.0, 4.0, 2.0, 2.0, 2.0, 2.0, 2.0)
-          val result = Stats.findInflection(window)
+          val result = Stats.findInflectionBy(window)(identity)
 
           result shouldBe defined
           result.get shouldBe 4
@@ -83,7 +51,7 @@ class StatsSpec extends AnyFreeSpec with Matchers {
         "should find transition point with steep decrease" in {
           // 100, 80, 60, 40, 20, [0], 0, 0, 0
           val window = filledWindow(100.0, 80.0, 60.0, 40.0, 20.0, 0.0, 0.0, 0.0, 0.0)
-          val result = Stats.findInflection(window)
+          val result = Stats.findInflectionBy(window)(identity)
 
           result shouldBe defined
           result.get shouldBe 5
@@ -96,7 +64,7 @@ class StatsSpec extends AnyFreeSpec with Matchers {
         "should find transition point with clean data" in {
           // 2, 4, 6, 8, [10], 10, 10, 10, 10
           val window = filledWindow(2.0, 4.0, 6.0, 8.0, 10.0, 10.0, 10.0, 10.0, 10.0)
-          val result = Stats.findInflection(window)
+          val result = Stats.findInflectionBy(window)(identity)
 
           result shouldBe defined
           result.get shouldBe 4
@@ -105,7 +73,7 @@ class StatsSpec extends AnyFreeSpec with Matchers {
         "should find transition with gradual increase" in {
           // 0, 1, 2, 3, 4, [5], 5, 5, 5, 5, 5
           val window = filledWindow(0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0)
-          val result = Stats.findInflection(window)
+          val result = Stats.findInflectionBy(window)(identity)
 
           result shouldBe defined
           result.get shouldBe 5
@@ -118,7 +86,7 @@ class StatsSpec extends AnyFreeSpec with Matchers {
         "should find transition point with clean data" in {
           // 10, 10, 10, 10, [10], 8, 6, 4, 2
           val window = filledWindow(10.0, 10.0, 10.0, 10.0, 10.0, 8.0, 6.0, 4.0, 2.0)
-          val result = Stats.findInflection(window)
+          val result = Stats.findInflectionBy(window)(identity)
 
           result shouldBe defined
           result.get shouldBe 4
@@ -127,7 +95,7 @@ class StatsSpec extends AnyFreeSpec with Matchers {
         "should find transition with steep drop" in {
           // 50, 50, 50, [50], 40, 30, 20, 10, 0
           val window = filledWindow(50.0, 50.0, 50.0, 50.0, 40.0, 30.0, 20.0, 10.0, 0.0)
-          val result = Stats.findInflection(window)
+          val result = Stats.findInflectionBy(window)(identity)
 
           result shouldBe defined
           result.get shouldBe 3
@@ -140,7 +108,7 @@ class StatsSpec extends AnyFreeSpec with Matchers {
         "should find transition point with clean data" in {
           // 0, 0, 0, 0, [0], 2, 4, 6, 8
           val window = filledWindow(0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 4.0, 6.0, 8.0)
-          val result = Stats.findInflection(window)
+          val result = Stats.findInflectionBy(window)(identity)
 
           result shouldBe defined
           result.get shouldBe 4
@@ -149,7 +117,7 @@ class StatsSpec extends AnyFreeSpec with Matchers {
         "should find transition with steep rise" in {
           // 5, 5, 5, [5], 15, 25, 35, 45
           val window = filledWindow(5.0, 5.0, 5.0, 5.0, 15.0, 25.0, 35.0, 45.0)
-          val result = Stats.findInflection(window)
+          val result = Stats.findInflectionBy(window)(identity)
 
           result shouldBe defined
           result.get shouldBe 3
@@ -163,7 +131,7 @@ class StatsSpec extends AnyFreeSpec with Matchers {
           val window = filledWindow(
             10.2, 8.1, 6.3, 3.8, 2.1, 1.9, 2.1, 2.0, 1.8, 2.2,
           )
-          val result = Stats.findInflection(window)
+          val result = Stats.findInflectionBy(window)(identity)
 
           result shouldBe defined
           result.get should (be >= 3 and be <= 5)
@@ -173,7 +141,7 @@ class StatsSpec extends AnyFreeSpec with Matchers {
           val window = filledWindow(
             5.1, 4.9, 5.2, 4.8, 5.0, 7.1, 8.9, 11.2, 12.8, 15.1,
           )
-          val result = Stats.findInflection(window)
+          val result = Stats.findInflectionBy(window)(identity)
 
           result shouldBe defined
           result.get should (be >= 3 and be <= 5)
@@ -183,7 +151,7 @@ class StatsSpec extends AnyFreeSpec with Matchers {
           val window = filledWindow(
             1.1, 2.9, 5.2, 6.8, 9.1, 10.2, 9.8, 10.1, 10.3, 9.9,
           )
-          val result = Stats.findInflection(window)
+          val result = Stats.findInflectionBy(window)(identity)
 
           result shouldBe defined
           result.get should (be >= 4 and be <= 6)
@@ -193,7 +161,7 @@ class StatsSpec extends AnyFreeSpec with Matchers {
           val window = filledWindow(
             10.1, 9.9, 10.2, 10.0, 9.8, 8.1, 5.9, 4.2, 1.8, 0.1,
           )
-          val result = Stats.findInflection(window)
+          val result = Stats.findInflectionBy(window)(identity)
 
           result shouldBe defined
           result.get should (be >= 3 and be <= 5)
@@ -206,7 +174,7 @@ class StatsSpec extends AnyFreeSpec with Matchers {
         "should find inflection near the start" in {
           // Short decrease, long stable
           val window = filledWindow(10.0, 5.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
-          val result = Stats.findInflection(window)
+          val result = Stats.findInflectionBy(window)(identity)
 
           result shouldBe defined
           result.get shouldBe 2
@@ -215,7 +183,7 @@ class StatsSpec extends AnyFreeSpec with Matchers {
         "should find inflection near the end" in {
           // Long stable, short increase
           val window = filledWindow(5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 10.0, 15.0)
-          val result = Stats.findInflection(window)
+          val result = Stats.findInflectionBy(window)(identity)
 
           result shouldBe defined
           result.get should (be >= 6 and be <= 7)
@@ -228,7 +196,7 @@ class StatsSpec extends AnyFreeSpec with Matchers {
         "should handle negative decreasing-then-stable" in {
           // -2, -4, -6, -8, [-10], -10, -10, -10
           val window = filledWindow(-2.0, -4.0, -6.0, -8.0, -10.0, -10.0, -10.0, -10.0)
-          val result = Stats.findInflection(window)
+          val result = Stats.findInflectionBy(window)(identity)
 
           result shouldBe defined
           result.get shouldBe 4
@@ -237,7 +205,7 @@ class StatsSpec extends AnyFreeSpec with Matchers {
         "should handle crossing zero" in {
           // 4, 2, 0, -2, [-4], -4, -4, -4
           val window = filledWindow(4.0, 2.0, 0.0, -2.0, -4.0, -4.0, -4.0, -4.0)
-          val result = Stats.findInflection(window)
+          val result = Stats.findInflectionBy(window)(identity)
 
           result shouldBe defined
           result.get shouldBe 4
@@ -249,12 +217,12 @@ class StatsSpec extends AnyFreeSpec with Matchers {
 
         "should return None for window of size 3" in {
           val window = filledWindow(1.0, 2.0, 3.0)
-          Stats.findInflection(window) shouldBe None
+          Stats.findInflectionBy(window)(identity) shouldBe None
         }
 
         "should return Some for minimum window of size 4" in {
           val window = filledWindow(10.0, 5.0, 0.0, 0.0)
-          val result = Stats.findInflection(window)
+          val result = Stats.findInflectionBy(window)(identity)
 
           result shouldBe defined
           result.get shouldBe 2
@@ -262,7 +230,7 @@ class StatsSpec extends AnyFreeSpec with Matchers {
 
         "should handle perfectly constant data" in {
           val window = filledWindow(5.0, 5.0, 5.0, 5.0, 5.0, 5.0)
-          val result = Stats.findInflection(window)
+          val result = Stats.findInflectionBy(window)(identity)
 
           // All splits have zero error, should still return a valid index
           result shouldBe defined
@@ -270,7 +238,7 @@ class StatsSpec extends AnyFreeSpec with Matchers {
 
         "should handle purely linear data" in {
           val window = filledWindow(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0)
-          val result = Stats.findInflection(window)
+          val result = Stats.findInflectionBy(window)(identity)
 
           // No real inflection but should return a valid index
           result shouldBe defined
@@ -280,7 +248,7 @@ class StatsSpec extends AnyFreeSpec with Matchers {
           val window = filledWindow(
             1e6, 1e6, 1e6, 1e6, 1e6, 2e6, 3e6, 4e6, 5e6,
           )
-          val result = Stats.findInflection(window)
+          val result = Stats.findInflectionBy(window)(identity)
 
           result shouldBe defined
           result.get should (be >= 4 and be <= 5)
@@ -290,7 +258,7 @@ class StatsSpec extends AnyFreeSpec with Matchers {
           val window = filledWindow(
             1.0001, 1.0002, 1.0003, 1.0004, 1.0005, 1.0005, 1.0005, 1.0005,
           )
-          val result = Stats.findInflection(window)
+          val result = Stats.findInflectionBy(window)(identity)
 
           result shouldBe defined
           result.get should (be >= 3 and be <= 5)
@@ -305,7 +273,7 @@ class StatsSpec extends AnyFreeSpec with Matchers {
           val window = filledWindow(
             0.5, 0.3, 0.8, 0.2, 0.6, 5.0, 15.0, 30.0, 45.0, 55.0,
           )
-          val result = Stats.findInflection(window)
+          val result = Stats.findInflectionBy(window)(identity)
 
           result shouldBe defined
           result.get should (be >= 4 and be <= 6)
@@ -316,7 +284,7 @@ class StatsSpec extends AnyFreeSpec with Matchers {
           val window = filledWindow(
             55.0, 54.0, 53.0, 50.0, 40.0, 15.0, 14.0, 13.0, 13.0, 13.0,
           )
-          val result = Stats.findInflection(window)
+          val result = Stats.findInflectionBy(window)(identity)
 
           result shouldBe defined
           result.get should (be >= 5 and be <= 7)
@@ -327,7 +295,7 @@ class StatsSpec extends AnyFreeSpec with Matchers {
           val window = filledWindow(
             13.0, 12.0, 10.0, 5.0, 1.0, 0.2, 0.1, 0.0, 0.1, 0.0,
           )
-          val result = Stats.findInflection(window)
+          val result = Stats.findInflectionBy(window)(identity)
 
           result shouldBe defined
           result.get should (be >= 3 and be <= 5)
@@ -338,7 +306,7 @@ class StatsSpec extends AnyFreeSpec with Matchers {
           val window = filledWindow(
             0.0, 0.1, 0.0, 0.1, 0.2, 5.0, 15.0, 25.0, 35.0, 40.0,
           )
-          val result = Stats.findInflection(window)
+          val result = Stats.findInflectionBy(window)(identity)
 
           result shouldBe defined
           result.get should (be >= 4 and be <= 6)
@@ -352,8 +320,8 @@ class StatsSpec extends AnyFreeSpec with Matchers {
           val increasing = filledWindow(0.0, 2.0, 4.0, 6.0, 8.0, 8.0, 8.0, 8.0, 8.0)
           val decreasing = filledWindow(8.0, 8.0, 8.0, 8.0, 8.0, 6.0, 4.0, 2.0, 0.0)
 
-          val incResult = Stats.findInflection(increasing)
-          val decResult = Stats.findInflection(decreasing)
+          val incResult = Stats.findInflectionBy(increasing)(identity)
+          val decResult = Stats.findInflectionBy(decreasing)(identity)
 
           incResult shouldBe defined
           decResult shouldBe defined
@@ -365,8 +333,8 @@ class StatsSpec extends AnyFreeSpec with Matchers {
           val base    = filledWindow(0.0, 0.0, 0.0, 0.0, 2.0, 4.0, 6.0, 8.0)
           val shifted = filledWindow(100.0, 100.0, 100.0, 100.0, 102.0, 104.0, 106.0, 108.0)
 
-          val baseResult    = Stats.findInflection(base)
-          val shiftedResult = Stats.findInflection(shifted)
+          val baseResult    = Stats.findInflectionBy(base)(identity)
+          val shiftedResult = Stats.findInflectionBy(shifted)(identity)
 
           baseResult shouldBe shiftedResult
         }
@@ -375,8 +343,8 @@ class StatsSpec extends AnyFreeSpec with Matchers {
           val base   = filledWindow(0.0, 0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0)
           val scaled = filledWindow(0.0, 0.0, 0.0, 0.0, 10.0, 20.0, 30.0, 40.0)
 
-          val baseResult   = Stats.findInflection(base)
-          val scaledResult = Stats.findInflection(scaled)
+          val baseResult   = Stats.findInflectionBy(base)(identity)
+          val scaledResult = Stats.findInflectionBy(scaled)(identity)
 
           baseResult shouldBe scaledResult
         }
