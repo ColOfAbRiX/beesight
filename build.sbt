@@ -15,14 +15,16 @@ Test / tpolecatScalacOptions := Set.empty
 
 addCommandAlias("styleApply", "; scalafixAll ExplicitResultTypes; scalafixAll OrganizeImports; scalafixAll RedundantSyntax; scalafixAll RemoveUnused; scalafmtAll")
 addCommandAlias("styleCheck", "; scalafixAll --check ExplicitResultTypes; scalafixAll --check OrganizeImports; scalafixAll --check RedundantSyntax; scalafixAll --check RemoveUnused; scalafmtCheckAll")
+addCommandAlias("nativeImage", "GraalVMNativeImage / packageBin")
 
 lazy val root =
   project
     .in(file("."))
+    .enablePlugins(GraalVMNativeImagePlugin)
     .settings(
       name                 := "beesight",
       organization         := "com.colofabrix.scala",
-      version              := "0.1.0-SNAPSHOT",
+      version              := "1.0.0",
       scalaVersion         := scala3Version,
       semanticdbEnabled    := true,
       semanticdbVersion    := scalafixSemanticdb.revision,
@@ -34,16 +36,20 @@ lazy val root =
         "com.colofabrix.scala" %% "declinio"                      % "1.0.0",
         "com.monovore"         %% "decline"                       % "2.4.1",
         "de.lhns"              %% "fs2-compress-zip"              % "2.3.2",
-        "io.github.pityka"     %% "nspl-awt"                      % "0.10.0",
-        "org.gnieh"            %% "fs2-data-csv-generic"          % "1.11.1",
         "org.gnieh"            %% "fs2-data-csv"                  % "1.11.1",
         "org.scalameta"        %% "metaconfig-core"               % "0.18.2",
         "org.scalameta"        %% "metaconfig-typesafe-config"    % "0.18.2",
-        "org.scalanlp"         %% "breeze"                        % "2.1.0",
         "org.scalatest"        %% "scalatest"                     % "3.2.18" % Test,
         "org.typelevel"        %% "cats-core"                     % "2.12.0",
         "org.typelevel"        %% "cats-effect-testing-scalatest" % "1.7.0"  % Test,
         "org.typelevel"        %% "cats-effect"                   % "3.5.4",
+      ),
+      graalVMNativeImageOptions ++= Seq(
+        "--no-fallback",
+        "--initialize-at-build-time",
+        "-H:+UnlockExperimentalVMOptions",
+        "-H:IncludeResources=reference.conf",
+        "-H:ConfigurationFileDirectories=src/main/resources/META-INF/native-image",
       ),
       semanticdbEnabled := true,
       semanticdbVersion := scalafixSemanticdb.revision,

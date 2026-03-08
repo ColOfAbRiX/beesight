@@ -1,0 +1,9 @@
+{
+  "resources": {
+    "includes": [
+      {"pattern": "reference\\.conf$"},
+      {"pattern": "application\\.conf$"},
+      {"pattern": ".*\\.properties$"}
+    ]
+  }
+}

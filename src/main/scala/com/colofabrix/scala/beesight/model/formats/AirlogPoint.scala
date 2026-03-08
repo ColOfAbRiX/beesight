@@ -6,7 +6,6 @@ import com.colofabrix.scala.beesight.detection.model.*
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.model.derivation.given
 import fs2.data.csv.*
-import fs2.data.csv.generic.semiauto.*
 import java.time.*
 import scala.util.Try
 

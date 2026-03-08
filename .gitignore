@@ -2,7 +2,6 @@
 .DS_Store
 
 # sbt specific
-dist/*
 target/
 lib_managed/
 src_managed/
@@ -31,6 +30,9 @@ metals.sbt
 .idea
 .idea_modules
 /.worksheet/
+
+# Native image binaries
+dist/beesight.bin
 
 # Other
 real_data/

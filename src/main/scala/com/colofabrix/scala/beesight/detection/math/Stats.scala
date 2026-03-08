@@ -1,7 +1,5 @@
 package com.colofabrix.scala.beesight.detection.math
 
-import breeze.linalg.DenseVector
-import breeze.stats.median as breezeMedian
 import com.colofabrix.scala.beesight.collections.NEW
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
 import com.colofabrix.scala.beesight.model.GeoVector
@@ -25,9 +23,9 @@ object Stats {
     }
 
     GeoVector(
-      north = breezeMedian(DenseVector(northArr)),
-      east = breezeMedian(DenseVector(eastArr)),
-      vertical = breezeMedian(DenseVector(vertArr)),
+      north = median(northArr),
+      east = median(eastArr),
+      vertical = median(vertArr),
     )
 
   /** Population standard deviation of values extracted from a window. */
@@ -63,6 +61,13 @@ object Stats {
     }
 
     findInflectionFromArray(data, n)
+
+  /** Computes the median of an array of doubles. */
+  private def median(values: Array[Double]): Double =
+    val sorted = values.sorted
+    val n      = sorted.length
+    if n % 2 == 0 then (sorted(n / 2 - 1) + sorted(n / 2)) / 2.0
+    else sorted(n / 2)
 
   private def findInflectionFromArray(data: Array[Double], n: Int): Option[Int] =
     var bestIdx   = -1
