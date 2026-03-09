@@ -1,7 +1,6 @@
 package com.colofabrix.scala.beesight.output
 
 import cats.Show
-import cats.effect.IO
 import cats.implicits.given
 import com.colofabrix.scala.beesight.*
 import com.colofabrix.scala.beesight.config.Config
@@ -32,7 +31,7 @@ final class ResultPrinter private (config: Config) {
       landing = point.landing,
     )
 
-  // ─── Show Instances ────────────────────────────────────────────────────────────
+  //  Show Instances  //
 
   given niceOptionShow[A: Show]: Show[Option[A]] =
     _.fold("N/A")(Show[A].show(_))
@@ -55,6 +54,8 @@ final class ResultPrinter private (config: Config) {
 }
 
 object ResultPrinter {
+
   def apply(config: Config): ResultPrinter =
     new ResultPrinter(config)
+
 }

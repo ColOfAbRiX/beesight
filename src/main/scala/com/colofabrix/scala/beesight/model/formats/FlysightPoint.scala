@@ -1,7 +1,6 @@
 package com.colofabrix.scala.beesight.model.formats
 
 import cats.data.NonEmptyList
-import cats.implicits.*
 import com.colofabrix.scala.beesight.detection.model.*
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.model.derivation.given

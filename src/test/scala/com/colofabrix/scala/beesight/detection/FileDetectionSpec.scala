@@ -1,10 +1,8 @@
 package com.colofabrix.scala.beesight.detection
 
 import cats.effect.IO
-import cats.effect.unsafe.implicits.global
-import cats.effect.unsafe.IORuntime
-import cats.syntax.all.given
 import com.colofabrix.scala.beesight.*
+import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.colofabrix.scala.beesight.input.CsvFileReader
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.model.formats.FlysightPoint
@@ -14,7 +12,6 @@ import java.util.zip.ZipInputStream
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import scala.io.Source
-import com.colofabrix.scala.beesight.config.DetectionConfig
 
 class FileDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues {
 

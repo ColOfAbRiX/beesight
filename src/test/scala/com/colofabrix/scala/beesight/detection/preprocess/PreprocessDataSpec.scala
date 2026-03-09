@@ -1,15 +1,14 @@
 package com.colofabrix.scala.beesight.detection.preprocess
 
 import cats.effect.IO
-import cats.effect.unsafe.implicits.global
-import com.colofabrix.scala.beesight.config.*
-import com.colofabrix.scala.beesight.model.GeoVector
 import com.colofabrix.scala.beesight.IOValues
+import com.colofabrix.scala.beesight.config.*
+import com.colofabrix.scala.beesight.detection.model.IndexedDataPoint
+import com.colofabrix.scala.beesight.model.GeoVector
 import fs2.Stream
 import java.time.Instant
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
-import com.colofabrix.scala.beesight.detection.model.IndexedDataPoint
 
 class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
 

@@ -1,7 +1,6 @@
 package com.colofabrix.scala.beesight.input
 
 import cats.effect.*
-import cats.implicits.*
 import com.colofabrix.scala.beesight.*
 import java.nio.file.*
 import scala.jdk.CollectionConverters.*

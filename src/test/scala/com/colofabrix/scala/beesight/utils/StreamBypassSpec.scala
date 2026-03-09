@@ -1,7 +1,6 @@
 package com.colofabrix.scala.beesight.utils
 
 import cats.effect.IO
-import cats.effect.unsafe.implicits.global
 import com.colofabrix.scala.beesight.IOValues
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers

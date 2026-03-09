@@ -1,7 +1,5 @@
 package com.colofabrix.scala.beesight.config
 
-import com.colofabrix.scala.beesight.model.EventType
-
 final case class DetectionConfig(
   global: GlobalConfig,
   takeoff: TakeoffConfig,

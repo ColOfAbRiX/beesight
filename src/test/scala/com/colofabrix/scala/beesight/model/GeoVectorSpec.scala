@@ -1,10 +1,10 @@
 package com.colofabrix.scala.beesight.model
 
 import cats.Order
-import org.scalatest.freespec.AnyFreeSpec
-import org.scalatest.matchers.should.Matchers
 import com.colofabrix.scala.beesight.model.GeoVector
 import com.colofabrix.scala.beesight.model.GeoVector.*
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.should.Matchers
 
 class GeoVectorSpec extends AnyFreeSpec with Matchers {
 

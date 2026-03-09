@@ -1,11 +1,9 @@
 package com.colofabrix.scala.beesight.config
 
-import com.colofabrix.scala.beesight.model.EventType
-
 final case class CutterConfig(
   keepBeforeTakeoff: Int,
   keepAfterLanding: Int,
-  minKeepPoints: Int,
+  minPercentKeepPoints: Double,
 )
 
 object CutterConfig {
@@ -14,7 +12,7 @@ object CutterConfig {
     CutterConfig(
       keepBeforeTakeoff = 500,
       keepAfterLanding = 500,
-      minKeepPoints = 0,
+      minPercentKeepPoints = 0.1,
     )
 
 }

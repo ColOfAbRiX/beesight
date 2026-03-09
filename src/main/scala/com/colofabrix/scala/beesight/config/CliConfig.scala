@@ -1,6 +1,5 @@
 package com.colofabrix.scala.beesight.config
 
-import cats.data.*
 import cats.implicits.*
 import com.monovore.decline.*
 import java.nio.file.{ Path, Paths }
@@ -48,7 +47,7 @@ object CliConfig {
         long = "detection-config",
         help = "Output directory where to place the produced CSV files",
       )
-      .map(_ => DetectionConfig.default)  // TODO: Implement decoding
+      .map(_ => DetectionConfig.default) // TODO: Implement decoding
       .withDefault(DetectionConfig.default)
 
   lazy val limit: Opts[Option[Int]] =

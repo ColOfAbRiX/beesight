@@ -40,7 +40,7 @@ object Config {
       createGraph = false,
       createSummary = false,
       parallelism = None,
-      detectionConfig = DetectionConfig.default
+      detectionConfig = DetectionConfig.default,
     )
 
 }

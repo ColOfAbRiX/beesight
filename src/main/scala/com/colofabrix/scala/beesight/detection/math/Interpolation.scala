@@ -59,7 +59,7 @@ object Interpolation {
       acceleration = interpolate_(k1.acceleration, k2.acceleration)(t),
     )
 
-  private def tParam(t1: Instant, t2: Instant, time: Instant): Double =
-    (time.toEpochMilli - t1.toEpochMilli).toDouble / (t2.toEpochMilli - t1.toEpochMilli)
+  private def tParam(t1: Instant, t2: Instant, time: Instant): Double = (time.toEpochMilli - t1.toEpochMilli).toDouble /
+    (t2.toEpochMilli - t1.toEpochMilli)
 
 }

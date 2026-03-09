@@ -1,9 +1,8 @@
 package com.colofabrix.scala.beesight.collections
 
-import cats.syntax.all.*
+import com.colofabrix.scala.beesight.collections.NonEmptyWindow.*
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
-import com.colofabrix.scala.beesight.collections.NonEmptyWindow.*
 
 /**
  * Tests for NonEmptyWindow - a non-empty sliding window.

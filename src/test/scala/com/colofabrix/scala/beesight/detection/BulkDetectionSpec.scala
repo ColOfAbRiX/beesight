@@ -1,8 +1,6 @@
 package com.colofabrix.scala.beesight.detection
 
 import cats.effect.IO
-import cats.effect.unsafe.implicits.global
-import cats.effect.unsafe.IORuntime
 import cats.syntax.all.given
 import com.colofabrix.scala.beesight.*
 import com.colofabrix.scala.beesight.input.CsvFileReader
@@ -121,8 +119,10 @@ class BulkDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues wi
     landing: Option[FlightEventPoint],
     tag: Option[String],
   ) {
+
     def toFlightEvents: FlightEvents =
       FlightEvents(takeoff, freefall, canopy, landing)
+
   }
 
   private def loadSummary(file: File): List[TestFileRow] =

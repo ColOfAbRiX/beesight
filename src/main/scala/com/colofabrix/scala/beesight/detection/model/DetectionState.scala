@@ -1,7 +1,6 @@
 package com.colofabrix.scala.beesight.detection.model
 
 import cats.data.IndexedState
-import cats.syntax.all.*
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.*
 import com.colofabrix.scala.beesight.model.*
 

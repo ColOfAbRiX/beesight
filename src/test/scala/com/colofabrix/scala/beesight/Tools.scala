@@ -1,11 +1,11 @@
 package com.colofabrix.scala.beesight
 
+import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.colofabrix.scala.beesight.detection.FlightStagesDetection
 import com.colofabrix.scala.beesight.model.FlightEvents
 import com.colofabrix.scala.beesight.model.formats.FlysightPoint
 import java.io.File
 import scala.io.Source
-import com.colofabrix.scala.beesight.config.DetectionConfig
 
 object Tools {
 

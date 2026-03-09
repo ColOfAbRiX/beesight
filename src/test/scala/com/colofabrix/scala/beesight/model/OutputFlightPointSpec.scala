@@ -1,8 +1,8 @@
 package com.colofabrix.scala.beesight.model
 
+import com.colofabrix.scala.beesight.model.OutputFlightPoint.*
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
-import com.colofabrix.scala.beesight.model.OutputFlightPoint.*
 
 class OutputFlightPointSpec extends AnyFreeSpec with Matchers {
 

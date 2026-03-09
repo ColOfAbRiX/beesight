@@ -1,9 +1,7 @@
 package com.colofabrix.scala.beesight.output
 
-import cats.effect.implicits.given
 import cats.syntax.all.*
 import com.colofabrix.scala.beesight.config.Config
-import com.colofabrix.scala.beesight.input.FileOps
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.model.formats.FileFormatAdapter
 import com.colofabrix.scala.beesight.utils.*

@@ -1,7 +1,5 @@
 package com.colofabrix.scala.beesight.output
 
-import cats.effect.IO
-import cats.implicits.*
 import com.colofabrix.scala.beesight.config.*
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.output.DataCutter.*
@@ -28,7 +26,7 @@ final class DataCutter private (config: Config) {
             (newState, newState.preBuffer.toVector ++ toEmit)
         }
         .flatMap {
-          case (state, pointsToEmit) => fs2.Stream.emits(pointsToEmit)
+          case (_, pointsToEmit) => fs2.Stream.emits(pointsToEmit)
         }
 
   private def processPoint[A](state: CutterState[A], point: OutputFlightPoint[A], index: Long): StreamState[A] =
@@ -51,8 +49,7 @@ final class DataCutter private (config: Config) {
       val newState = CutterState[A](CutterPhase.InvalidFile, Queue.empty)
       (newState, state.preBuffer.toVector :+ point)
     else if takeoffDetected then
-      val newState   = CutterState[A](CutterPhase.InFlight, Queue.empty, afterLandingCount = 0)
-      val emitPoints = state.preBuffer.take(config.bufferPoints).toVector :+ point
+      val newState = CutterState[A](CutterPhase.InFlight, Queue.empty, afterLandingCount = 0)
       (newState, state.preBuffer.toVector :+ point)
     else
       val updatedBuffer = state.preBuffer.enqueue(point)

@@ -2,9 +2,6 @@ package com.colofabrix.scala.beesight.input
 
 import cats.effect.IO
 import com.colofabrix.scala.beesight.IOConfig
-import com.colofabrix.scala.beesight.config.Config
-import com.colofabrix.scala.beesight.model.formats.FlysightPoint
-import com.colofabrix.scala.beesight.model.{ FlightEvents, OutputFlightPoint }
 import de.lhns.fs2.compress.ZipUnarchiver
 import fs2.data.csv.*
 import fs2.io.file.{ Files, Flags, Path as Fs2Path }

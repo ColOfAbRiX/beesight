@@ -4,8 +4,7 @@ import cats.syntax.option.*
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
 import com.colofabrix.scala.beesight.config.TakeoffConfig
 import com.colofabrix.scala.beesight.detection.math.Stats
-import com.colofabrix.scala.beesight.detection.model.{ DetectionData, IndexedDataPoint }
-import com.colofabrix.scala.beesight.model.EventType
+import com.colofabrix.scala.beesight.detection.model.DetectionData
 import java.time.Duration
 
 final class TakeoffHandler private (config: TakeoffConfig) extends StageHandler {

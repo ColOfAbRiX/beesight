@@ -2,7 +2,6 @@ package com.colofabrix.scala.beesight.detection
 
 import cats.data.*
 import cats.syntax.all.*
-import com.colofabrix.scala.beesight.collections.NEW
 import com.colofabrix.scala.beesight.collections.NEW.*
 import com.colofabrix.scala.beesight.config.*
 import com.colofabrix.scala.beesight.detection.PhaseDetector.*
@@ -10,7 +9,6 @@ import com.colofabrix.scala.beesight.detection.model.*
 import com.colofabrix.scala.beesight.detection.model.DetectionConfigActions.*
 import com.colofabrix.scala.beesight.detection.stages.StageHandler
 import com.colofabrix.scala.beesight.model.*
-import com.colofabrix.scala.beesight.utils.*
 import scala.annotation.tailrec
 
 final class PhaseDetector private (config: DetectionConfig) {
@@ -42,7 +40,7 @@ final class PhaseDetector private (config: DetectionConfig) {
     case state @ DetectionState(_, FlightPhase.UnderCanopy, _) =>
       runDetectionOnWindow(state, EventType.Landing) ::
       Nil
-    case state @ DetectionState(_, FlightPhase.Landed, _) =>
+    case _ @DetectionState(_, FlightPhase.Landed, _) =>
       Nil
   }
 

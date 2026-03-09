@@ -3,8 +3,8 @@ package com.colofabrix.scala.beesight
 import cats.effect.IO
 import cats.effect.unsafe.IORuntime
 import com.colofabrix.scala.beesight.config.Config
-import org.scalatest.exceptions.TestFailedException
 import org.scalatest.Suite
+import org.scalatest.exceptions.TestFailedException
 import scala.concurrent.duration.*
 
 /**

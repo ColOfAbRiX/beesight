@@ -1,8 +1,8 @@
 package com.colofabrix.scala.beesight.model
 
+import com.colofabrix.scala.beesight.model.FlightEvents.*
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
-import com.colofabrix.scala.beesight.model.FlightEvents.*
 
 class FlightEventsSpec extends AnyFreeSpec with Matchers {
 

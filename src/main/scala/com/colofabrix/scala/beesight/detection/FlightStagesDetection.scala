@@ -4,14 +4,12 @@ import cats.data.*
 import cats.syntax.all.*
 import com.colofabrix.scala.beesight.collections.*
 import com.colofabrix.scala.beesight.collections.NEW.*
-import com.colofabrix.scala.beesight.config.{ DetectionConfig, EventConfigs }
-import com.colofabrix.scala.beesight.detection.FlightStagesDetection.*
+import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.colofabrix.scala.beesight.detection.FlightStagesDetection.given
 import com.colofabrix.scala.beesight.detection.math.*
 import com.colofabrix.scala.beesight.detection.model.*
 import com.colofabrix.scala.beesight.detection.model.DetectionConfigActions.*
 import com.colofabrix.scala.beesight.detection.preprocess.PreprocessData
-import com.colofabrix.scala.beesight.detection.stages.*
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.model.formats.FileFormatAdapter
 import com.colofabrix.scala.beesight.utils.*

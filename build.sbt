@@ -13,8 +13,8 @@ Global / tpolecatExcludeOptions ++=
   )
 Test / tpolecatScalacOptions := Set.empty
 
-addCommandAlias("styleApply", "; scalafixAll ExplicitResultTypes; scalafixAll OrganizeImports; scalafixAll RedundantSyntax; scalafixAll RemoveUnused; scalafmtAll")
-addCommandAlias("styleCheck", "; scalafixAll --check ExplicitResultTypes; scalafixAll --check OrganizeImports; scalafixAll --check RedundantSyntax; scalafixAll --check RemoveUnused; scalafmtCheckAll")
+addCommandAlias("styleApply", "; set ThisBuild / scalacOptions += \"-Wunused:all\"; scalafixAll; session clear; scalafmtAll")
+addCommandAlias("styleCheck", "; set ThisBuild / scalacOptions += \"-Wunused:all\"; scalafixAll --check; session clear; scalafmtCheckAll")
 addCommandAlias("nativeImage", "GraalVMNativeImage / packageBin")
 
 lazy val root =
@@ -28,7 +28,6 @@ lazy val root =
       scalaVersion         := scala3Version,
       semanticdbEnabled    := true,
       semanticdbVersion    := scalafixSemanticdb.revision,
-      semanticdbEnabled    := true,
       scalacOptions        += "-preview",
       libraryDependencies ++= List(
         "co.fs2"               %% "fs2-core"                      % "3.10.2",
@@ -51,6 +50,4 @@ lazy val root =
         "-H:IncludeResources=reference.conf",
         "-H:ConfigurationFileDirectories=src/main/resources/META-INF/native-image",
       ),
-      semanticdbEnabled := true,
-      semanticdbVersion := scalafixSemanticdb.revision,
     )

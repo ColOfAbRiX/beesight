@@ -1,13 +1,11 @@
 package com.colofabrix.scala.beesight.model.formats
 
 import cats.data.NonEmptyList
-import cats.implicits.*
 import com.colofabrix.scala.beesight.detection.model.*
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.model.derivation.given
 import fs2.data.csv.*
 import java.time.*
-import scala.util.Try
 
 /**
  * Airlog One Data Point

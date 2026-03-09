@@ -4,9 +4,7 @@ import cats.syntax.option.*
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
 import com.colofabrix.scala.beesight.config.LandingConfig
 import com.colofabrix.scala.beesight.detection.math.Stats
-import com.colofabrix.scala.beesight.detection.model.{ DetectionData, IndexedDataPoint }
-import com.colofabrix.scala.beesight.model.EventType
-import java.time.Duration
+import com.colofabrix.scala.beesight.detection.model.DetectionData
 
 final class LandingHandler private (config: LandingConfig) extends StageHandler {
 
