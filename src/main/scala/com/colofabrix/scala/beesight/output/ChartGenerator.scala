@@ -30,7 +30,7 @@ final class ChartGenerator private (config: Config) {
             _          <- writeHtmlFile(html, outputPath)
           yield ()
         }
-        .drainWhen(config.createGraph && !config.dryRun)
+        .drainWhen(config.flags.createGraph && !config.flags.dryRun)
 
   private def updateChartState[A: FileFormatAdapter](
     state: ChartState[A],

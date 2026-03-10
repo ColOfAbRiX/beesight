@@ -25,7 +25,7 @@ object Main extends IODeclineReaderApp[Config] {
     "Beesight - A Flysight data manipulator tool"
 
   val options: Opts[Config] =
-    CliConfig.allOptions
+    Config.declineOpts
 
   override def runWithReader: IOConfig[ExitCode] =
     for
@@ -39,6 +39,7 @@ object Main extends IODeclineReaderApp[Config] {
     IOConfig.ask.flatMap { config =>
       config
         .parallelism
+        .map(_.value)
         .fold(inputFiles.parTraverse(processFile))(inputFiles.parTraverseN(_)(processFile))
     }
 

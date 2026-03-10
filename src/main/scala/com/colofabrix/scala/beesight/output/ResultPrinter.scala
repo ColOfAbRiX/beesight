@@ -21,7 +21,7 @@ final class ResultPrinter private (config: Config) {
           case Some(stages) => IOConfig.stdout(stages.show)
           case None         => IOConfig.stdout(s"${YELLOW}WARNING!${RESET} No data processed.")
         }
-        .drainWhen(config.writeCsv)
+        .drainWhen(config.flags.writeCsv)
 
   private def extractStages(point: OutputFlightPoint[FlysightPoint]): FlightEvents =
     FlightEvents(

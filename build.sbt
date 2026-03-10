@@ -13,10 +13,6 @@ Global / tpolecatExcludeOptions ++=
   )
 Test / tpolecatScalacOptions := Set.empty
 
-addCommandAlias("styleApply", "; set ThisBuild / scalacOptions += \"-Wunused:all\"; scalafixAll; session clear; scalafmtAll")
-addCommandAlias("styleCheck", "; set ThisBuild / scalacOptions += \"-Wunused:all\"; scalafixAll --check; session clear; scalafmtCheckAll")
-addCommandAlias("nativeImage", "GraalVMNativeImage / packageBin")
-
 lazy val root =
   project
     .in(file("."))
@@ -35,6 +31,8 @@ lazy val root =
         "com.colofabrix.scala" %% "declinio"                      % "1.0.0",
         "com.monovore"         %% "decline"                       % "2.4.1",
         "de.lhns"              %% "fs2-compress-zip"              % "2.3.2",
+        "io.github.iltotore"   %% "iron-decline"                  % "3.3.0",
+        "io.github.iltotore"   %% "iron"                          % "3.3.0",
         "org.gnieh"            %% "fs2-data-csv"                  % "1.11.1",
         "org.scalameta"        %% "metaconfig-core"               % "0.18.2",
         "org.scalameta"        %% "metaconfig-typesafe-config"    % "0.18.2",
@@ -51,3 +49,16 @@ lazy val root =
         "-H:ConfigurationFileDirectories=src/main/resources/META-INF/native-image",
       ),
     )
+
+addCommandAlias(
+  "styleApply",
+  "; set ThisBuild / scalacOptions += \"-Wunused:all\"; scalafixAll; session clear; scalafmtAll"
+)
+addCommandAlias(
+  "styleCheck",
+  "; set ThisBuild / scalacOptions += \"-Wunused:all\"; scalafixAll --check; session clear; scalafmtCheckAll"
+)
+addCommandAlias(
+  "nativeImage",
+  "GraalVMNativeImage / packageBin"
+)

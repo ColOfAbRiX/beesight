@@ -23,9 +23,9 @@ final class FlightStagesDetection private (config: DetectionConfig) {
   //  Configuration / Derived Values  //
 
   private val slidingWindowSize: Int =
-    val smoothWindows     = config.eventConfigsAsList.map(_.smoothingWindowSize)
-    val backWindows       = config.eventConfigsAsList.map(_.backtrackWindowSize)
-    val validationWindows = config.eventConfigsAsList.map(_.validationWindowSize)
+    val smoothWindows     = config.eventConfigsAsList.map(_.smoothingWindowSize.value)
+    val backWindows       = config.eventConfigsAsList.map(_.backtrackWindowSize.value)
+    val validationWindows = config.eventConfigsAsList.map(_.validationWindowSize.value)
     Math.max(smoothWindows.max, backWindows.max) + 1 + validationWindows.max
 
   //  Dependencies  //
@@ -164,7 +164,7 @@ final class FlightStagesDetection private (config: DetectionConfig) {
 
     val smoothingWindow =
       previousWindow
-        .takeNewest(smoothingWindowSize)
+        .takeNewest(smoothingWindowSize.value)
         .map(_.point)
 
     val kinematics             = Kinematics.computeSmoothed(smoothingWindow, currentPoint)

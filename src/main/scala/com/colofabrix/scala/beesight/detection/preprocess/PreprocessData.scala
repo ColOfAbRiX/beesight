@@ -10,7 +10,7 @@ import com.colofabrix.scala.beesight.utils.*
 final private[detection] class PreprocessData private (config: DetectionConfig) {
 
   private val windowCapacity: Int =
-    Math.max(2, config.global.preprocessWindowSize)
+    Math.max(2, config.global.preprocessWindowSize.value)
 
   def preprocess[F[_]]: fs2.Pipe[F, IndexedDataPoint, IndexedDataPoint] =
     _.statefulMapEmits(initialState, drainWindow) { (currentPoint, window) =>

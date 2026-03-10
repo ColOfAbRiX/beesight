@@ -63,7 +63,7 @@ final class PhaseDetector private (config: DetectionConfig) {
       LoopState(
         eventType = eventType,
         leftElements = initialFocus,
-        rightElements = stageConfig.validationWindowSize,
+        rightElements = stageConfig.validationWindowSize.value,
         stageHandler = stageHandler,
         maxFocus = eventTypeFocus,
         loopFocus = initialFocus,

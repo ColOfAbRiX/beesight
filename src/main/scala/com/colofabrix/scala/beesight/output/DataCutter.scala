@@ -43,7 +43,7 @@ final class DataCutter private (config: Config) {
       point
         .takeoff
         .map(_.index)
-        .exists(t => index >= Math.max(t - config.bufferPoints, 0))
+        .exists(t => index >= Math.max(t - config.dataCutterConfig.keepBeforeTakeoff.value, 0))
 
     if !point.freefall.isDefined then
       val newState = CutterState[A](CutterPhase.InvalidFile, Queue.empty)
@@ -70,7 +70,7 @@ final class DataCutter private (config: Config) {
       (state, Vector(point))
 
   private def handleAfterLanding[A](state: CutterState[A], point: OutputFlightPoint[A]): StreamState[A] =
-    if state.afterLandingCount >= config.bufferPoints then
+    if state.afterLandingCount >= config.dataCutterConfig.keepAfterLanding.value then
       val newState = state.copy(phase = CutterPhase.Done)
       (newState, Vector.empty)
     else

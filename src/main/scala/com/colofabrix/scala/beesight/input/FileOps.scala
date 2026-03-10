@@ -29,7 +29,7 @@ object FileOps {
         .map { files =>
           config
             .processLimit
-            .fold(files)(limit => files.take(limit))
+            .fold(files)(limit => files.take(limit.value))
         }
     }
 

@@ -1,6 +1,11 @@
 package com.colofabrix.scala.beesight.config
 
-import java.nio.file.Path
+import cats.syntax.all.*
+import com.monovore.decline.*
+import io.github.iltotore.iron.*
+import io.github.iltotore.iron.constraint.all.*
+import io.github.iltotore.iron.decline.given
+import java.nio.file.{ Path, Paths }
 
 /**
  * Configuration for the command line tool
@@ -15,15 +20,11 @@ import java.nio.file.Path
 final case class Config(
   input: Path,
   output: Option[Path],
-  processLimit: Option[Int],
-  dryRun: Boolean,
-  bufferPoints: Int,
-  minRetainedPoints: Double,
-  writeCsv: Boolean,
-  createGraph: Boolean,
-  createSummary: Boolean,
-  parallelism: Option[Int],
+  processLimit: Option[ProcessLimit],
   detectionConfig: DetectionConfig,
+  dataCutterConfig: DataCutterConfig,
+  flags: ConfigFlags,
+  parallelism: Option[Parallelism],
 )
 
 object Config {
@@ -33,14 +34,60 @@ object Config {
       input = Path.of("."),
       output = None,
       processLimit = None,
-      dryRun = false,
-      bufferPoints = 500,
-      minRetainedPoints = 0.1,
-      writeCsv = true,
-      createGraph = false,
-      createSummary = false,
-      parallelism = None,
+      dataCutterConfig = DataCutterConfig.default,
       detectionConfig = DetectionConfig.default,
+      flags = ConfigFlags.default,
+      parallelism = None,
     )
+
+  lazy val declineOpts: Opts[Config] =
+    (
+      input,
+      output,
+      processLimit,
+      DetectionConfig.declineOpts,
+      DataCutterConfig.declineOpts,
+      ConfigFlags.declineOpts,
+      parallelism,
+    ).mapN(Config.apply)
+
+  private lazy val input: Opts[Path] =
+    Opts
+      .option[String](
+        long = "input",
+        short = "i",
+        help = "Input path (file or directory, supports glob patterns)",
+      )
+      .map(Paths.get(_))
+      .withDefault(Config.default.input)
+
+  private lazy val output: Opts[Option[Path]] =
+    Opts
+      .option[String](
+        long = "output",
+        short = "o",
+        help = "Output directory where to place the produced CSV files",
+      )
+      .map(Paths.get(_))
+      .orNone
+
+  private lazy val processLimit: Opts[Option[ProcessLimit]] =
+    Opts
+      .option[Int :| GreaterEqual[1]](
+        long = "limit",
+        short = "l",
+        help = "The maximum amount of files to process",
+      )
+      .map(ProcessLimit.apply)
+      .orNone
+
+  private lazy val parallelism: Opts[Option[Parallelism]] =
+    Opts
+      .option[Int :| GreaterEqual[1]](
+        long = "parallelism",
+        help = "The number of concurrent threads used to process the files in batch. Default is: no limit",
+      )
+      .map(Parallelism.apply)
+      .orNone
 
 }

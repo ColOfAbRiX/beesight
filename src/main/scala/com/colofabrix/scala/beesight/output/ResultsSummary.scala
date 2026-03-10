@@ -16,7 +16,7 @@ object ResultsSummary {
    */
   def writeSummaryCsv[A](rows: List[(Path, Option[OutputFlightPoint[A]])]): IOConfig[Unit] =
     IOConfig.ask.flatMap { config =>
-      if config.dryRun || rows.isEmpty || !config.createSummary then
+      if config.flags.dryRun || rows.isEmpty || !config.flags.createSummary then
         IOConfig.pure(())
       else
         val header =

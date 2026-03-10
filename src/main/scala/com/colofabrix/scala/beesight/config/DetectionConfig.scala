@@ -1,4 +1,6 @@
 package com.colofabrix.scala.beesight.config
+import com.monovore.decline.Opts
+import java.nio.file.Paths
 
 final case class DetectionConfig(
   global: GlobalConfig,
@@ -54,23 +56,43 @@ object DetectionConfig {
       ),
     )
 
+  lazy val declineOpts: Opts[DetectionConfig] =
+    detectionConfigPath orElse detectionConfigString orElse Opts(DetectionConfig.default)
+
+  private lazy val detectionConfigPath: Opts[DetectionConfig] =
+    Opts
+      .option[String](
+        long = "detection-config-path",
+        help = "Override configuration for the detection config, in HOCON format",
+      )
+      .map(Paths.get(_))
+      .map(_ => DetectionConfig.default)
+
+  private lazy val detectionConfigString: Opts[DetectionConfig] =
+    Opts
+      .option[String](
+        long = "detection-config-path",
+        help = "Override configuration for the detection config, in HOCON format",
+      )
+      .map(_ => DetectionConfig.default)
+
 }
 
 final case class GlobalConfig(
-  preprocessWindowSize: Int,
+  preprocessWindowSize: WindowSize,
   accelerationClip: Double,
 )
 
 sealed trait EventConfigs {
-  def smoothingWindowSize: Int
-  def backtrackWindowSize: Int
-  def validationWindowSize: Int
+  def smoothingWindowSize: WindowSize
+  def backtrackWindowSize: WindowSize
+  def validationWindowSize: WindowSize
 }
 
 final case class TakeoffConfig(
-  smoothingWindowSize: Int,
-  backtrackWindowSize: Int,
-  validationWindowSize: Int,
+  smoothingWindowSize: WindowSize,
+  backtrackWindowSize: WindowSize,
+  validationWindowSize: WindowSize,
   validationVerticalSpeed: Double,
   verticalSpeedThreshold: Double,
   horizontalSpeedThreshold: Double,
@@ -78,9 +100,9 @@ final case class TakeoffConfig(
 ) extends EventConfigs
 
 final case class FreefallConfig(
-  smoothingWindowSize: Int,
-  backtrackWindowSize: Int,
-  validationWindowSize: Int,
+  smoothingWindowSize: WindowSize,
+  backtrackWindowSize: WindowSize,
+  validationWindowSize: WindowSize,
   verticalSpeedThreshold: Double,
   accelerationThreshold: Double,
   accelerationMinVelocity: Double,
@@ -89,18 +111,18 @@ final case class FreefallConfig(
 ) extends EventConfigs
 
 final case class CanopyConfig(
-  smoothingWindowSize: Int,
-  backtrackWindowSize: Int,
-  validationWindowSize: Int,
+  smoothingWindowSize: WindowSize,
+  backtrackWindowSize: WindowSize,
+  validationWindowSize: WindowSize,
   verticalSpeedThreshold: Double,
   minCanopyAltitude: Double,
   validationVerticalSpeed: Double,
 ) extends EventConfigs
 
 final case class LandingConfig(
-  smoothingWindowSize: Int,
-  backtrackWindowSize: Int,
-  validationWindowSize: Int,
+  smoothingWindowSize: WindowSize,
+  backtrackWindowSize: WindowSize,
+  validationWindowSize: WindowSize,
   verticalSpeedThreshold: Double,
   stabilityThreshold: Double,
   validationVerticalSpeed: Double,

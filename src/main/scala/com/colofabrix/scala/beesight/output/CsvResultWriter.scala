@@ -27,7 +27,7 @@ final class CsvResultWriter private (config: Config) {
         .through(encodeUsingFirstHeaders(fullRows = true))
         .through(fs2.text.utf8.encode)
         .through(Files[IOConfig].writeAll(Fs2Path.fromNioPath(filePath)))
-        .drainWhen(!config.dryRun && config.writeCsv)
+        .drainWhen(!config.flags.dryRun && config.flags.writeCsv)
 
 }
 
