@@ -4,7 +4,6 @@ import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
 import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.colofabrix.scala.beesight.detection.model.*
 import com.colofabrix.scala.beesight.model.EventType
-import scala.collection.mutable.Map as MMap
 
 trait StageHandler {
 
@@ -25,19 +24,12 @@ trait StageHandler {
 
 object StageHandler {
 
-  private val lookup: MMap[(EventType, DetectionConfig), StageHandler] =
-    MMap.empty
-
   def apply(config: DetectionConfig, eventType: EventType): StageHandler =
     eventType match {
-      case EventType.Takeoff =>
-        lookup.getOrElseUpdate((eventType, config), TakeoffHandler(config.takeoff))
-      case EventType.Freefall =>
-        lookup.getOrElseUpdate((eventType, config), FreefallHandler(config.freefall))
-      case EventType.Canopy =>
-        lookup.getOrElseUpdate((eventType, config), CanopyHandler(config.canopy, config.freefall))
-      case EventType.Landing =>
-        lookup.getOrElseUpdate((eventType, config), LandingHandler(config.landing))
+      case EventType.Takeoff  => TakeoffHandler(config.takeoff)
+      case EventType.Freefall => FreefallHandler(config.freefall)
+      case EventType.Canopy   => CanopyHandler(config.canopy, config.freefall)
+      case EventType.Landing  => LandingHandler(config.landing)
     }
 
 }

@@ -5,13 +5,12 @@ import cats.implicits.given
 import com.colofabrix.scala.beesight.*
 import com.colofabrix.scala.beesight.config.Config
 import com.colofabrix.scala.beesight.model.*
-import com.colofabrix.scala.beesight.model.formats.FlysightPoint
 import com.colofabrix.scala.beesight.utils.*
 import scala.io.AnsiColor.*
 
 final class ResultPrinter private (config: Config) {
 
-  def printStagesPipe: fs2.Pipe[IOConfig, OutputFlightPoint[FlysightPoint], Nothing] =
+  def printStagesPipe: fs2.Pipe[IOConfig, OutputFlightPoint[?], Nothing] =
     data =>
       data
         .fold(Option.empty[FlightEvents]) { (_, point) =>
@@ -23,7 +22,7 @@ final class ResultPrinter private (config: Config) {
         }
         .drainWhen(config.flags.writeCsv)
 
-  private def extractStages(point: OutputFlightPoint[FlysightPoint]): FlightEvents =
+  private def extractStages(point: OutputFlightPoint[?]): FlightEvents =
     FlightEvents(
       takeoff = point.takeoff,
       freefall = point.freefall,

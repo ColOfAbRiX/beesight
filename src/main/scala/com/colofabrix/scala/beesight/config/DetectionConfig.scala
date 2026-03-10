@@ -1,6 +1,9 @@
 package com.colofabrix.scala.beesight.config
+
 import com.monovore.decline.Opts
 import java.nio.file.Paths
+import io.github.iltotore.iron.*
+import io.github.iltotore.iron.constraint.numeric.*
 
 final case class DetectionConfig(
   global: GlobalConfig,
@@ -71,10 +74,13 @@ object DetectionConfig {
   private lazy val detectionConfigString: Opts[DetectionConfig] =
     Opts
       .option[String](
-        long = "detection-config-path",
+        long = "detection-config-string",
         help = "Override configuration for the detection config, in HOCON format",
       )
       .map(_ => DetectionConfig.default)
+
+  given Conversion[Int, WindowSize] with
+    def apply(x: Int): WindowSize = WindowSize(x.refineUnsafe)
 
 }
 

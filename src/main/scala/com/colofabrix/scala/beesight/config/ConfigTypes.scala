@@ -13,8 +13,8 @@ object ProcessLimit {
   extension (self: ProcessLimit)
     def value: Int :| GreaterEqual[1] = self
 
-  given Conversion[Int, ProcessLimit] with
-    def apply(x: Int): ProcessLimit = x.refineUnsafe
+  given Ordering[ProcessLimit] =
+    Ordering.by(_.value)
 
 }
 
@@ -28,8 +28,8 @@ object Parallelism {
   extension (self: Parallelism)
     def value: Int :| GreaterEqual[1] = self
 
-  given Conversion[Int, Parallelism] with
-    def apply(x: Int): Parallelism = x.refineUnsafe
+  given Ordering[Parallelism] =
+    Ordering.by(_.value)
 
 }
 
@@ -43,8 +43,8 @@ object WindowSize {
   extension (self: WindowSize)
     def value: Int :| GreaterEqual[1] = self
 
-  given Conversion[Int, WindowSize] with
-    def apply(x: Int): WindowSize = x.refineUnsafe
+  given Ordering[WindowSize] =
+    Ordering.by(_.value)
 
 }
 
@@ -58,8 +58,8 @@ object Percent {
   extension (self: Percent)
     def value: Double :| Interval.Closed[0.0, 1.0] = self
 
-  given Conversion[Double, Percent] with
-    def apply(x: Double): Percent = x.refineUnsafe
+  given Ordering[Percent] =
+    Ordering.by(_.value)
 
 }
 
@@ -73,7 +73,7 @@ object KeepPoints {
   extension (self: KeepPoints)
     def value: Int :| GreaterEqual[0] = self
 
-  given Conversion[Int, KeepPoints] with
-    def apply(x: Int): KeepPoints = x.refineUnsafe
+  given Ordering[KeepPoints] =
+    Ordering.by(_.value)
 
 }

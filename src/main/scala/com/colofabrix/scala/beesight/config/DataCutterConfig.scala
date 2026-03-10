@@ -51,4 +51,10 @@ object DataCutterConfig {
       .map(Percent.apply)
       .withDefault(default.minRetainedPoints)
 
+  given Conversion[Int, KeepPoints] with
+    def apply(x: Int): KeepPoints = KeepPoints(x.refineUnsafe)
+
+  given Conversion[Double, Percent] with
+    def apply(x: Double): Percent = Percent(x.refineUnsafe)
+
 }
