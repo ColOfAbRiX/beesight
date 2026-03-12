@@ -1,6 +1,5 @@
 package com.colofabrix.scala.beesight.input
 
-import cats.effect.IO
 import com.colofabrix.scala.beesight.IOConfig
 import de.lhns.fs2.compress.ZipUnarchiver
 import fs2.data.csv.*
@@ -28,11 +27,10 @@ object CsvFileReader {
       .filter { line =>
         line.trim.nonEmpty && !line.trim.startsWith("#")
       }
+      .through(trimHeaders)
       .intersperse("\n")
       .through(lenient.attemptDecodeUsingHeaders[A]())
-      .collect {
-        case Right(decoded) => decoded
-      }
+      .collect { case Right(decoded) => decoded }
 
   private def isZipFile(filePath: Path): Boolean =
     filePath
@@ -56,6 +54,19 @@ object CsvFileReader {
       .through(fs2.text.utf8.decode)
       .through(unixEol)
       .through(fs2.text.lines)
+
+  private val trimHeaders: fs2.Pipe[IOConfig, String, String] =
+    stream =>
+      stream.zipWithIndex.flatMap {
+        case (line, 0) => // Header row: fix empty first column name
+          val fields = line.split(",", -1).map(_.trim)
+          if fields.nonEmpty && fields(0).isEmpty then fields(0) = "time"
+          fs2.Stream.emit(fields.mkString(","))
+        case (_, 1) => // Units row: skip it
+          fs2.Stream.empty
+        case (line, _) => // Data rows: pass through
+          fs2.Stream.emit(line)
+      }
 
   private val unixEol: fs2.Pipe[IOConfig, String, String] =
     _.map(_.replace("\r\n", "\n"))

@@ -121,7 +121,7 @@ class FileDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues {
 
   }
 
-  /** Reads the first entry from a zip file and counts the non-header CSV lines */
+  /** Reads the first entry from a zip file and counts the data lines (excluding header and units row) */
   private def countCsvLinesInZip(file: File): Int =
     val zis = new ZipInputStream(java.io.FileInputStream(file))
     try {
@@ -129,7 +129,7 @@ class FileDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues {
       Source
         .fromInputStream(zis)
         .getLines()
-        .drop(1)
+        .drop(2)
         .size
     } finally
       zis.close()

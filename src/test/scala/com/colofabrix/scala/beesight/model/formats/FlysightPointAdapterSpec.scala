@@ -99,7 +99,7 @@ class FlysightPointAdapterSpec extends AnyFreeSpec with Matchers {
       sAcc = 0.0,
       heading = 0.0,
       cAcc = 0.0,
-      gpsFix = 3,
+      gpsFix = Some(3),
       numSV = 10,
       extra = List.empty,
     )

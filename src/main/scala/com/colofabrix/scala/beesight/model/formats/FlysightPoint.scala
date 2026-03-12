@@ -38,7 +38,7 @@ final case class FlysightPoint(
   sAcc: Double,
   heading: Double,
   cAcc: Double,
-  gpsFix: Int,
+  gpsFix: Option[Int],
   numSV: Int,
   extra: List[(String, String)],
 )
@@ -72,7 +72,7 @@ object FlysightPoint {
         sAcc     <- row.as[Double]("sAcc")
         heading  <- row.as[Double]("heading")
         cAcc     <- row.as[Double]("cAcc")
-        gpsFix   <- row.as[Int]("gpsFix")
+        gpsFix   <- row.asOptional[Int]("gpsFix")
         numSV    <- row.as[Int]("numSV")
       yield FlysightPoint(
         time = javaTime,
@@ -126,7 +126,7 @@ object FlysightPoint {
         ("sAcc", formatDouble(row.sAcc, 2)),
         ("heading", formatDouble(row.heading, 5)),
         ("cAcc", formatDouble(row.cAcc, 5)),
-        ("gpsFix", row.gpsFix.toString),
+        ("gpsFix", row.gpsFix.map(_.toString).getOrElse("")),
         ("numSV", row.numSV.toString),
       )
       .appendList(row.extra)
