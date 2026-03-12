@@ -4,6 +4,7 @@ import cats.effect.IO
 import com.colofabrix.scala.beesight.IOValues
 import com.colofabrix.scala.beesight.config.*
 import com.colofabrix.scala.beesight.config.DetectionConfig.given
+import io.github.iltotore.iron.*
 import com.colofabrix.scala.beesight.detection.model.IndexedDataPoint
 import com.colofabrix.scala.beesight.model.GeoVector
 import fs2.Stream
@@ -421,7 +422,7 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
   ): DetectionConfig =
     DetectionConfig.default.copy(
       global = DetectionConfig.default.global.copy(
-        preprocessWindowSize = preprocessWindowSize,
+        preprocessWindowSize = WindowSize(preprocessWindowSize.refineUnsafe),
         accelerationClip = accelerationClip,
       ),
     )

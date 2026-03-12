@@ -18,19 +18,22 @@ final class ChartGenerator private (config: Config) {
    */
   def chartPipe[A: FileFormatAdapter](outputCsvFile: Path): fs2.Pipe[IOConfig, OutputFlightPoint[A], Nothing] =
     stream =>
-      stream
-        .zipWithIndex
-        .fold(ChartState[A]()) {
-          case (state, (point, idx)) => updateChartState(state, point, idx)
-        }
-        .evalMap { state =>
-          for
-            outputPath <- computeChartPath(outputCsvFile)
-            html        = createHtmlFromState(state)
-            _          <- writeHtmlFile(html, outputPath)
-          yield ()
-        }
-        .drainWhen(config.flags.createGraph && !config.flags.dryRun)
+      if config.flags.createGraph && !config.flags.dryRun then
+        stream
+          .zipWithIndex
+          .fold(ChartState[A]()) {
+            case (state, (point, idx)) => updateChartState(state, point, idx)
+          }
+          .evalMap { state =>
+            for
+              outputPath <- computeChartPath(outputCsvFile)
+              html        = createHtmlFromState(state)
+              _          <- writeHtmlFile(html, outputPath)
+            yield ()
+          }
+          .drain
+      else
+        stream.drain
 
   private def updateChartState[A: FileFormatAdapter](
     state: ChartState[A],

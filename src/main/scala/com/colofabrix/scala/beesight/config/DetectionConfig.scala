@@ -1,9 +1,13 @@
 package com.colofabrix.scala.beesight.config
 
+import cats.data.*
 import com.monovore.decline.Opts
-import java.nio.file.Paths
+import com.typesafe.config.ConfigFactory
 import io.github.iltotore.iron.*
 import io.github.iltotore.iron.constraint.numeric.*
+import java.nio.file.Paths
+import pureconfig.*
+import scala.io.Source
 
 final case class DetectionConfig(
   global: GlobalConfig,
@@ -11,53 +15,14 @@ final case class DetectionConfig(
   freefall: FreefallConfig,
   canopy: CanopyConfig,
   landing: LandingConfig,
-)
+) derives ConfigReader
 
 object DetectionConfig {
 
   val default: DetectionConfig =
-    DetectionConfig(
-      global = GlobalConfig(
-        preprocessWindowSize = 20,
-        accelerationClip = 20.0,
-      ),
-      takeoff = TakeoffConfig(
-        smoothingWindowSize = 5,
-        backtrackWindowSize = 10,
-        validationWindowSize = 100,
-        validationVerticalSpeed = -4.932 * 0.5,
-        verticalSpeedThreshold = -2.0,
-        horizontalSpeedThreshold = 30.0,
-        maxTakeoffAltitude = 600.0,
-      ),
-      freefall = FreefallConfig(
-        verticalSpeedThreshold = 25.0,
-        validationVerticalSpeed = 6.713 * 0.5,
-        accelerationThreshold = 3.0,
-        accelerationMinVelocity = 10.0,
-        minFreefallAltitude = 600.0,
-        smoothingWindowSize = 5,
-        backtrackWindowSize = 10,
-        validationWindowSize = 100,
-      ),
-      canopy = CanopyConfig(
-        smoothingWindowSize = 5,
-        backtrackWindowSize = 10,
-        validationWindowSize = 100,
-        verticalSpeedThreshold = 10.0,
-        minCanopyAltitude = 600.0,
-        validationVerticalSpeed = 6.713 * 0.2,
-      ),
-      landing = LandingConfig(
-        smoothingWindowSize = 5,
-        backtrackWindowSize = 10,
-        validationWindowSize = 100,
-        verticalSpeedThreshold = 1.0,
-        horizontalSpeedThreshold = 2.0,
-        stabilityThreshold = 0.5,
-        validationVerticalSpeed = 0.05,
-      ),
-    )
+    ConfigSource
+      .default
+      .loadOrThrow[DetectionConfig]
 
   lazy val declineOpts: Opts[DetectionConfig] =
     detectionConfigPath orElse detectionConfigString orElse Opts(DetectionConfig.default)
@@ -66,10 +31,11 @@ object DetectionConfig {
     Opts
       .option[String](
         long = "detection-config-path",
-        help = "Override configuration for the detection config, in HOCON format",
+        help = "Path to a HOCON file with override configuration for detection",
       )
-      .map(Paths.get(_))
-      .map(_ => DetectionConfig.default)
+      .mapValidated { path =>
+        fromString(Source.fromFile(Paths.get(path).toFile).mkString)
+      }
 
   private lazy val detectionConfigString: Opts[DetectionConfig] =
     Opts
@@ -77,17 +43,29 @@ object DetectionConfig {
         long = "detection-config-string",
         help = "Override configuration for the detection config, in HOCON format",
       )
-      .map(_ => DetectionConfig.default)
+      .mapValidated(fromString)
 
-  given Conversion[Int, WindowSize] with
-    def apply(x: Int): WindowSize = WindowSize(x.refineUnsafe)
+  private def fromString(configString: String): ValidatedNel[String, DetectionConfig] =
+    val overrides = ConfigFactory.parseString(configString)
+    val defaults  = ConfigFactory.defaultReference()
+    val merged    = overrides.withFallback(defaults).resolve()
+
+    ConfigSource
+      .fromConfig(merged)
+      .load[DetectionConfig]
+      .left
+      .map(_.prettyPrint())
+      .fold(
+        err => Validated.invalidNel(err),
+        cfg => Validated.valid(cfg),
+      )
 
 }
 
 final case class GlobalConfig(
   preprocessWindowSize: WindowSize,
   accelerationClip: Double,
-)
+) derives ConfigReader
 
 sealed trait EventConfigs {
   def smoothingWindowSize: WindowSize
@@ -103,7 +81,7 @@ final case class TakeoffConfig(
   verticalSpeedThreshold: Double,
   horizontalSpeedThreshold: Double,
   maxTakeoffAltitude: Double,
-) extends EventConfigs
+) extends EventConfigs derives ConfigReader
 
 final case class FreefallConfig(
   smoothingWindowSize: WindowSize,
@@ -114,7 +92,7 @@ final case class FreefallConfig(
   accelerationMinVelocity: Double,
   minFreefallAltitude: Double,
   validationVerticalSpeed: Double,
-) extends EventConfigs
+) extends EventConfigs derives ConfigReader
 
 final case class CanopyConfig(
   smoothingWindowSize: WindowSize,
@@ -123,7 +101,7 @@ final case class CanopyConfig(
   verticalSpeedThreshold: Double,
   minCanopyAltitude: Double,
   validationVerticalSpeed: Double,
-) extends EventConfigs
+) extends EventConfigs derives ConfigReader
 
 final case class LandingConfig(
   smoothingWindowSize: WindowSize,
@@ -133,4 +111,7 @@ final case class LandingConfig(
   stabilityThreshold: Double,
   validationVerticalSpeed: Double,
   horizontalSpeedThreshold: Double,
-) extends EventConfigs
+) extends EventConfigs derives ConfigReader
+
+given ConfigReader[WindowSize] =
+  ConfigReader[Int].map(i => WindowSize(i.refineUnsafe))

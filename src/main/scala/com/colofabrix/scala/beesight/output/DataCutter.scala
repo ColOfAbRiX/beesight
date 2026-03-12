@@ -16,25 +16,38 @@ final class DataCutter private (config: Config) {
   def cutPipe[F[_], A]: fs2.Pipe[F, OutputFlightPoint[A], OutputFlightPoint[A]] =
     stream =>
       stream
-        .zipWithNext
-        .zipWithIndex
-        .mapAccumulate(CutterState[A]()) {
-          case (state, ((point, Some(_)), index)) =>
-            processPoint(state, point, index)
-          case (state, ((point, None), index)) =>
-            val (newState, toEmit) = processPoint(state, point, index)
-            (newState, newState.preBuffer.toVector ++ toEmit)
+        .fold(Vector.empty[OutputFlightPoint[A]])(_ :+ _)
+        .flatMap { allPoints =>
+          val cutResult = applyCutting(allPoints)
+          val retainedRatio =
+            if allPoints.isEmpty then 1.0
+            else cutResult.size.toDouble / allPoints.size
+          if retainedRatio < config.dataCutterConfig.minRetainedPoints.value then
+            fs2.Stream.emits(allPoints)
+          else
+            fs2.Stream.emits(cutResult)
         }
-        .flatMap {
-          case (_, pointsToEmit) => fs2.Stream.emits(pointsToEmit)
-        }
+
+  private def applyCutting[A](points: Vector[OutputFlightPoint[A]]): Vector[OutputFlightPoint[A]] =
+    fs2.Stream
+      .emits(points)
+      .zipWithNext
+      .zipWithIndex
+      .mapAccumulate(CutterState[A]()) {
+        case (state, ((point, Some(_)), index)) =>
+          processPoint(state, point, index)
+        case (state, ((point, None), index)) =>
+          val (newState, toEmit) = processPoint(state, point, index)
+          (newState, newState.preBuffer.toVector ++ toEmit)
+      }
+      .flatMap { case (_, pointsToEmit) => fs2.Stream.emits(pointsToEmit) }
+      .toVector
 
   private def processPoint[A](state: CutterState[A], point: OutputFlightPoint[A], index: Long): StreamState[A] =
     state.phase match {
       case CutterPhase.BeforeTakeoff => handleBeforeTakeoff(state, point, index)
       case CutterPhase.InFlight      => handleInFlight(state, point, index)
       case CutterPhase.AfterLanding  => handleAfterLanding(state, point)
-      case CutterPhase.InvalidFile   => (state, Vector(point))
       case CutterPhase.Done          => (state, Vector.empty)
     }
 
@@ -43,14 +56,25 @@ final class DataCutter private (config: Config) {
       point
         .takeoff
         .map(_.index)
-        .exists(t => index >= Math.max(t - config.dataCutterConfig.keepBeforeTakeoff.value, 0))
+        .exists(t => index >= t)
 
-    if !point.freefall.isDefined then
-      val newState = CutterState[A](CutterPhase.InvalidFile, Queue.empty)
-      (newState, state.preBuffer.toVector :+ point)
-    else if takeoffDetected then
-      val newState = CutterState[A](CutterPhase.InFlight, Queue.empty, afterLandingCount = 0)
-      (newState, state.preBuffer.toVector :+ point)
+    val landingPassed =
+      point.takeoff.isEmpty &&
+        point
+          .landing
+          .map(_.index)
+          .exists(l => index > l)
+
+    if takeoffDetected then
+      val keep       = config.dataCutterConfig.keepBeforeTakeoff.value
+      val keptPoints = state.preBuffer.toVector.takeRight(keep)
+      val newState   = CutterState[A](CutterPhase.InFlight, Queue.empty, afterLandingCount = 0)
+      (newState, keptPoints :+ point)
+    else if landingPassed then
+      val keptPoints = state.preBuffer.toVector
+      val newState   = CutterState[A](CutterPhase.AfterLanding, Queue.empty, afterLandingCount = 0)
+      val (afterState, afterPoints) = handleAfterLanding(newState, point)
+      (afterState, keptPoints ++ afterPoints)
     else
       val updatedBuffer = state.preBuffer.enqueue(point)
       val newState      = state.copy(preBuffer = updatedBuffer)
@@ -64,8 +88,8 @@ final class DataCutter private (config: Config) {
         .exists(l => index > l)
 
     if isAfterLanding then
-      val newState = CutterState[A](CutterPhase.AfterLanding, Queue.empty, 1)
-      (newState, Vector(point))
+      val newState = CutterState[A](CutterPhase.AfterLanding, Queue.empty, 0)
+      handleAfterLanding(newState, point)
     else
       (state, Vector(point))
 
@@ -85,7 +109,7 @@ object DataCutter {
     (CutterState[A], Vector[OutputFlightPoint[A]])
 
   private enum CutterPhase {
-    case BeforeTakeoff, InFlight, AfterLanding, Done, InvalidFile
+    case BeforeTakeoff, InFlight, AfterLanding, Done
   }
 
   final private case class CutterState[A](
@@ -94,9 +118,6 @@ object DataCutter {
     afterLandingCount: Long = 0,
   )
 
-  /**
-   * Creates a new DataCutter instance using the current configuration.
-   */
   def apply(config: Config): DataCutter =
     new DataCutter(config)
 

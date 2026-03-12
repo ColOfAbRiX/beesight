@@ -12,15 +12,18 @@ final class ResultPrinter private (config: Config) {
 
   def printStagesPipe: fs2.Pipe[IOConfig, OutputFlightPoint[?], Nothing] =
     data =>
-      data
-        .fold(Option.empty[FlightEvents]) { (_, point) =>
-          Some(extractStages(point))
-        }
-        .evalMap {
-          case Some(stages) => IOConfig.stdout(stages.show)
-          case None         => IOConfig.stdout(s"${YELLOW}WARNING!${RESET} No data processed.")
-        }
-        .drainWhen(config.flags.writeCsv)
+      if config.flags.writeCsv then
+        data
+          .fold(Option.empty[FlightEvents]) { (_, point) =>
+            Some(extractStages(point))
+          }
+          .evalMap {
+            case Some(stages) => IOConfig.stdout(stages.show)
+            case None         => IOConfig.stdout(s"${YELLOW}WARNING!${RESET} No data processed.")
+          }
+          .drain
+      else
+        data.drain
 
   private def extractStages(point: OutputFlightPoint[?]): FlightEvents =
     FlightEvents(

@@ -23,11 +23,14 @@ final class CsvResultWriter private (config: Config) {
     CsvRowEncoder[OutputFlightPoint[A], String],
   ): fs2.Pipe[IOConfig, OutputFlightPoint[A], Nothing] =
     stream =>
-      stream
-        .through(encodeUsingFirstHeaders(fullRows = true))
-        .through(fs2.text.utf8.encode)
-        .through(Files[IOConfig].writeAll(Fs2Path.fromNioPath(filePath)))
-        .drainWhen(!config.flags.dryRun && config.flags.writeCsv)
+      if !config.flags.dryRun && config.flags.writeCsv then
+        stream
+          .through(encodeUsingFirstHeaders(fullRows = true))
+          .through(fs2.text.utf8.encode)
+          .through(Files[IOConfig].writeAll(Fs2Path.fromNioPath(filePath)))
+          .drain
+      else
+        stream.drain
 
 }
 
