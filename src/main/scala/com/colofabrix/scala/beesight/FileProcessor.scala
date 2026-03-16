@@ -1,6 +1,7 @@
 package com.colofabrix.scala.beesight
 
 import cats.effect.IO
+import cats.syntax.all.*
 import com.colofabrix.scala.beesight.config.Config
 import com.colofabrix.scala.beesight.detection.*
 import com.colofabrix.scala.beesight.input.*
@@ -20,10 +21,16 @@ object FileProcessor {
    * Detects the format of a CSV file and processes it through the appropriate pipeline
    */
   def processFile(inputFile: Path): IOConfig[(Path, Option[OutputFlightPoint[?]])] =
-    FormatDetector.detect(inputFile).flatMap {
-      case FileFormat.FlySight => processFileAs[FlysightPoint](inputFile)
-      case FileFormat.Airlog   => processFileAs[AirlogPoint](inputFile)
-    }
+    FormatDetector
+      .detect(inputFile)
+      .flatMap {
+        case FileFormat.FlySight => processFileAs[FlysightPoint](inputFile)
+        case FileFormat.Airlog   => processFileAs[AirlogPoint](inputFile)
+      }
+      .handleErrorWith { error =>
+        val msg = s"ERROR processing $inputFile: ${error.getMessage}"
+        msg.stderr.as((inputFile, None))
+      }
 
   private def processFileAs[A](
     inputFile: Path,
