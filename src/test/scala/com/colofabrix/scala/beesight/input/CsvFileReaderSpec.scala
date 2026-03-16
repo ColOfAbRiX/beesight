@@ -161,7 +161,7 @@ class CsvFileReaderSpec extends AnyFreeSpec with Matchers with IOConfigValues wi
 
   private def writeZip(name: String, csvContent: String): Path =
     val path = tempDir.resolve(name)
-    val zos = new ZipOutputStream(new FileOutputStream(path.toFile))
+    val zos  = new ZipOutputStream(new FileOutputStream(path.toFile))
     zos.putNextEntry(new ZipEntry("data.csv"))
     zos.write(csvContent.getBytes(StandardCharsets.UTF_8))
     zos.closeEntry()

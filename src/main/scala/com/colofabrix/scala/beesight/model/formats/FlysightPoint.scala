@@ -45,6 +45,47 @@ final case class FlysightPoint(
 
 object FlysightPoint {
 
+  private val timeField    = CsvFieldSpec.required[FlysightPoint, OffsetDateTime]("time", _.time.toString)
+  private val latField     = CsvFieldSpec.required[FlysightPoint, Double]("lat", p => formatDouble(p.lat, 7))
+  private val lonField     = CsvFieldSpec.required[FlysightPoint, Double]("lon", p => formatDouble(p.lon, 7))
+  private val hMSLField    = CsvFieldSpec.required[FlysightPoint, Double]("hMSL", p => formatDouble(p.hMSL, 3))
+  private val velNField    = CsvFieldSpec.required[FlysightPoint, Double]("velN", p => formatDouble(p.velN, 2))
+  private val velEField    = CsvFieldSpec.required[FlysightPoint, Double]("velE", p => formatDouble(p.velE, 2))
+  private val velDField    = CsvFieldSpec.required[FlysightPoint, Double]("velD", p => formatDouble(p.velD, 2))
+  private val hAccField    = CsvFieldSpec.required[FlysightPoint, Double]("hAcc", p => formatDouble(p.hAcc, 3))
+  private val vAccField    = CsvFieldSpec.required[FlysightPoint, Double]("vAcc", p => formatDouble(p.vAcc, 3))
+  private val sAccField    = CsvFieldSpec.required[FlysightPoint, Double]("sAcc", p => formatDouble(p.sAcc, 2))
+  private val headingField = CsvFieldSpec.required[FlysightPoint, Double]("heading", p => formatDouble(p.heading, 5))
+  private val cAccField    = CsvFieldSpec.required[FlysightPoint, Double]("cAcc", p => formatDouble(p.cAcc, 5))
+  private val numSVField   = CsvFieldSpec.required[FlysightPoint, Int]("numSV", _.numSV.toString)
+  private val gpsFixField  =
+    CsvFieldSpec.optional[FlysightPoint, Int]("gpsFix", p => p.gpsFix.map(_.toString).getOrElse(""))
+
+  val fieldSpecs: NonEmptyList[CsvFieldSpec[FlysightPoint, ?]] =
+    NonEmptyList.of(
+      timeField,
+      latField,
+      lonField,
+      hMSLField,
+      velNField,
+      velEField,
+      velDField,
+      hAccField,
+      vAccField,
+      sAccField,
+      headingField,
+      cAccField,
+      gpsFixField,
+      numSVField,
+    )
+
+  val requiredColumns: Set[String] =
+    fieldSpecs
+      .toList
+      .filter(_.required)
+      .map(_.name)
+      .toSet
+
   given flysightFormatAdapter: FileFormatAdapter[FlysightPoint] with {
 
     def toDataPoint(point: FlysightPoint): DataPoint =
@@ -60,22 +101,22 @@ object FlysightPoint {
 
     def apply(row: CsvRow[String]): DecoderResult[FlysightPoint] =
       for
-        javaTime <- row.as[OffsetDateTime]("time")
-        lat      <- row.as[Double]("lat")
-        lon      <- row.as[Double]("lon")
-        hMSL     <- row.as[Double]("hMSL")
-        velN     <- row.as[Double]("velN")
-        velE     <- row.as[Double]("velE")
-        velD     <- row.as[Double]("velD")
-        hAcc     <- row.as[Double]("hAcc")
-        vAcc     <- row.as[Double]("vAcc")
-        sAcc     <- row.as[Double]("sAcc")
-        heading  <- row.as[Double]("heading")
-        cAcc     <- row.as[Double]("cAcc")
-        gpsFix   <- row.asOptional[Int]("gpsFix")
-        numSV    <- row.as[Int]("numSV")
+        time    <- timeField.decode(row)
+        lat     <- latField.decode(row)
+        lon     <- lonField.decode(row)
+        hMSL    <- hMSLField.decode(row)
+        velN    <- velNField.decode(row)
+        velE    <- velEField.decode(row)
+        velD    <- velDField.decode(row)
+        hAcc    <- hAccField.decode(row)
+        vAcc    <- vAccField.decode(row)
+        sAcc    <- sAccField.decode(row)
+        heading <- headingField.decode(row)
+        cAcc    <- cAccField.decode(row)
+        gpsFix  <- gpsFixField.decode(row)
+        numSV   <- numSVField.decode(row)
       yield FlysightPoint(
-        time = javaTime,
+        time = time,
         lat = lat,
         lon = lon,
         hMSL = hMSL,
@@ -105,30 +146,14 @@ object FlysightPoint {
 
     def apply(row: OutputFlightPoint[FlysightPoint]): CsvRow[String] =
       CsvRow.fromNelHeaders(
-        flysightFields(row.source)
-          .append(("phase", row.phase.toString)),
+        flysightFields(row.source).append(("phase", row.phase.toString)),
       )
 
   }
 
   private def flysightFields(row: FlysightPoint): NonEmptyList[(String, String)] =
-    NonEmptyList
-      .of(
-        ("time", row.time.toString()),
-        ("lat", formatDouble(row.lat, 7)),
-        ("lon", formatDouble(row.lon, 7)),
-        ("hMSL", formatDouble(row.hMSL, 3)),
-        ("velN", formatDouble(row.velN, 2)),
-        ("velE", formatDouble(row.velE, 2)),
-        ("velD", formatDouble(row.velD, 2)),
-        ("hAcc", formatDouble(row.hAcc, 3)),
-        ("vAcc", formatDouble(row.vAcc, 3)),
-        ("sAcc", formatDouble(row.sAcc, 2)),
-        ("heading", formatDouble(row.heading, 5)),
-        ("cAcc", formatDouble(row.cAcc, 5)),
-        ("gpsFix", row.gpsFix.map(_.toString).getOrElse("")),
-        ("numSV", row.numSV.toString),
-      )
+    fieldSpecs
+      .map(f => (f.name, f.encode(row)))
       .appendList(row.extra)
 
   private def formatDouble(value: Double, precision: Int): String =

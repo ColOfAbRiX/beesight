@@ -4,7 +4,6 @@ import cats.effect.IO
 import com.colofabrix.scala.beesight.IOConfig
 import com.colofabrix.scala.beesight.config.Config
 import com.colofabrix.scala.beesight.model.OutputFlightPoint
-import com.colofabrix.scala.beesight.utils.*
 import fs2.data.csv.*
 import fs2.io.file.{ Files, Path as Fs2Path }
 import java.nio.file.Path

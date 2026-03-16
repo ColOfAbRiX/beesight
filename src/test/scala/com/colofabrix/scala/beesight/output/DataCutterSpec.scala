@@ -418,7 +418,8 @@ class DataCutterSpec extends AnyFreeSpec with Matchers {
 
       "should emit the single point when takeoff and landing are detected" in {
         val cfg    = configWith()
-        val points = annotatedStream(1, takeoff = Some(eventAt(0)), freefall = Some(eventAt(0)), landing = Some(eventAt(0)))
+        val points =
+          annotatedStream(1, takeoff = Some(eventAt(0)), freefall = Some(eventAt(0)), landing = Some(eventAt(0)))
         val result = runCutter(cfg, points)
         result.size shouldBe 1
       }

@@ -15,6 +15,21 @@ object CsvFileReader {
     ZipUnarchiver.make[IOConfig]()
 
   /**
+   * Reads the header line (first non-empty, non-comment line) from a CSV or ZIP file, with trimmed fields
+   */
+  def readHeaderLine(filePath: Path): IOConfig[String] =
+    val rawLines =
+      if isZipFile(filePath) then readLinesFromZip(filePath)
+      else readLinesFromFile(filePath)
+
+    rawLines
+      .filter(line => line.trim.nonEmpty && !line.trim.startsWith("#"))
+      .through(trimHeaderFields)
+      .head
+      .compile
+      .lastOrError
+
+  /**
    * Reads a CSV file and decodes it into a stream of type A. Automatically detects and reads from zip files when the
    * path ends with .zip
    */

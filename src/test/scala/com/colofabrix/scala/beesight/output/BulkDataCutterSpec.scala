@@ -43,22 +43,22 @@ class BulkDataCutterSpec extends AnyWordSpec with Matchers {
         else (expectedStart, expectedEnd, expectedSize)
 
       s"correctly cut ${row.filename} (start=$finalExpectedStart, end=$finalExpectedEnd, size=$finalExpectedSize/${row.rowsCount})" in {
-        val points = buildAnnotatedStream(row)
-        val result = runCutter(points)
+          val points = buildAnnotatedStream(row)
+          val result = runCutter(points)
 
-        withClue(s"${row.filename}: ") {
-          result.size shouldBe finalExpectedSize
+          withClue(s"${row.filename}: ") {
+            result.size shouldBe finalExpectedSize
 
-          if result.nonEmpty then {
-            result.head.source shouldBe finalExpectedStart
-            result.last.source shouldBe (finalExpectedEnd - 1)
+            if result.nonEmpty then {
+              result.head.source shouldBe finalExpectedStart
+              result.last.source shouldBe (finalExpectedEnd - 1)
 
-            // Verify contiguous indices
-            val indices = result.map(_.source)
-            indices shouldBe (finalExpectedStart until finalExpectedEnd).toVector
+              // Verify contiguous indices
+              val indices = result.map(_.source)
+              indices shouldBe (finalExpectedStart until finalExpectedEnd).toVector
+            }
           }
         }
-      }
     }
 
   }
@@ -104,7 +104,7 @@ class BulkDataCutterSpec extends AnyWordSpec with Matchers {
 
   // -- CSV loading ------------------------------------------------------------
 
-  private final case class TestRow(
+  final private case class TestRow(
     filename: String,
     takeoff: Option[Int],
     freefall: Option[Int],

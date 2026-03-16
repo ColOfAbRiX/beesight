@@ -5,7 +5,6 @@ import cats.implicits.given
 import com.colofabrix.scala.beesight.*
 import com.colofabrix.scala.beesight.config.Config
 import com.colofabrix.scala.beesight.model.*
-import com.colofabrix.scala.beesight.utils.*
 import scala.io.AnsiColor.*
 
 final class ResultPrinter private (config: Config) {

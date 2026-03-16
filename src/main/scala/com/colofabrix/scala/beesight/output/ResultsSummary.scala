@@ -14,7 +14,7 @@ object ResultsSummary {
   /**
    * Writes summary rows to a CSV file using OutputFlightPoint directly
    */
-  def writeSummaryCsv[A](rows: List[(Path, Option[OutputFlightPoint[A]])]): IOConfig[Unit] =
+  def writeSummaryCsv(rows: List[(Path, Option[OutputFlightPoint[?]])]): IOConfig[Unit] =
     IOConfig.ask.flatMap { config =>
       if config.flags.dryRun || rows.isEmpty || !config.flags.createSummary then
         IOConfig.pure(())
@@ -42,7 +42,7 @@ object ResultsSummary {
         yield ()
     }
 
-  private def rowToCsv[A](row: (Path, Option[OutputFlightPoint[A]])): String =
+  private def rowToCsv(row: (Path, Option[OutputFlightPoint[?]])): String =
     val (inputFile, pointOpt) = row
     val filename              = inputFile.getFileName.toString
 

@@ -33,6 +33,59 @@ final case class AirlogPoint(
 
 object AirlogPoint {
 
+  private val timeField    = CsvFieldSpec.required[AirlogPoint, Instant]("time", _.time.toString)
+  private val latField     = CsvFieldSpec.required[AirlogPoint, Double]("lat", p => formatDouble(p.coordinates.lat, 7))
+  private val lonField     = CsvFieldSpec.required[AirlogPoint, Double]("lon", p => formatDouble(p.coordinates.lon, 7))
+  private val altField     = CsvFieldSpec.required[AirlogPoint, Double]("alt", p => formatDouble(p.altitude.barometric, 1))
+  private val gpsAltField  = CsvFieldSpec.required[AirlogPoint, Double]("gpsAlt", p => formatDouble(p.altitude.gps, 1))
+  private val speedField   = CsvFieldSpec.required[AirlogPoint, Double]("speed", p => formatDouble(p.motion.speed, 2))
+  private val sinkField    = CsvFieldSpec.required[AirlogPoint, Double]("sink", p => formatDouble(p.motion.sink, 2))
+  private val headingField = CsvFieldSpec.required[AirlogPoint, Double]("heading", p => formatDouble(p.motion.heading, 1))
+  private val qwField      = CsvFieldSpec.required[AirlogPoint, Double]("Qw", p => formatDouble(p.orientation.w, 4))
+  private val qxField      = CsvFieldSpec.required[AirlogPoint, Double]("Qx", p => formatDouble(p.orientation.x, 4))
+  private val qyField      = CsvFieldSpec.required[AirlogPoint, Double]("Qy", p => formatDouble(p.orientation.y, 4))
+  private val qzField      = CsvFieldSpec.required[AirlogPoint, Double]("Qz", p => formatDouble(p.orientation.z, 4))
+  private val axField      = CsvFieldSpec.required[AirlogPoint, Double]("Ax", p => formatDouble(p.acceleration.x, 3))
+  private val ayField      = CsvFieldSpec.required[AirlogPoint, Double]("Ay", p => formatDouble(p.acceleration.y, 3))
+  private val azField      = CsvFieldSpec.required[AirlogPoint, Double]("Az", p => formatDouble(p.acceleration.z, 3))
+  private val gxField      = CsvFieldSpec.required[AirlogPoint, Double]("Gx", p => formatDouble(p.angularVelocity.x, 3))
+  private val gyField      = CsvFieldSpec.required[AirlogPoint, Double]("Gy", p => formatDouble(p.angularVelocity.y, 3))
+  private val gzField      = CsvFieldSpec.required[AirlogPoint, Double]("Gz", p => formatDouble(p.angularVelocity.z, 3))
+  private val markField    = CsvFieldSpec.required[AirlogPoint, Int]("mark", _.metadata.mark.toString)
+  private val numSatField  = CsvFieldSpec.required[AirlogPoint, Int]("numSat", _.metadata.numSat.toString)
+  private val msgField     = CsvFieldSpec.required[AirlogPoint, Int]("msg", _.metadata.msg.toString)
+  private val bSinkField   = CsvFieldSpec.required[AirlogPoint, Double]("b_sink", p => formatDouble(p.motion.backupSink, 2))
+
+  val fieldSpecs: NonEmptyList[CsvFieldSpec[AirlogPoint, ?]] =
+    NonEmptyList.of(
+      timeField,
+      latField,
+      lonField,
+      altField,
+      gpsAltField,
+      speedField,
+      sinkField,
+      headingField,
+      qwField,
+      qxField,
+      qyField,
+      qzField,
+      axField,
+      ayField,
+      azField,
+      gxField,
+      gyField,
+      gzField,
+      markField,
+      numSatField,
+      msgField,
+      bSinkField,
+    )
+
+  /** Column names that must be present to identify this format */
+  val requiredColumns: Set[String] =
+    fieldSpecs.toList.filter(_.required).map(_.name).toSet
+
   given airlogFormatAdapter: FileFormatAdapter[AirlogPoint] with {
 
     def toDataPoint(point: AirlogPoint): DataPoint =
@@ -53,30 +106,30 @@ object AirlogPoint {
 
     def apply(row: CsvRow[String]): DecoderResult[AirlogPoint] =
       for
-        javaTime <- row.as[Instant]("time")
-        lat      <- row.as[Double]("lat")
-        lon      <- row.as[Double]("lon")
-        alt      <- row.as[Double]("alt")
-        gpsAlt   <- row.as[Double]("gpsAlt")
-        speed    <- row.as[Double]("speed")
-        sink     <- row.as[Double]("sink")
-        heading  <- row.as[Double]("heading")
-        bSink    <- row.as[Double]("b_sink")
-        qw       <- row.as[Double]("Qw")
-        qx       <- row.as[Double]("Qx")
-        qy       <- row.as[Double]("Qy")
-        qz       <- row.as[Double]("Qz")
-        ax       <- row.as[Double]("Ax")
-        ay       <- row.as[Double]("Ay")
-        az       <- row.as[Double]("Az")
-        gx       <- row.as[Double]("Gx")
-        gy       <- row.as[Double]("Gy")
-        gz       <- row.as[Double]("Gz")
-        mark     <- row.as[Int]("mark")
-        numSat   <- row.as[Int]("numSat")
-        msg      <- row.as[Int]("msg")
+        time    <- timeField.decode(row)
+        lat     <- latField.decode(row)
+        lon     <- lonField.decode(row)
+        alt     <- altField.decode(row)
+        gpsAlt  <- gpsAltField.decode(row)
+        speed   <- speedField.decode(row)
+        sink    <- sinkField.decode(row)
+        heading <- headingField.decode(row)
+        bSink   <- bSinkField.decode(row)
+        qw      <- qwField.decode(row)
+        qx      <- qxField.decode(row)
+        qy      <- qyField.decode(row)
+        qz      <- qzField.decode(row)
+        ax      <- axField.decode(row)
+        ay      <- ayField.decode(row)
+        az      <- azField.decode(row)
+        gx      <- gxField.decode(row)
+        gy      <- gyField.decode(row)
+        gz      <- gzField.decode(row)
+        mark    <- markField.decode(row)
+        numSat  <- numSatField.decode(row)
+        msg     <- msgField.decode(row)
       yield AirlogPoint(
-        time = javaTime,
+        time = time,
         coordinates = Coordinates(lat, lon),
         altitude = Altitude(alt, gpsAlt),
         motion = Motion(speed, sink, heading, bSink),
@@ -92,38 +145,23 @@ object AirlogPoint {
   given csvRowEncoder: CsvRowEncoder[AirlogPoint, String] with {
 
     def apply(row: AirlogPoint): CsvRow[String] =
+      CsvRow.fromNelHeaders(airlogFields(row))
+
+  }
+
+  given outputFlightRowEncoder: CsvRowEncoder[OutputFlightPoint[AirlogPoint], String] with {
+
+    def apply(row: OutputFlightPoint[AirlogPoint]): CsvRow[String] =
       CsvRow.fromNelHeaders(
-        NonEmptyList
-          .of(
-            ("time", row.time.toString()),
-            ("lat", formatDouble(row.coordinates.lat, 7)),
-            ("lon", formatDouble(row.coordinates.lon, 7)),
-            ("alt", formatDouble(row.altitude.barometric, 1)),
-            ("gpsAlt", formatDouble(row.altitude.gps, 1)),
-            ("speed", formatDouble(row.motion.speed, 2)),
-            ("sink", formatDouble(row.motion.sink, 2)),
-            ("heading", formatDouble(row.motion.heading, 1)),
-            ("Qw", formatDouble(row.orientation.w, 4)),
-            ("Qx", formatDouble(row.orientation.x, 4)),
-            ("Qy", formatDouble(row.orientation.y, 4)),
-            ("Qz", formatDouble(row.orientation.z, 4)),
-            ("Ax", formatDouble(row.acceleration.x, 3)),
-            ("Ay", formatDouble(row.acceleration.y, 3)),
-            ("Az", formatDouble(row.acceleration.z, 3)),
-            ("Gx", formatDouble(row.angularVelocity.x, 3)),
-            ("Gy", formatDouble(row.angularVelocity.y, 3)),
-            ("Gz", formatDouble(row.angularVelocity.z, 3)),
-            ("mark", row.metadata.mark.toString),
-            ("numSat", row.metadata.numSat.toString),
-            ("msg", row.metadata.msg.toString),
-            ("b_sink", formatDouble(row.motion.backupSink, 2)),
-          )
-          .appendList(
-            row.extra,
-          ),
+        airlogFields(row.source).append(("phase", row.phase.toString)),
       )
 
   }
+
+  private def airlogFields(row: AirlogPoint): NonEmptyList[(String, String)] =
+    fieldSpecs
+      .map(f => (f.name, f.encode(row)))
+      .appendList(row.extra)
 
   private def formatDouble(value: Double, precision: Int): String =
     BigDecimal(value)

@@ -18,7 +18,7 @@ final class DataCutter private (config: Config) {
       stream
         .fold(Vector.empty[OutputFlightPoint[A]])(_ :+ _)
         .flatMap { allPoints =>
-          val cutResult = applyCutting(allPoints)
+          val cutResult     = applyCutting(allPoints)
           val retainedRatio =
             if allPoints.isEmpty then 1.0
             else cutResult.size.toDouble / allPoints.size
@@ -60,10 +60,10 @@ final class DataCutter private (config: Config) {
 
     val landingPassed =
       point.takeoff.isEmpty &&
-        point
-          .landing
-          .map(_.index)
-          .exists(l => index > l)
+      point
+        .landing
+        .map(_.index)
+        .exists(l => index > l)
 
     if takeoffDetected then
       val keep       = config.dataCutterConfig.keepBeforeTakeoff.value
@@ -71,8 +71,8 @@ final class DataCutter private (config: Config) {
       val newState   = CutterState[A](CutterPhase.InFlight, Queue.empty, afterLandingCount = 0)
       (newState, keptPoints :+ point)
     else if landingPassed then
-      val keptPoints = state.preBuffer.toVector
-      val newState   = CutterState[A](CutterPhase.AfterLanding, Queue.empty, afterLandingCount = 0)
+      val keptPoints                = state.preBuffer.toVector
+      val newState                  = CutterState[A](CutterPhase.AfterLanding, Queue.empty, afterLandingCount = 0)
       val (afterState, afterPoints) = handleAfterLanding(newState, point)
       (afterState, keptPoints ++ afterPoints)
     else

@@ -131,8 +131,7 @@ class FileDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues {
         .getLines()
         .drop(1)
         .size
-    } finally {
+    } finally
       zis.close()
-    }
 
 }

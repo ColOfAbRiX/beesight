@@ -4,7 +4,6 @@ import cats.syntax.all.*
 import com.colofabrix.scala.beesight.config.Config
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.model.formats.FileFormatAdapter
-import com.colofabrix.scala.beesight.utils.*
 import com.colofabrix.scala.beesight.{ IOConfig, * }
 import java.nio.file.*
 

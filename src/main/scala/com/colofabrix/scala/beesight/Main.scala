@@ -4,10 +4,8 @@ import cats.effect.*
 import cats.effect.implicits.given
 import cats.implicits.given
 import com.colofabrix.scala.beesight.config.*
-import com.colofabrix.scala.beesight.detection.*
 import com.colofabrix.scala.beesight.input.*
 import com.colofabrix.scala.beesight.model.*
-import com.colofabrix.scala.beesight.model.formats.FlysightPoint
 import com.colofabrix.scala.beesight.output.*
 import com.colofabrix.scala.declinio.*
 import com.monovore.decline.Opts
@@ -35,39 +33,14 @@ object Main extends IODeclineReaderApp[Config] {
       _           <- ResultsSummary.writeSummaryCsv(summaryRows)
     yield ExitCode.Success
 
-  private def runParallel(inputFiles: List[Path]): IOConfig[List[(Path, Option[OutputFlightPoint[FlysightPoint]])]] =
+  private def runParallel(inputFiles: List[Path]): IOConfig[List[(Path, Option[OutputFlightPoint[?]])]] =
     IOConfig.ask.flatMap { config =>
       config
         .parallelism
         .map(_.value)
-        .fold(inputFiles.parTraverse(processFile))(inputFiles.parTraverseN(_)(processFile))
+        .fold(inputFiles.parTraverse(FileProcessor.processFile)) { n =>
+          inputFiles.parTraverseN(n)(FileProcessor.processFile)
+        }
     }
-
-  private def processFile(inputFile: Path): IOConfig[(Path, Option[OutputFlightPoint[FlysightPoint]])] =
-    for
-      outputFile <- FileOps.createProcessedDirectory(inputFile)
-      _          <- s"Processing: $inputFile -> $outputFile".stdout
-      csvStream   = CsvFileReader.readCsv[FlysightPoint](inputFile)
-      pipeline   <- processingPipeline(csvStream, outputFile)
-      lastPoint  <- pipeline.compile.last
-    yield (inputFile, lastPoint)
-
-  private def processingPipeline(
-    csvStream: fs2.Stream[IOConfig, FlysightPoint],
-    outputCsvFile: Path,
-  ): IOConfig[fs2.Stream[IOConfig, OutputFlightPoint[FlysightPoint]]] =
-    IOConfig
-      .ask
-      .map { config =>
-        csvStream
-          .through(FlightStagesDetection(DetectionConfig.default).streamDetect)
-          .through(DataCutter(config).cutPipe)
-          .broadcastThrough(
-            CsvResultWriter(config).writePipe(outputCsvFile),
-            ChartGenerator(config).chartPipe(outputCsvFile),
-            ResultPrinter(config).printStagesPipe,
-            identity,
-          )
-      }
 
 }
