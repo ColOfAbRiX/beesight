@@ -15,7 +15,8 @@ import scala.io.Source
 
 class FileDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues {
 
-  private val inputData = Paths.get("src/test/resources/file_detection_spec/input_data.zip")
+  private val inputData =
+    Paths.get("src/test/resources/file_detection_spec/input_data.zip")
 
   "FlightStagesDetection" should {
 
@@ -121,7 +122,6 @@ class FileDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues {
 
   }
 
-  /** Reads the first entry from a zip file and counts the data lines (excluding header and units row) */
   private def countCsvLinesInZip(file: File): Int =
     val zis = new ZipInputStream(java.io.FileInputStream(file))
     try {
@@ -129,9 +129,10 @@ class FileDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues {
       Source
         .fromInputStream(zis)
         .getLines()
-        .drop(2)
+        .drop(1)
         .size
-    } finally
+    } finally {
       zis.close()
+    }
 
 }

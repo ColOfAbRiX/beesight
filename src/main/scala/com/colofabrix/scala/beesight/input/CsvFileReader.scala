@@ -27,10 +27,18 @@ object CsvFileReader {
       .filter { line =>
         line.trim.nonEmpty && !line.trim.startsWith("#")
       }
-      .through(trimHeaders)
+      .through(trimHeaderFields)
       .intersperse("\n")
       .through(lenient.attemptDecodeUsingHeaders[A]())
-      .collect { case Right(decoded) => decoded }
+      .zipWithIndex
+      .flatMap {
+        case (Right(a), _) =>
+          fs2.Stream.emit(a)
+        case (Left(_), idx) if idx < 1 =>
+          fs2.Stream.empty
+        case (Left(err), _) =>
+          fs2.Stream.raiseError[IOConfig](new DecoderError(s"File '$filePath': ${err.getMessage}"))
+      }
 
   private def isZipFile(filePath: Path): Boolean =
     filePath
@@ -55,18 +63,16 @@ object CsvFileReader {
       .through(unixEol)
       .through(fs2.text.lines)
 
-  private val trimHeaders: fs2.Pipe[IOConfig, String, String] =
+  private val trimHeaderFields: fs2.Pipe[IOConfig, String, String] =
     stream =>
-      stream.zipWithIndex.flatMap {
-        case (line, 0) => // Header row: fix empty first column name
-          val fields = line.split(",", -1).map(_.trim)
-          if fields.nonEmpty && fields(0).isEmpty then fields(0) = "time"
-          fs2.Stream.emit(fields.mkString(","))
-        case (_, 1) => // Units row: skip it
-          fs2.Stream.empty
-        case (line, _) => // Data rows: pass through
-          fs2.Stream.emit(line)
-      }
+      stream
+        .zipWithIndex
+        .map {
+          case (line, 0) =>
+            line.split(",", -1).map(_.trim).mkString(",")
+          case (line, _) =>
+            line
+        }
 
   private val unixEol: fs2.Pipe[IOConfig, String, String] =
     _.map(_.replace("\r\n", "\n"))
