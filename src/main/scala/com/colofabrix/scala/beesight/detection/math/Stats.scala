@@ -4,9 +4,11 @@ import com.colofabrix.scala.beesight.collections.NEW
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
 import com.colofabrix.scala.beesight.model.GeoVector
 
-object Stats {
+private[detection] object Stats {
 
-  /** Component-wise median of GeoVectors extracted from a window. */
+  /**
+   * Component-wise median of GeoVectors extracted from a window.
+   */
   def medianBy[A](window: NEW[A])(f: A => GeoVector): GeoVector =
     val n        = window.length
     val eastArr  = new Array[Double](n)
@@ -28,7 +30,9 @@ object Stats {
       vertical = median(vertArr),
     )
 
-  /** Population standard deviation of values extracted from a window. */
+  /**
+   * Population standard deviation of values extracted from a window.
+   */
   def stdDevBy[A](window: NEW[A])(f: A => Double): Double =
     val n     = window.length
     var sum   = 0.0
@@ -62,7 +66,9 @@ object Stats {
 
     findInflectionFromArray(data, n)
 
-  /** Computes the median of an array of doubles. */
+  /**
+   * Computes the median of an array of doubles.
+   */
   private def median(values: Array[Double]): Double =
     val sorted = values.sorted
     val n      = sorted.length

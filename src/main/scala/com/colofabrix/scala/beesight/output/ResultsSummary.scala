@@ -7,9 +7,9 @@ import com.colofabrix.scala.beesight.model.*
 import java.nio.file.{ Files as JFiles, Path }
 
 /**
- * Handles collection and writing of flight detection summary results
+ * Handles collection and writing of flight detection summary results.
  */
-object ResultsSummary {
+private[beesight] object ResultsSummary {
 
   /**
    * Writes summary rows to a CSV file using OutputFlightPoint directly

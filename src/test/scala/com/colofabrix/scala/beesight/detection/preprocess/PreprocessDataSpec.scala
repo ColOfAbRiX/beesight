@@ -3,7 +3,6 @@ package com.colofabrix.scala.beesight.detection.preprocess
 import cats.effect.IO
 import com.colofabrix.scala.beesight.IOValues
 import com.colofabrix.scala.beesight.config.*
-import com.colofabrix.scala.beesight.config.DetectionConfig.given
 import com.colofabrix.scala.beesight.detection.model.IndexedDataPoint
 import com.colofabrix.scala.beesight.model.GeoVector
 import fs2.Stream

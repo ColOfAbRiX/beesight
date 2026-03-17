@@ -2,13 +2,13 @@ package com.colofabrix.scala.beesight.collections
 
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.*
 
-type NEW[A] = NonEmptyWindow[A]
-val NEW = NonEmptyWindow
+private[beesight] type NEW[A] = NonEmptyWindow[A]
+private[beesight] val NEW = NonEmptyWindow
 
 /**
  * A non-empty sliding window - guaranteed to have at least one element.
  */
-sealed trait NonEmptyWindow[A] {
+sealed private[beesight] trait NonEmptyWindow[A] {
 
   // Internal state //
 
@@ -18,8 +18,13 @@ sealed trait NonEmptyWindow[A] {
 
   // Capacity & Size //
 
+  /** Maximum number of elements this window can hold. */
   def capacity: Int
+
+  /** Current number of elements in the window. */
   def length: Int
+
+  /** True when the window contains exactly `capacity` elements. */
   def isAtCapacity: Boolean
 
   // Buffer Helpers //
@@ -48,20 +53,27 @@ sealed trait NonEmptyWindow[A] {
 
   // Accessors //
 
+  /** Returns all elements as a Vector, from oldest to newest. */
   def toVector: Vector[A] =
     sliceToVector(0, length)
 
+  /** Returns the oldest (first-inserted) element in the window. */
   def oldest: A =
     readAt(0)
 
+  /** Returns the newest (most recently inserted) element in the window. */
   def newest: A =
     readAt(length - 1)
 
   // Mutations //
 
+  /** Appends an element, discarding the oldest if at capacity. Returns the updated window. */
   def enqueue(a: A): NonEmptyWindow[A]
+
+  /** Appends an element. Returns the evicted element (if any) and the updated window. */
   def push(a: A): (Option[A], NonEmptyWindow[A])
 
+  /** Removes up to `n` oldest elements, returning them and the remaining filling window. */
   def dequeue(n: Int): (Vector[A], NonEmptyFilling[A]) =
     val maxDequeue  = Math.max(0, Math.min(n, capacity - 1))
     val remaining   = capacity - maxDequeue
@@ -75,6 +87,7 @@ sealed trait NonEmptyWindow[A] {
 
   // Subwindows //
 
+  /** Returns a filled subwindow containing the `i` most recently added elements (at least 1). */
   def takeNewest(i: Int): NonEmptyFilled[A] =
     val count     = Math.max(1, Math.min(i, length))
     val start     = length - count
@@ -83,32 +96,29 @@ sealed trait NonEmptyWindow[A] {
 
   // Focus (Zipper) //
 
+  /** Returns the element at the current focus position. */
   def focus: A =
     readAt(focusIdx)
 
+  /** Returns the current focus index (0-based, relative to oldest). */
   def focusIndex: Int =
     focusIdx
 
+  /** Returns a copy of this window with the focus moved to the given index. */
   def focusAt(index: Int): NonEmptyWindow[A]
 
   // Transformations //
 
+  /** Transforms every element in the window, preserving structure and focus. */
   def map[B](f: A => B): NonEmptyWindow[B]
 
+  /** Left-associative fold over all elements from oldest to newest. */
   def foldLeft[B](z: B)(f: (B, A) => B): B =
     var acc = z
     var i   = 0
     while i < length do
       acc = f(acc, readAt(i))
       i += 1
-    acc
-
-  def foldRight[B](z: B)(f: (A, B) => B): B =
-    var acc = z
-    var i   = length - 1
-    while i >= 0 do
-      acc = f(readAt(i), acc)
-      i -= 1
     acc
 
   // Display //

@@ -7,6 +7,9 @@ import com.colofabrix.scala.beesight.detection.math.*
 import com.colofabrix.scala.beesight.detection.model.*
 import com.colofabrix.scala.beesight.utils.*
 
+/**
+ * Removes GPS data spikes and smooths velocity readings via a small sliding window.
+ */
 final private[detection] class PreprocessData private (config: DetectionConfig) {
 
   private val windowCapacity: Int =
@@ -42,7 +45,7 @@ final private[detection] class PreprocessData private (config: DetectionConfig) 
 
 }
 
-object PreprocessData {
+private[detection] object PreprocessData {
 
   def apply(config: DetectionConfig): PreprocessData =
     new PreprocessData(config)

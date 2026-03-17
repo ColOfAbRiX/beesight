@@ -3,6 +3,14 @@ package com.colofabrix.scala.beesight.config
 import cats.syntax.all.*
 import com.monovore.decline.Opts
 
+/**
+ * Boolean feature flags controlling which outputs the application produces.
+ *
+ * @param dryRun When true, run detection without writing any output files
+ * @param writeCsv When true, write processed CSV files with detected phases
+ * @param createGraph When true, generate interactive HTML charts for each file
+ * @param createSummary When true, produce a summary CSV aggregating all detection results
+ */
 final case class ConfigFlags(
   dryRun: Boolean,
   writeCsv: Boolean,
@@ -10,6 +18,9 @@ final case class ConfigFlags(
   createSummary: Boolean,
 )
 
+/**
+ * Factory and CLI option definitions for ConfigFlags.
+ */
 object ConfigFlags {
 
   val default: ConfigFlags =

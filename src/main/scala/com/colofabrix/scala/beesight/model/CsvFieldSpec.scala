@@ -13,7 +13,7 @@ import fs2.data.csv.*
  * @param encode Function to encode this field's value from the parent type to a string
  * @param required Whether this column must be present for format detection (optional fields like gpsFix are false)
  */
-final case class CsvFieldSpec[A, T](
+final private[beesight] case class CsvFieldSpec[A, T](
   name: String,
   decode: CsvRow[String] => DecoderResult[T],
   encode: A => String,

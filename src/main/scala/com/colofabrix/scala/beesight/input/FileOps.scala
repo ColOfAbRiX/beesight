@@ -5,8 +5,14 @@ import com.colofabrix.scala.beesight.*
 import java.nio.file.*
 import scala.jdk.CollectionConverters.*
 
-object FileOps {
+/**
+ * File system operations for discovering input files and creating output directories.
+ */
+private[beesight] object FileOps {
 
+  /**
+   * Discovers all CSV and ZIP files matching the configured input path, applying the process limit if set.
+   */
   def discoverCsvFiles(): IOConfig[List[Path]] =
     IOConfig.ask.flatMap { config =>
       val (baseDir, glob) = parseInputAsGlob(config.input)
@@ -43,9 +49,15 @@ object FileOps {
     yield outputPath
 
   /**
-   * Computes the output path for a given input file
+   * Returns the base directory from the input configuration
    */
-  def computeProcessedPath(inputFile: Path): IOConfig[Path] =
+  private[beesight] def getInputBaseDir(): IOConfig[Path] =
+    IOConfig.ask.map { config =>
+      val (baseDir, _) = parseInputAsGlob(config.input)
+      baseDir
+    }
+
+  private def computeProcessedPath(inputFile: Path): IOConfig[Path] =
     IOConfig.ask.map { config =>
       val (inputBaseDir, _) = parseInputAsGlob(config.input)
       val parent            = Option(inputBaseDir.getParent).getOrElse(Paths.get("."))
@@ -59,15 +71,6 @@ object FileOps {
         .resolve(relativePath)
         .toAbsolutePath
         .normalize
-    }
-
-  /**
-   * Returns the base directory from the input configuration
-   */
-  def getInputBaseDir(): IOConfig[Path] =
-    IOConfig.ask.map { config =>
-      val (baseDir, _) = parseInputAsGlob(config.input)
-      baseDir
     }
 
   private def parseInputAsGlob(input: Path): (Path, String) =

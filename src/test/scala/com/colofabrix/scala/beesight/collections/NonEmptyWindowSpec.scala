@@ -4,12 +4,6 @@ import com.colofabrix.scala.beesight.collections.NonEmptyWindow.*
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
-/**
- * Tests for NonEmptyWindow - a non-empty sliding window.
- *
- * These tests are written from first principles, focusing on expected behavior
- * rather than implementation details.
- */
 class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
 
   "NonEmptyWindow" - {
@@ -342,13 +336,6 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
         val result = window.foldLeft("")((acc, a) => acc + a.toString)
 
         result shouldBe "12345"
-      }
-
-      "foldRight should fold from newest to oldest" in {
-        val window = filledWindow(1, 2, 3, 4, 5)
-        val result = window.foldRight("")((a, acc) => acc + a.toString)
-
-        result shouldBe "54321"
       }
 
     }

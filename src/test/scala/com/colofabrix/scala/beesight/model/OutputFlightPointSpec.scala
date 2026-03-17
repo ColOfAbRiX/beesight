@@ -83,59 +83,6 @@ class OutputFlightPointSpec extends AnyFreeSpec with Matchers {
 
     }
 
-    "phaseTransitionIndex" - {
-
-      "should return 0 for BeforeTakeoff" in {
-        val point = OutputFlightPoint[String](None, None, None, None, "source")
-        point.phaseTransitionIndex shouldBe 0
-      }
-
-      "should return takeoff index for Climbing phase" in {
-        val point = OutputFlightPoint[String](
-          takeoff = Some(FlightEventPoint(42, 500.0)),
-          freefall = None,
-          canopy = None,
-          landing = None,
-          source = "source",
-        )
-        point.phaseTransitionIndex shouldBe 42
-      }
-
-      "should return freefall index for Freefall phase" in {
-        val point = OutputFlightPoint[String](
-          takeoff = Some(FlightEventPoint(10, 500.0)),
-          freefall = Some(FlightEventPoint(77, 4000.0)),
-          canopy = None,
-          landing = None,
-          source = "source",
-        )
-        point.phaseTransitionIndex shouldBe 77
-      }
-
-      "should return canopy index for UnderCanopy phase" in {
-        val point = OutputFlightPoint[String](
-          takeoff = Some(FlightEventPoint(10, 500.0)),
-          freefall = Some(FlightEventPoint(50, 4000.0)),
-          canopy = Some(FlightEventPoint(215, 1200.0)),
-          landing = None,
-          source = "source",
-        )
-        point.phaseTransitionIndex shouldBe 215
-      }
-
-      "should return landing index for Landed phase" in {
-        val point = OutputFlightPoint[String](
-          takeoff = Some(FlightEventPoint(10, 500.0)),
-          freefall = Some(FlightEventPoint(50, 4000.0)),
-          canopy = Some(FlightEventPoint(200, 1200.0)),
-          landing = Some(FlightEventPoint(333, 50.0)),
-          source = "source",
-        )
-        point.phaseTransitionIndex shouldBe 333
-      }
-
-    }
-
   }
 
 }

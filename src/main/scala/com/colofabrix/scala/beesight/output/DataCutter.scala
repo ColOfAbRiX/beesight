@@ -8,7 +8,7 @@ import scala.collection.immutable.Queue
 /**
  * Cuts flight data streams to retain only flight-relevant points from takeoff to landing.
  */
-final class DataCutter private (config: Config) {
+final private[beesight] class DataCutter private (config: Config) {
 
   /**
    * Streaming pipe that cuts data to retain only flight-relevant points
@@ -103,7 +103,7 @@ final class DataCutter private (config: Config) {
 
 }
 
-object DataCutter {
+private[beesight] object DataCutter {
 
   private type StreamState[A] =
     (CutterState[A], Vector[OutputFlightPoint[A]])

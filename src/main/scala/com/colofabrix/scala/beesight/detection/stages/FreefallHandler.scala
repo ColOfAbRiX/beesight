@@ -7,7 +7,10 @@ import com.colofabrix.scala.beesight.detection.math.Stats
 import com.colofabrix.scala.beesight.detection.model.DetectionData
 import java.time.Duration
 
-final class FreefallHandler private (config: FreefallConfig) extends StageHandler {
+/**
+ * Detects freefall exit by identifying the onset of rapid vertical descent or acceleration.
+ */
+final private[stages] class FreefallHandler private (config: FreefallConfig) extends StageHandler {
 
   protected def detectTrigger(window: NonEmptyFilled[DetectionData]): Boolean =
     val kinematics = window.focus.kinematics
@@ -41,7 +44,7 @@ final class FreefallHandler private (config: FreefallConfig) extends StageHandle
 
 }
 
-object FreefallHandler {
+private[stages] object FreefallHandler {
 
   def apply(config: FreefallConfig): FreefallHandler =
     new FreefallHandler(config)

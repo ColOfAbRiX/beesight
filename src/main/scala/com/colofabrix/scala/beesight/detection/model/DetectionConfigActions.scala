@@ -3,7 +3,10 @@ package com.colofabrix.scala.beesight.detection.model
 import com.colofabrix.scala.beesight.config.*
 import com.colofabrix.scala.beesight.model.EventType
 
-object DetectionConfigActions {
+/**
+ * Extension methods for looking up stage-specific configurations from DetectionConfig.
+ */
+private[detection] object DetectionConfigActions {
 
   extension (self: DetectionConfig) {
 

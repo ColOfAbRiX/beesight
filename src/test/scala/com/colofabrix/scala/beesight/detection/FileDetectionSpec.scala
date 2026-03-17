@@ -1,6 +1,5 @@
 package com.colofabrix.scala.beesight.detection
 
-import cats.effect.IO
 import com.colofabrix.scala.beesight.*
 import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.colofabrix.scala.beesight.input.CsvFileReader
@@ -32,30 +31,6 @@ class FileDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues {
           .result()
 
       processedResults.size shouldBe inputLineCount
-    }
-
-    "output the Phases at the point where they happen" in {
-      val processedResults =
-        CsvFileReader
-          .readCsv[FlysightPoint](inputData)
-          .through(FlightStagesDetection(DetectionConfig.default).streamDetect)
-          .compile
-          .toList
-          .result()
-
-      processedResults
-        .zipWithIndex
-        .sliding(2)
-        .foreach {
-          case Seq((prev, _), (curr, idx)) =>
-            if (prev.phase != curr.phase) {
-              withClue(s"Phase transition at row $idx, from ${prev.phase} to ${curr.phase}: ") {
-                curr.phaseTransitionIndex shouldBe idx
-              }
-            }
-          case _ =>
-          // Handle edge case of single element
-        }
     }
 
     "produce phases in monotonically non-decreasing sequence order" in {

@@ -5,19 +5,22 @@ import fs2.data.csv.*
 import java.time.*
 import java.time.format.DateTimeFormatter
 
+/**
+ * CSV cell decoders for Java time types used in flight data formats.
+ */
 package object derivation {
 
   private val offsetDateTimeFormatter: DateTimeFormatter =
     DateTimeFormatter.ISO_OFFSET_DATE_TIME
 
-  given CellDecoder[OffsetDateTime] =
+  private[beesight] given CellDecoder[OffsetDateTime] =
     CellDecoder[String].emap { value =>
       Either
         .catchNonFatal(OffsetDateTime.parse(value, offsetDateTimeFormatter))
         .leftMap(t => new DecoderError(t.getMessage()))
     }
 
-  given CellDecoder[Instant] =
+  private[beesight] given CellDecoder[Instant] =
     CellDecoder[String].emap { value =>
       Either
         .catchNonFatal(Instant.parse(value))

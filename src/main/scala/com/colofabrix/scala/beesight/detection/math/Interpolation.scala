@@ -7,7 +7,7 @@ import java.time.Instant
 /**
  * Provides linear interpolation functions for various flight data types.
  */
-object Interpolation {
+private[detection] object Interpolation {
 
   /**
    * Linearly interpolates between two Double values based on time.

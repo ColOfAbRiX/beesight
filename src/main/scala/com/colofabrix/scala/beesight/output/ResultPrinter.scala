@@ -7,8 +7,14 @@ import com.colofabrix.scala.beesight.config.Config
 import com.colofabrix.scala.beesight.model.*
 import scala.io.AnsiColor.*
 
-final class ResultPrinter private (config: Config) {
+/**
+ * Prints detected flight stage summary to standard output.
+ */
+final private[beesight] class ResultPrinter private (config: Config) {
 
+  /**
+   * Streaming pipe that collects the last detection state and prints a human-readable summary.
+   */
   def printStagesPipe: fs2.Pipe[IOConfig, OutputFlightPoint[?], Nothing] =
     data =>
       if config.flags.writeCsv then
@@ -54,7 +60,7 @@ final class ResultPrinter private (config: Config) {
 
 }
 
-object ResultPrinter {
+private[beesight] object ResultPrinter {
 
   def apply(config: Config): ResultPrinter =
     new ResultPrinter(config)

@@ -7,7 +7,10 @@ import com.colofabrix.scala.beesight.detection.math.Stats
 import com.colofabrix.scala.beesight.detection.model.DetectionData
 import java.time.Duration
 
-final class TakeoffHandler private (config: TakeoffConfig) extends StageHandler {
+/**
+ * Detects takeoff by identifying the onset of climbing speed and horizontal movement.
+ */
+final private[stages] class TakeoffHandler private (config: TakeoffConfig) extends StageHandler {
 
   protected def detectTrigger(window: NonEmptyFilled[DetectionData]): Boolean =
     val kinematics = window.focus.kinematics
@@ -41,7 +44,7 @@ final class TakeoffHandler private (config: TakeoffConfig) extends StageHandler 
 
 }
 
-object TakeoffHandler {
+private[stages] object TakeoffHandler {
 
   def apply(config: TakeoffConfig): TakeoffHandler =
     new TakeoffHandler(config)

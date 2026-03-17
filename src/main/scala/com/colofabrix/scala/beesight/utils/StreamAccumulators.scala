@@ -2,10 +2,18 @@ package com.colofabrix.scala.beesight.utils
 
 import cats.Foldable
 
+/**
+ * Provides stateful stream transformation with multi-element emission and drain support.
+ */
 private[utils] trait StreamAccumulators {
 
   extension [F[_], A](self: fs2.Stream[F, A]) {
 
+    /**
+     * Stateful stream transformation that can emit zero or more elements per input and drain remaining state at
+     * stream end. The first element initialises the state via `init`; subsequent elements are processed by `f`.
+     * When the upstream ends, `drain` is called to flush any buffered output.
+     */
     def statefulMapEmits[G[_]: Foldable, SA, SB <: SA, B](
       init: A => (SA, G[B]),
       drain: SA => Vector[B] = (_: SA) => Vector.empty[B],

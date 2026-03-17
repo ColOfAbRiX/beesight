@@ -13,9 +13,9 @@ import fs2.data.csv.*
 import java.nio.file.*
 
 /**
- * Handles the processing of individual CSV files through the flight data pipeline
+ * Handles the processing of individual CSV files through the flight data pipeline.
  */
-object FileProcessor {
+private[beesight] object FileProcessor {
 
   /**
    * Detects the format of a CSV file and processes it through the appropriate pipeline
@@ -28,44 +28,43 @@ object FileProcessor {
         case FileFormat.Airlog   => processFileAs[AirlogPoint](inputFile)
       }
       .handleErrorWith { error =>
-        val msg = s"ERROR processing $inputFile: ${error.getMessage}"
-        msg.stderr.as((inputFile, None))
+        s"ERROR processing $inputFile: ${error.getMessage}"
+          .stderr
+          .as((inputFile, None))
       }
 
   private def processFileAs[A](
     inputFile: Path,
   )(using
-    decoder: CsvRowDecoder[A, String],
     adapter: FileFormatAdapter[A],
+    decoder: CsvRowDecoder[A, String],
     encoder: CsvRowEncoder[OutputFlightPoint[A], String],
   ): IOConfig[(Path, Option[OutputFlightPoint[?]])] =
     for
       outputFile <- FileOps.createProcessedDirectory(inputFile)
       _          <- s"Processing: $inputFile -> $outputFile".stdout
       csvStream   = CsvFileReader.readCsv[A](inputFile)
-      pipeline   <- processingPipeline(csvStream, outputFile)
-      lastPoint  <- pipeline.compile.last
-    yield (inputFile, lastPoint)
+      cfg        <- IOConfig.ask[IO, Config]
+      lastPoint  <- processingPipeline(cfg, csvStream, outputFile).compile.last
+      result      = (inputFile, lastPoint)
+    yield result
 
   private def processingPipeline[A](
+    cfg: Config,
     csvStream: fs2.Stream[IOConfig, A],
     outputCsvFile: Path,
   )(using
     adapter: FileFormatAdapter[A],
     encoder: CsvRowEncoder[OutputFlightPoint[A], String],
-  ): IOConfig[fs2.Stream[IOConfig, OutputFlightPoint[A]]] =
-    IOConfig
-      .ask[IO, Config]
-      .map { cfg =>
-        csvStream
-          .through(FlightStagesDetection(cfg.detectionConfig).streamDetect)
-          .through(DataCutter(cfg).cutPipe)
-          .broadcastThrough(
-            CsvResultWriter(cfg).writePipe(outputCsvFile),
-            ChartGenerator(cfg).chartPipe(outputCsvFile),
-            ResultPrinter(cfg).printStagesPipe,
-            identity,
-          )
-      }
+  ): fs2.Stream[IOConfig, OutputFlightPoint[A]] =
+    csvStream
+      .through(FlightStagesDetection(cfg.detectionConfig).streamDetect)
+      .through(DataCutter(cfg).cutPipe)
+      .broadcastThrough(
+        CsvResultWriter(cfg).writePipe(outputCsvFile),
+        ChartGenerator(cfg).chartPipe(outputCsvFile),
+        ResultPrinter(cfg).printStagesPipe,
+        identity,
+      )
 
 }

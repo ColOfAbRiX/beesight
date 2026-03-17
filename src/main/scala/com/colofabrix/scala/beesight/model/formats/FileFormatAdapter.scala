@@ -5,7 +5,7 @@ import com.colofabrix.scala.beesight.detection.model.DataPoint
 /**
  * Type class for adapting various flight data file formats to a common InputFlightPoint representation.
  */
-trait FileFormatAdapter[A] {
+private[beesight] trait FileFormatAdapter[A] {
 
   /**
    * Converts a source data point to an DataPoint.
@@ -14,7 +14,7 @@ trait FileFormatAdapter[A] {
 
 }
 
-object FileFormatAdapter {
+private[beesight] object FileFormatAdapter {
 
   /**
    * Summons the FileFormatAdapter instance for type A.

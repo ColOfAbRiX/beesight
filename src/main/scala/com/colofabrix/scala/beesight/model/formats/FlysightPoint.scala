@@ -20,12 +20,12 @@ import java.time.*
  * @param hAcc Horizontal accuracy (m)
  * @param vAcc Vertical accuracy (m)
  * @param sAcc Speed accuracy (m/s)
- * @param heading
- * @param cAcc
+ * @param heading Heading (degrees)
+ * @param cAcc Course accuracy (degrees)
  * @param gpsFix GPS fix type (3 = 3D)
  * @param numSV Number of satellites used in fix
  */
-final case class FlysightPoint(
+final private[beesight] case class FlysightPoint(
   time: OffsetDateTime,
   lat: Double,
   lon: Double,
@@ -43,22 +43,35 @@ final case class FlysightPoint(
   extra: List[(String, String)],
 )
 
-object FlysightPoint {
+private[beesight] object FlysightPoint {
 
-  private val timeField    = CsvFieldSpec.required[FlysightPoint, OffsetDateTime]("time", _.time.toString)
-  private val latField     = CsvFieldSpec.required[FlysightPoint, Double]("lat", p => formatDouble(p.lat, 7))
-  private val lonField     = CsvFieldSpec.required[FlysightPoint, Double]("lon", p => formatDouble(p.lon, 7))
-  private val hMSLField    = CsvFieldSpec.required[FlysightPoint, Double]("hMSL", p => formatDouble(p.hMSL, 3))
-  private val velNField    = CsvFieldSpec.required[FlysightPoint, Double]("velN", p => formatDouble(p.velN, 2))
-  private val velEField    = CsvFieldSpec.required[FlysightPoint, Double]("velE", p => formatDouble(p.velE, 2))
-  private val velDField    = CsvFieldSpec.required[FlysightPoint, Double]("velD", p => formatDouble(p.velD, 2))
-  private val hAccField    = CsvFieldSpec.required[FlysightPoint, Double]("hAcc", p => formatDouble(p.hAcc, 3))
-  private val vAccField    = CsvFieldSpec.required[FlysightPoint, Double]("vAcc", p => formatDouble(p.vAcc, 3))
-  private val sAccField    = CsvFieldSpec.required[FlysightPoint, Double]("sAcc", p => formatDouble(p.sAcc, 2))
-  private val headingField = CsvFieldSpec.required[FlysightPoint, Double]("heading", p => formatDouble(p.heading, 5))
-  private val cAccField    = CsvFieldSpec.required[FlysightPoint, Double]("cAcc", p => formatDouble(p.cAcc, 5))
-  private val numSVField   = CsvFieldSpec.required[FlysightPoint, Int]("numSV", _.numSV.toString)
-  private val gpsFixField  =
+  private val timeField =
+    CsvFieldSpec.required[FlysightPoint, OffsetDateTime]("time", _.time.toString)
+  private val latField =
+    CsvFieldSpec.required[FlysightPoint, Double]("lat", p => formatDouble(p.lat, 7))
+  private val lonField =
+    CsvFieldSpec.required[FlysightPoint, Double]("lon", p => formatDouble(p.lon, 7))
+  private val hMSLField =
+    CsvFieldSpec.required[FlysightPoint, Double]("hMSL", p => formatDouble(p.hMSL, 3))
+  private val velNField =
+    CsvFieldSpec.required[FlysightPoint, Double]("velN", p => formatDouble(p.velN, 2))
+  private val velEField =
+    CsvFieldSpec.required[FlysightPoint, Double]("velE", p => formatDouble(p.velE, 2))
+  private val velDField =
+    CsvFieldSpec.required[FlysightPoint, Double]("velD", p => formatDouble(p.velD, 2))
+  private val hAccField =
+    CsvFieldSpec.required[FlysightPoint, Double]("hAcc", p => formatDouble(p.hAcc, 3))
+  private val vAccField =
+    CsvFieldSpec.required[FlysightPoint, Double]("vAcc", p => formatDouble(p.vAcc, 3))
+  private val sAccField =
+    CsvFieldSpec.required[FlysightPoint, Double]("sAcc", p => formatDouble(p.sAcc, 2))
+  private val headingField =
+    CsvFieldSpec.required[FlysightPoint, Double]("heading", p => formatDouble(p.heading, 5))
+  private val cAccField =
+    CsvFieldSpec.required[FlysightPoint, Double]("cAcc", p => formatDouble(p.cAcc, 5))
+  private val numSVField =
+    CsvFieldSpec.required[FlysightPoint, Int]("numSV", _.numSV.toString)
+  private val gpsFixField =
     CsvFieldSpec.optional[FlysightPoint, Int]("gpsFix", p => p.gpsFix.map(_.toString).getOrElse(""))
 
   val fieldSpecs: NonEmptyList[CsvFieldSpec[FlysightPoint, ?]] =

@@ -7,7 +7,11 @@ import com.colofabrix.scala.beesight.detection.math.Stats
 import com.colofabrix.scala.beesight.detection.model.DetectionData
 import java.time.Duration
 
-final class CanopyHandler private (config: CanopyConfig, freefallConfig: FreefallConfig) extends StageHandler {
+/**
+ * Detects canopy deployment by identifying the transition from freefall to slower descent.
+ */
+final private[stages] class CanopyHandler private (config: CanopyConfig, freefallConfig: FreefallConfig)
+  extends StageHandler {
 
   protected def detectTrigger(window: NonEmptyFilled[DetectionData]): Boolean =
     val kinematics = window.focus.kinematics
@@ -56,7 +60,7 @@ final class CanopyHandler private (config: CanopyConfig, freefallConfig: Freefal
 
 }
 
-object CanopyHandler {
+private[stages] object CanopyHandler {
 
   def apply(config: CanopyConfig, freefallConfig: FreefallConfig): CanopyHandler =
     new CanopyHandler(config, freefallConfig)

@@ -8,9 +8,9 @@ import com.colofabrix.scala.beesight.{ IOConfig, * }
 import java.nio.file.*
 
 /**
- * Generates interactive HTML charts showing flight data and detected stages
+ * Generates interactive HTML charts showing flight data and detected stages.
  */
-final class ChartGenerator private (config: Config) {
+final private[beesight] class ChartGenerator private (config: Config) {
 
   /**
    * Returns a pipe that generates an HTML chart from the stream of OutputFlightPoints
@@ -216,7 +216,7 @@ final class ChartGenerator private (config: Config) {
 
 }
 
-object ChartGenerator {
+private[beesight] object ChartGenerator {
 
   def apply(config: Config): ChartGenerator =
     new ChartGenerator(config)

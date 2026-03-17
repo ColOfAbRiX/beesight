@@ -18,7 +18,7 @@ import scala.annotation.tailrec
 /**
  * Detects flight stages from flight data streams.
  */
-final class FlightStagesDetection private (config: DetectionConfig) {
+final private[beesight] class FlightStagesDetection private (config: DetectionConfig) {
 
   //  Configuration / Derived Values  //
 
@@ -180,7 +180,10 @@ final class FlightStagesDetection private (config: DetectionConfig) {
 
 }
 
-object FlightStagesDetection {
+/**
+ * Factory and type class instances for FlightStagesDetection.
+ */
+private[beesight] object FlightStagesDetection {
 
   //  Factory  //
 

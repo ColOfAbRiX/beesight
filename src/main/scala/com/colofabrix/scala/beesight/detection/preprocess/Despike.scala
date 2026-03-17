@@ -5,7 +5,10 @@ import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.colofabrix.scala.beesight.detection.math.Interpolation
 import java.time.Instant
 
-object Despike {
+/**
+ * Detects and removes velocity spikes by interpolating outlier points.
+ */
+private[preprocess] object Despike {
 
   def despike(
     config: DetectionConfig,

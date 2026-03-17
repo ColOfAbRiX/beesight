@@ -1,9 +1,17 @@
 package com.colofabrix.scala.beesight.model
 
 /**
- * Represents the phases of a skydiving jump
+ * Represents the sequential phases of a skydiving jump.
+ *
+ *   - `BeforeTakeoff` (0) — on the ground or preparing for the jump
+ *   - `Climbing` (1) — in the aircraft, gaining altitude
+ *   - `Freefall` (2) — after exit, in free fall
+ *   - `UnderCanopy` (3) — after deployment, descending under canopy
+ *   - `Landed` (4) — on the ground after landing
+ *
+ * @param sequence Ordinal position in the jump timeline (0–4)
  */
-enum FlightPhase(val sequence: Int) {
+private[beesight] enum FlightPhase(val sequence: Int) {
   case BeforeTakeoff extends FlightPhase(0)
   case Climbing      extends FlightPhase(1)
   case Freefall      extends FlightPhase(2)
@@ -11,9 +19,12 @@ enum FlightPhase(val sequence: Int) {
   case Landed        extends FlightPhase(4)
 }
 
-object FlightPhase {
+/**
+ * Companion providing conversion from EventType to the resulting FlightPhase.
+ */
+private[beesight] object FlightPhase {
 
-  def fromEvent(event: EventType): FlightPhase =
+  private[beesight] def fromEvent(event: EventType): FlightPhase =
     event match {
       case EventType.Takeoff  => FlightPhase.Climbing
       case EventType.Freefall => FlightPhase.Freefall

@@ -6,7 +6,10 @@ import com.colofabrix.scala.beesight.config.LandingConfig
 import com.colofabrix.scala.beesight.detection.math.Stats
 import com.colofabrix.scala.beesight.detection.model.DetectionData
 
-final class LandingHandler private (config: LandingConfig) extends StageHandler {
+/**
+ * Detects landing by identifying sustained near-zero velocity and low speed variance.
+ */
+final private[stages] class LandingHandler private (config: LandingConfig) extends StageHandler {
 
   protected def detectTrigger(window: NonEmptyFilled[DetectionData]): Boolean =
     val kinematics = window.focus.kinematics
@@ -44,7 +47,7 @@ final class LandingHandler private (config: LandingConfig) extends StageHandler 
 
 }
 
-object LandingHandler {
+private[stages] object LandingHandler {
 
   def apply(config: LandingConfig): LandingHandler =
     new LandingHandler(config)

@@ -8,14 +8,14 @@ package com.colofabrix.scala.beesight.model
  * @param canopy The detected canopy deployment point (if found)
  * @param landing The detected landing point (if found)
  */
-final case class FlightEvents(
+final private[beesight] case class FlightEvents(
   takeoff: Option[FlightEventPoint],
   freefall: Option[FlightEventPoint],
   canopy: Option[FlightEventPoint],
   landing: Option[FlightEventPoint],
 )
 
-object FlightEvents {
+private[beesight] object FlightEvents {
 
   /**
    * Empty flight stages with no detected points
@@ -30,7 +30,7 @@ object FlightEvents {
 
   extension (self: FlightEvents) {
 
-    def setEvent(eventType: EventType, value: FlightEventPoint): FlightEvents =
+    private[beesight] def setEvent(eventType: EventType, value: FlightEventPoint): FlightEvents =
       eventType match {
         case EventType.Takeoff  => self.copy(takeoff = Some(value))
         case EventType.Freefall => self.copy(freefall = Some(value))
@@ -43,9 +43,12 @@ object FlightEvents {
 }
 
 /**
- * A point in the flight timeline representing a detected stage transition
+ * A point in the flight timeline representing a detected stage transition.
+ *
+ * @param index Zero-based index of this point in the original data stream
+ * @param altitude Altitude (m) at which the transition was detected
  */
-final case class FlightEventPoint(
+final private[beesight] case class FlightEventPoint(
   index: Long,
   altitude: Double,
 )

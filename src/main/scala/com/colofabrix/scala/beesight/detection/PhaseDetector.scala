@@ -11,7 +11,10 @@ import com.colofabrix.scala.beesight.detection.stages.StageHandler
 import com.colofabrix.scala.beesight.model.*
 import scala.annotation.tailrec
 
-final class PhaseDetector private (config: DetectionConfig) {
+/**
+ * Orchestrates per-phase stage handlers, sweeping the focus across the window to find transitions.
+ */
+final private[detection] class PhaseDetector private (config: DetectionConfig) {
 
   def detect(): Transition[DetectionState, Vector[FlightEvents]] =
     IndexedState { state =>
@@ -143,7 +146,7 @@ object PhaseDetector {
   private type Detector =
     Option[(StateTrait, Vector[FlightEvents])]
 
-  def apply(config: DetectionConfig): PhaseDetector =
+  private[detection] def apply(config: DetectionConfig): PhaseDetector =
     new PhaseDetector(config)
 
 }

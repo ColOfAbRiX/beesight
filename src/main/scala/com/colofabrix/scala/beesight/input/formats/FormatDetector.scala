@@ -8,9 +8,9 @@ import com.colofabrix.scala.beesight.model.formats.{ AirlogPoint, FlysightPoint 
 import java.nio.file.Path
 
 /**
- * Detects the file format of a CSV file by inspecting its header columns
+ * Detects the file format of a CSV file by inspecting its header columns.
  */
-object FormatDetector {
+private[beesight] object FormatDetector {
 
   /**
    * Detects the format of a CSV file by reading its header line and checking whether all required columns for a known

@@ -7,6 +7,7 @@ import com.colofabrix.scala.beesight.config.*
 import com.colofabrix.scala.beesight.input.*
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.output.*
+import com.colofabrix.scala.beesight.utils.*
 import com.colofabrix.scala.declinio.*
 import com.monovore.decline.Opts
 import java.nio.file.*
@@ -29,18 +30,8 @@ object Main extends IODeclineReaderApp[Config] {
     for
       inputFiles  <- FileOps.discoverCsvFiles()
       _           <- s"Processing ${inputFiles.size} CSV files".stdout
-      summaryRows <- runParallel(inputFiles)
+      summaryRows <- inputFiles.configTraverse(FileProcessor.processFile)
       _           <- ResultsSummary.writeSummaryCsv(summaryRows)
     yield ExitCode.Success
-
-  private def runParallel(inputFiles: List[Path]): IOConfig[List[(Path, Option[OutputFlightPoint[?]])]] =
-    IOConfig.ask.flatMap { config =>
-      config
-        .parallelism
-        .map(_.value)
-        .fold(inputFiles.parTraverse(FileProcessor.processFile)) { n =>
-          inputFiles.parTraverseN(n)(FileProcessor.processFile)
-        }
-    }
 
 }

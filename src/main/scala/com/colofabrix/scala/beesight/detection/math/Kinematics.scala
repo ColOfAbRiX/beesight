@@ -8,7 +8,7 @@ import java.time.Duration
 /**
  * Computes kinematic properties (speed, acceleration) from flight data points.
  */
-object Kinematics {
+private[detection] object Kinematics {
 
   /**
    * Computes acceleration by comparing velocity changes between two consecutive data points.
@@ -24,6 +24,9 @@ object Kinematics {
       acceleration = acceleration,
     )
 
+  /**
+   * Computes smoothed kinematics using median speed from a sliding window.
+   */
   def computeSmoothed(
     previousWindow: NonEmptyFilled[IndexedDataPoint],
     currentPoint: IndexedDataPoint,

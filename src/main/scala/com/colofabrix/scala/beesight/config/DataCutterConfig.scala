@@ -6,12 +6,22 @@ import io.github.iltotore.iron.*
 import io.github.iltotore.iron.constraint.numeric.*
 import io.github.iltotore.iron.decline.given
 
+/**
+ * Configuration for the output data cutter that trims flight data to the jump-relevant portion.
+ *
+ * @param keepBeforeTakeoff Number of data points to retain before the detected takeoff
+ * @param keepAfterLanding Number of data points to retain after the detected landing
+ * @param minRetainedPoints Minimum fraction of total points that must be retained; below this the file is kept uncut
+ */
 final case class DataCutterConfig(
   keepBeforeTakeoff: KeepPoints,
   keepAfterLanding: KeepPoints,
   minRetainedPoints: Percent,
 )
 
+/**
+ * Factory, defaults, and CLI option definitions for DataCutterConfig.
+ */
 object DataCutterConfig {
 
   val default: DataCutterConfig =

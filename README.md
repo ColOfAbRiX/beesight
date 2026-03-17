@@ -198,6 +198,10 @@ Beesight is released under the MIT license. See [LICENSE](LICENSE) for details.
 
 [Fabrizio Colonna](mailto:colofabrix@tin.it)
 
+## Documentation
+
+- [Detection Algorithm](DETECTION_ALGORITHM.md) — Detailed description of how the flight stage detection works
+
 ## See Also
 
 - [Flysight](https://flysight.ca/) — GPS logger for skydivers

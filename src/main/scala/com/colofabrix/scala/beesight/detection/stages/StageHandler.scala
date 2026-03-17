@@ -5,7 +5,10 @@ import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.colofabrix.scala.beesight.detection.model.*
 import com.colofabrix.scala.beesight.model.EventType
 
-trait StageHandler {
+/**
+ * Template for a flight-stage detector implementing the trigger → validate → inflection pipeline.
+ */
+private[detection] trait StageHandler {
 
   protected def detectTrigger(window: NonEmptyFilled[DetectionData]): Boolean
 
@@ -22,7 +25,7 @@ trait StageHandler {
 
 }
 
-object StageHandler {
+private[detection] object StageHandler {
 
   def apply(config: DetectionConfig, eventType: EventType): StageHandler =
     eventType match {

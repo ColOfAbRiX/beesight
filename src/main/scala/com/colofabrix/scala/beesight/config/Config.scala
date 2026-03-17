@@ -1,5 +1,6 @@
 package com.colofabrix.scala.beesight.config
 
+import cats.Show
 import cats.syntax.all.*
 import com.monovore.decline.*
 import io.github.iltotore.iron.*
@@ -8,14 +9,15 @@ import io.github.iltotore.iron.decline.given
 import java.nio.file.{ Path, Paths }
 
 /**
- * Configuration for the command line tool
+ * Top-level application configuration assembled from CLI options.
  *
- * @param input Input path (file or directory, supports glob patterns)
- * @param output Output directory (optional, defaults to sibling "processed" directory)
- * @param processLimit Limits the number of files to process
- * @param dryRun Do a test run without creating output files
- * @param bufferPoints Number of points to keep before or after a landing or takeoff has been detected
- * @param minRetainedPoints Percentage of minimum point the tool must keep
+ * @param input Input path (file, directory, or glob pattern)
+ * @param output Output directory (optional; defaults to sibling "processed" directory)
+ * @param processLimit Maximum number of files to process (None = unlimited)
+ * @param detectionConfig Algorithm thresholds and window sizes for flight stage detection
+ * @param dataCutterConfig Settings for trimming output data around the jump
+ * @param flags Boolean feature flags controlling output behaviour
+ * @param parallelism Number of files to process concurrently (None = unbounded)
  */
 final case class Config(
   input: Path,
@@ -27,6 +29,9 @@ final case class Config(
   parallelism: Option[Parallelism],
 )
 
+/**
+ * Factory, defaults, and CLI option definitions for Config.
+ */
 object Config {
 
   val default: Config =
@@ -37,7 +42,7 @@ object Config {
       dataCutterConfig = DataCutterConfig.default,
       detectionConfig = DetectionConfig.default,
       flags = ConfigFlags.default,
-      parallelism = None,
+      parallelism = Parallelism(1).some,
     )
 
   lazy val declineOpts: Opts[Config] =
@@ -59,14 +64,14 @@ object Config {
         help = "Input path (file or directory, supports glob patterns)",
       )
       .map(Paths.get(_))
-      .withDefault(Config.default.input)
+      .withDefault(default.input)
 
   private lazy val output: Opts[Option[Path]] =
     Opts
       .option[String](
         long = "output",
         short = "o",
-        help = "Output directory where to place the produced CSV files",
+        help = "Output directory where to place the produced CSV files.",
       )
       .map(Paths.get(_))
       .orNone
@@ -76,18 +81,22 @@ object Config {
       .option[Int :| GreaterEqual[1]](
         long = "limit",
         short = "l",
-        help = "The maximum amount of files to process",
+        help = s"The maximum amount of files to process (default: ${default.processLimit.show})",
       )
-      .map(ProcessLimit.apply)
-      .orNone
+      .map(x => Option(ProcessLimit.apply(x)))
+      .withDefault(default.processLimit)
 
   private lazy val parallelism: Opts[Option[Parallelism]] =
     Opts
       .option[Int :| GreaterEqual[1]](
         long = "parallelism",
-        help = "The number of concurrent threads used to process the files in batch. Default is: no limit",
+        help = s"Number of concurrent files to process (default: ${default.parallelism.show})",
       )
-      .map(Parallelism.apply)
-      .orNone
+      .map(x => Option(Parallelism.apply(x)))
+      .withDefault(default.parallelism)
+
+  private given showOption[A: Show]: Show[Option[A]] with
+    def show(t: Option[A]): String =
+      t.fold("Not configured")(Show[A].show)
 
 }

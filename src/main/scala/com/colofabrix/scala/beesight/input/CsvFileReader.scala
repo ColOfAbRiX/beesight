@@ -7,9 +7,9 @@ import fs2.io.file.{ Files, Flags, Path as Fs2Path }
 import java.nio.file.Path
 
 /**
- * Aggregations of operations on files using fs2
+ * Reads CSV and ZIP flight data files into typed streams using fs2-data.
  */
-object CsvFileReader {
+private[beesight] object CsvFileReader {
 
   private given ZipUnarchiver[IOConfig] =
     ZipUnarchiver.make[IOConfig]()

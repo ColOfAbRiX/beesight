@@ -1,6 +1,5 @@
 package com.colofabrix.scala.beesight.output
 
-import cats.effect.IO
 import com.colofabrix.scala.beesight.IOConfig
 import com.colofabrix.scala.beesight.config.Config
 import com.colofabrix.scala.beesight.model.OutputFlightPoint
@@ -9,9 +8,9 @@ import fs2.io.file.{ Files, Path as Fs2Path }
 import java.nio.file.Path
 
 /**
- * Aggregations of operations on files using fs2
+ * Writes processed flight data with detected phases to CSV files.
  */
-final class CsvResultWriter private (config: Config) {
+final private[beesight] class CsvResultWriter private (config: Config) {
 
   /**
    * Returns a pipe that writes OutputFlightPoint to a CSV file (includes phase column)
@@ -33,7 +32,7 @@ final class CsvResultWriter private (config: Config) {
 
 }
 
-object CsvResultWriter {
+private[beesight] object CsvResultWriter {
 
   def apply(config: Config): CsvResultWriter =
     new CsvResultWriter(config)

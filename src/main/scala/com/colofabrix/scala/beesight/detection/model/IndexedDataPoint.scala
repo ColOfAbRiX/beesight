@@ -6,7 +6,7 @@ import java.time.Instant
 /**
  * Internal representation of a flight data point with time, altitude, and velocity.
  */
-final case class IndexedDataPoint(
+final private[detection] case class IndexedDataPoint(
   time: Instant,
   idx: Long,
   altitude: Double,
