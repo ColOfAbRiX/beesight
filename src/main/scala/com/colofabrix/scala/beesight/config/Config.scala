@@ -50,7 +50,7 @@ object Config {
       input,
       output,
       processLimit,
-      DetectionConfig.declineOpts,
+      DetectionConfigCli.declineOpts,
       DataCutterConfig.declineOpts,
       ConfigFlags.declineOpts,
       parallelism,

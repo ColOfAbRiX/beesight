@@ -4,7 +4,7 @@ import com.colofabrix.scala.beesight.*
 import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.colofabrix.scala.beesight.input.CsvFileReader
 import com.colofabrix.scala.beesight.model.*
-import com.colofabrix.scala.beesight.model.formats.FlysightPoint
+import com.colofabrix.scala.beesight.model.formats.{ FileFormatAdapter, FlysightPoint }
 import java.io.File
 import java.nio.file.Paths
 import java.util.zip.ZipInputStream
@@ -17,82 +17,41 @@ class FileDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues {
   private val inputData =
     Paths.get("src/test/resources/file_detection_spec/input_data.zip")
 
+  private def detectAll: List[FlightEvents] =
+    CsvFileReader
+      .readCsv[FlysightPoint](inputData)
+      .map(FileFormatAdapter[FlysightPoint].toDataPoint)
+      .through(FlightStagesDetection(DetectionConfig.default).streamDetect)
+      .compile
+      .toList
+      .result()
+
   "FlightStagesDetection" should {
 
     "output the same number of rows as the input" in {
       val inputLineCount = countCsvLinesInZip(inputData.toFile)
 
-      val processedResults =
-        CsvFileReader
-          .readCsv[FlysightPoint](inputData)
-          .through(FlightStagesDetection(DetectionConfig.default).streamDetect)
-          .compile
-          .toList
-          .result()
+      val processedResults = detectAll
 
       processedResults.size shouldBe inputLineCount
     }
 
-    "produce phases in monotonically non-decreasing sequence order" in {
-      val processedResults =
-        CsvFileReader
-          .readCsv[FlysightPoint](inputData)
-          .through(FlightStagesDetection(DetectionConfig.default).streamDetect)
-          .compile
-          .toList
-          .result()
-
-      processedResults
-        .sliding(2)
-        .foreach {
-          case Seq(prev, curr) =>
-            withClue(s"Phase ${prev.phase} -> ${curr.phase}: ") {
-              curr.phase.sequence should be >= prev.phase.sequence
-            }
-          case _ =>
-        }
-    }
-
     "detect all expected flight phases" in {
-      val processedResults =
-        CsvFileReader
-          .readCsv[FlysightPoint](inputData)
-          .through(FlightStagesDetection(DetectionConfig.default).streamDetect)
-          .compile
-          .toList
-          .result()
+      val events = detectAll.lastOption.getOrElse(FlightEvents.empty)
 
-      val phases = processedResults.map(_.phase).distinct
-
-      phases should contain(FlightPhase.BeforeTakeoff)
-      phases should contain(FlightPhase.Climbing)
-      phases should contain(FlightPhase.Freefall)
-      phases should contain(FlightPhase.UnderCanopy)
-      phases should contain(FlightPhase.Landed)
+      events.takeoff shouldBe defined
+      events.freefall shouldBe defined
+      events.canopy shouldBe defined
+      events.landing shouldBe defined
     }
 
-    "start with BeforeTakeoff phase" in {
-      val processedResults =
-        CsvFileReader
-          .readCsv[FlysightPoint](inputData)
-          .through(FlightStagesDetection(DetectionConfig.default).streamDetect)
-          .compile
-          .toList
-          .result()
+    "detect phases in the correct chronological order" in {
+      val events = detectAll.lastOption.getOrElse(FlightEvents.empty)
 
-      processedResults.head.phase shouldBe FlightPhase.BeforeTakeoff
-    }
+      val indices =
+        List(events.takeoff, events.freefall, events.canopy, events.landing).flatten.map(_.index)
 
-    "end with Landed phase" in {
-      val processedResults =
-        CsvFileReader
-          .readCsv[FlysightPoint](inputData)
-          .through(FlightStagesDetection(DetectionConfig.default).streamDetect)
-          .compile
-          .toList
-          .result()
-
-      processedResults.last.phase shouldBe FlightPhase.Landed
+      indices shouldBe indices.sorted
     }
 
   }

@@ -5,20 +5,21 @@ import cats.syntax.all.*
 import com.colofabrix.scala.beesight.collections.*
 import com.colofabrix.scala.beesight.collections.NEW.*
 import com.colofabrix.scala.beesight.config.DetectionConfig
-import com.colofabrix.scala.beesight.detection.FlightStagesDetection.given
 import com.colofabrix.scala.beesight.detection.math.*
 import com.colofabrix.scala.beesight.detection.model.*
 import com.colofabrix.scala.beesight.detection.model.DetectionConfigActions.*
 import com.colofabrix.scala.beesight.detection.preprocess.PreprocessData
 import com.colofabrix.scala.beesight.model.*
-import com.colofabrix.scala.beesight.model.formats.FileFormatAdapter
 import com.colofabrix.scala.beesight.utils.*
 import scala.annotation.tailrec
 
 /**
  * Detects flight stages from flight data streams.
+ *
+ * The detection engine works purely on [[DataPoint]] and emits the accumulated [[FlightEvents]] for each point. Format
+ * adaptation (e.g. from a specific CSV format to [[DataPoint]]) is the responsibility of the caller.
  */
-final private[beesight] class FlightStagesDetection private (config: DetectionConfig) {
+final class FlightStagesDetection private (config: DetectionConfig) {
 
   //  Configuration / Derived Values  //
 
@@ -40,9 +41,11 @@ final private[beesight] class FlightStagesDetection private (config: DetectionCo
 
   /**
    * Streaming pipe that detects flight stages using the provided configuration.
+   *
+   * Consumes a stream of [[DataPoint]] and emits, for each point, the [[FlightEvents]] accumulated so far.
    */
-  def streamDetect[F[_], A: FileFormatAdapter]: fs2.Pipe[F, A, OutputFlightPoint[A]] =
-    _.processBypass(mainDetectionPipe)
+  def streamDetect[F[_]]: fs2.Pipe[F, DataPoint, FlightEvents] =
+    mainDetectionPipe
 
   //  Stream Pipeline  //
 
@@ -181,23 +184,11 @@ final private[beesight] class FlightStagesDetection private (config: DetectionCo
 }
 
 /**
- * Factory and type class instances for FlightStagesDetection.
+ * Factory for FlightStagesDetection.
  */
-private[beesight] object FlightStagesDetection {
-
-  //  Factory  //
+object FlightStagesDetection {
 
   def apply(config: DetectionConfig): FlightStagesDetection =
     new FlightStagesDetection(config)
-
-  //  Type Class Instances  //
-
-  given splitter[A: FileFormatAdapter]: Splitter[A, DataPoint, A] with
-    def split(a: A): (DataPoint, A) =
-      (FileFormatAdapter[A].toDataPoint(a), a)
-
-  given combiner[A]: Combiner[FlightEvents, A, OutputFlightPoint[A]] with
-    def combine(events: FlightEvents, source: A): OutputFlightPoint[A] =
-      OutputFlightPoint(events.takeoff, events.freefall, events.canopy, events.landing, source)
 
 }

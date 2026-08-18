@@ -1,16 +1,13 @@
 package com.colofabrix.scala.beesight.config
 
-import cats.data.*
-import com.monovore.decline.Opts
-import com.typesafe.config.ConfigFactory
 import io.github.iltotore.iron.*
 import io.github.iltotore.iron.constraint.numeric.*
-import java.nio.file.Paths
-import pureconfig.*
-import scala.io.Source
 
 /**
  * Top-level configuration for the flight stage detection algorithm.
+ *
+ * This is a pure data structure intrinsic to the detection engine. It carries no configuration-loading or CLI concerns;
+ * those live in the CLI module (see `DetectionConfigCli`).
  *
  * @param global Settings shared across all stages
  * @param takeoff Thresholds and window sizes for takeoff detection
@@ -24,53 +21,59 @@ final case class DetectionConfig(
   freefall: FreefallConfig,
   canopy: CanopyConfig,
   landing: LandingConfig,
-) derives ConfigReader
+)
 
 /**
- * Factory, defaults, and CLI option definitions for DetectionConfig.
+ * Factory and default configuration for DetectionConfig.
  */
 object DetectionConfig {
 
+  /**
+   * Default detection configuration, hardcoded as a pure value so the library has no configuration-loading dependency.
+   */
   val default: DetectionConfig =
-    ConfigSource
-      .default
-      .loadOrThrow[DetectionConfig]
-
-  lazy val declineOpts: Opts[DetectionConfig] =
-    detectionConfigPath orElse detectionConfigString orElse Opts(DetectionConfig.default)
-
-  private lazy val detectionConfigPath: Opts[DetectionConfig] =
-    Opts
-      .option[String](
-        long = "detection-config-path",
-        help = "Path to a HOCON file with override configuration for detection",
-      )
-      .mapValidated { path =>
-        fromString(Source.fromFile(Paths.get(path).toFile).mkString)
-      }
-
-  private lazy val detectionConfigString: Opts[DetectionConfig] =
-    Opts
-      .option[String](
-        long = "detection-config-string",
-        help = "Override configuration for the detection config, in HOCON format",
-      )
-      .mapValidated(fromString)
-
-  private def fromString(configString: String): ValidatedNel[String, DetectionConfig] =
-    val overrides = ConfigFactory.parseString(configString)
-    val defaults  = ConfigFactory.defaultReference()
-    val merged    = overrides.withFallback(defaults).resolve()
-
-    ConfigSource
-      .fromConfig(merged)
-      .load[DetectionConfig]
-      .left
-      .map(_.prettyPrint())
-      .fold(
-        err => Validated.invalidNel(err),
-        cfg => Validated.valid(cfg),
-      )
+    DetectionConfig(
+      global = GlobalConfig(
+        preprocessWindowSize = WindowSize(20),
+        accelerationClip = 20.0,
+      ),
+      takeoff = TakeoffConfig(
+        smoothingWindowSize = WindowSize(5),
+        backtrackWindowSize = WindowSize(10),
+        validationWindowSize = WindowSize(100),
+        validationVerticalSpeed = -2.466,
+        verticalSpeedThreshold = -2.0,
+        horizontalSpeedThreshold = 30.0,
+        maxTakeoffAltitude = 600.0,
+      ),
+      freefall = FreefallConfig(
+        smoothingWindowSize = WindowSize(5),
+        backtrackWindowSize = WindowSize(10),
+        validationWindowSize = WindowSize(100),
+        verticalSpeedThreshold = 25.0,
+        accelerationThreshold = 3.0,
+        accelerationMinVelocity = 10.0,
+        minFreefallAltitude = 600.0,
+        validationVerticalSpeed = 3.3565,
+      ),
+      canopy = CanopyConfig(
+        smoothingWindowSize = WindowSize(5),
+        backtrackWindowSize = WindowSize(10),
+        validationWindowSize = WindowSize(100),
+        verticalSpeedThreshold = 10.0,
+        minCanopyAltitude = 600.0,
+        validationVerticalSpeed = 1.3426,
+      ),
+      landing = LandingConfig(
+        smoothingWindowSize = WindowSize(5),
+        backtrackWindowSize = WindowSize(10),
+        validationWindowSize = WindowSize(100),
+        verticalSpeedThreshold = 1.0,
+        stabilityThreshold = 0.5,
+        validationVerticalSpeed = 0.05,
+        horizontalSpeedThreshold = 2.0,
+      ),
+    )
 
 }
 
@@ -83,7 +86,7 @@ object DetectionConfig {
 final case class GlobalConfig(
   preprocessWindowSize: WindowSize,
   accelerationClip: Double,
-) derives ConfigReader
+)
 
 /**
  * Common sliding-window parameters shared by all stage-specific detection configurations. Each stage defines these
@@ -127,7 +130,7 @@ final case class TakeoffConfig(
   verticalSpeedThreshold: Double,
   horizontalSpeedThreshold: Double,
   maxTakeoffAltitude: Double,
-) extends EventConfigs derives ConfigReader
+) extends EventConfigs
 
 /**
  * Configuration for freefall/exit detection.
@@ -150,7 +153,7 @@ final case class FreefallConfig(
   accelerationMinVelocity: Double,
   minFreefallAltitude: Double,
   validationVerticalSpeed: Double,
-) extends EventConfigs derives ConfigReader
+) extends EventConfigs
 
 /**
  * Configuration for canopy deployment detection.
@@ -169,7 +172,7 @@ final case class CanopyConfig(
   verticalSpeedThreshold: Double,
   minCanopyAltitude: Double,
   validationVerticalSpeed: Double,
-) extends EventConfigs derives ConfigReader
+) extends EventConfigs
 
 /**
  * Configuration for landing detection.
@@ -190,10 +193,4 @@ final case class LandingConfig(
   stabilityThreshold: Double,
   validationVerticalSpeed: Double,
   horizontalSpeedThreshold: Double,
-) extends EventConfigs derives ConfigReader
-
-/**
- * ConfigReader instance for decoding WindowSize from HOCON integer values.
- */
-given ConfigReader[WindowSize] =
-  ConfigReader[Int].map(i => WindowSize(i.refineUnsafe))
+) extends EventConfigs

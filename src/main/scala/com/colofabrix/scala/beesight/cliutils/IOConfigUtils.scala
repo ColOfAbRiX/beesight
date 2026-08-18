@@ -1,4 +1,4 @@
-package com.colofabrix.scala.beesight.utils
+package com.colofabrix.scala.beesight.cliutils
 
 import cats.effect.implicits.given
 import cats.implicits.given
@@ -9,7 +9,7 @@ import com.colofabrix.scala.beesight.IOConfig
 /**
  * Provides utilities for IOConfig
  */
-private[utils] trait IOConfigUtils {
+private[cliutils] trait IOConfigUtils {
 
   extension [A](self: List[A]) {
 

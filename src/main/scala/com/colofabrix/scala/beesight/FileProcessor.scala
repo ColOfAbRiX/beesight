@@ -4,11 +4,13 @@ import cats.effect.IO
 import cats.syntax.all.*
 import com.colofabrix.scala.beesight.config.Config
 import com.colofabrix.scala.beesight.detection.*
+import com.colofabrix.scala.beesight.detection.model.DataPoint
 import com.colofabrix.scala.beesight.input.*
 import com.colofabrix.scala.beesight.input.formats.*
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.model.formats.{ AirlogPoint, FileFormatAdapter, FlysightPoint }
 import com.colofabrix.scala.beesight.output.*
+import com.colofabrix.scala.beesight.cliutils.*
 import fs2.data.csv.*
 import java.nio.file.*
 
@@ -58,7 +60,7 @@ private[beesight] object FileProcessor {
     encoder: CsvRowEncoder[OutputFlightPoint[A], String],
   ): fs2.Stream[IOConfig, OutputFlightPoint[A]] =
     csvStream
-      .through(FlightStagesDetection(cfg.detectionConfig).streamDetect)
+      .through(detectAndRecombine(cfg))
       .through(DataCutter(cfg).cutPipe)
       .broadcastThrough(
         CsvResultWriter(cfg).writePipe(outputCsvFile),
@@ -66,5 +68,26 @@ private[beesight] object FileProcessor {
         ResultPrinter(cfg).printStagesPipe,
         identity,
       )
+
+  /**
+   * Adapts each source point to a DataPoint, runs the detection engine, and recombines the emitted FlightEvents with
+   * the original source point to build an OutputFlightPoint.
+   */
+  private def detectAndRecombine[A](
+    cfg: Config,
+  )(using
+    adapter: FileFormatAdapter[A],
+  ): fs2.Pipe[IOConfig, A, OutputFlightPoint[A]] =
+    _.processBypass(FlightStagesDetection(cfg.detectionConfig).streamDetect)
+
+  //  Type Class Instances  //
+
+  given splitter[A: FileFormatAdapter]: Splitter[A, DataPoint, A] with
+    def split(a: A): (DataPoint, A) =
+      (FileFormatAdapter[A].toDataPoint(a), a)
+
+  given combiner[A]: Combiner[FlightEvents, A, OutputFlightPoint[A]] with
+    def combine(events: FlightEvents, source: A): OutputFlightPoint[A] =
+      OutputFlightPoint(events.takeoff, events.freefall, events.canopy, events.landing, source)
 
 }

@@ -3,7 +3,7 @@ package com.colofabrix.scala.beesight
 import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.colofabrix.scala.beesight.detection.FlightStagesDetection
 import com.colofabrix.scala.beesight.model.FlightEvents
-import com.colofabrix.scala.beesight.model.formats.FlysightPoint
+import com.colofabrix.scala.beesight.model.formats.{ FileFormatAdapter, FlysightPoint }
 import java.io.File
 import scala.io.Source
 
@@ -34,6 +34,7 @@ object Tools {
 
   def detectPoints(data: fs2.Stream[IOConfig, FlysightPoint]): IOConfig[FlightEvents] =
     data
+      .map(FileFormatAdapter[FlysightPoint].toDataPoint)
       .through(FlightStagesDetection(DetectionConfig.default).streamDetect)
       .compile
       .last

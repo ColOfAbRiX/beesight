@@ -1,6 +1,6 @@
-package com.colofabrix.scala.beesight.utils
+package com.colofabrix.scala.beesight.cliutils
 
-private[utils] trait StreamBypass {
+private[cliutils] trait StreamBypass {
 
   /**
    * Typeclass for splitting an input into a processable part and a bypass part.

@@ -1,4 +1,4 @@
-package com.colofabrix.scala.beesight.utils
+package com.colofabrix.scala.beesight.cliutils
 
 import cats.effect.IO
 import com.colofabrix.scala.beesight.IOValues
@@ -7,7 +7,7 @@ import org.scalatest.matchers.should.Matchers
 
 class StreamBypassSpec extends AnyFreeSpec with Matchers with IOValues {
 
-  import com.colofabrix.scala.beesight.utils.*
+  import com.colofabrix.scala.beesight.cliutils.*
 
   "processBypass" - {
 

@@ -7,7 +7,7 @@ import com.colofabrix.scala.beesight.config.*
 import com.colofabrix.scala.beesight.input.*
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.output.*
-import com.colofabrix.scala.beesight.utils.*
+import com.colofabrix.scala.beesight.cliutils.*
 import com.colofabrix.scala.declinio.*
 import com.monovore.decline.Opts
 import java.nio.file.*

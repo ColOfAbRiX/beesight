@@ -41,3 +41,7 @@ processed/
 /*.log
 /*.csv
 __pycache__
+
+# AI
+.roo/
+plans/
