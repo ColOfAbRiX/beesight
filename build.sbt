@@ -1,6 +1,6 @@
 import org.typelevel.scalacoptions.ScalacOptions
 
-val scala3Version = "3.8.1"
+val scala3Version = "3.8.4"
 
 Global / run / fork              := true
 Global / tpolecatExcludeOptions ++=
@@ -32,20 +32,20 @@ lazy val root =
     .settings(
       name := "beesight-cli",
       libraryDependencies ++= List(
-        "co.fs2"                %% "fs2-core"                   % "3.10.2",
-        "co.fs2"                %% "fs2-io"                     % "3.10.2",
+        "co.fs2"                %% "fs2-core"                   % "3.13.0",
+        "co.fs2"                %% "fs2-io"                     % "3.13.0",
         "com.colofabrix.scala"  %% "declinio"                   % "1.0.0",
-        "com.monovore"          %% "decline"                    % "2.4.1",
+        "com.monovore"          %% "decline"                    % "2.6.2",
         "de.lhns"               %% "fs2-compress-zip"           % "2.3.2",
-        "io.github.iltotore"    %% "iron-decline"               % "3.3.0",
-        "io.github.iltotore"    %% "iron"                       % "3.3.0",
-        "org.gnieh"             %% "fs2-data-csv"               % "1.11.1",
-        "com.github.pureconfig" %% "pureconfig-core"            % "0.17.8",
-        "com.github.pureconfig" %% "pureconfig-generic-scala3"  % "0.17.8",
-        "org.scalatest"         %% "scalatest"                  % "3.2.18" % Test,
-        "org.typelevel"         %% "cats-core"                  % "2.12.0",
-        "org.typelevel"         %% "cats-effect-testing-scalatest" % "1.7.0" % Test,
-        "org.typelevel"         %% "cats-effect"                % "3.5.4",
+        "io.github.iltotore"    %% "iron-decline"               % "3.3.2",
+        "io.github.iltotore"    %% "iron"                       % "3.3.2",
+        "org.gnieh"             %% "fs2-data-csv"               % "1.14.1",
+        "com.github.pureconfig" %% "pureconfig-core"            % "0.17.10",
+        "com.github.pureconfig" %% "pureconfig-generic-scala3"  % "0.17.10",
+        "org.scalatest"         %% "scalatest"                  % "3.2.20" % Test,
+        "org.typelevel"         %% "cats-core"                  % "2.13.0",
+        "org.typelevel"         %% "cats-effect-testing-scalatest" % "1.8.0" % Test,
+        "org.typelevel"         %% "cats-effect"                % "3.7.0",
       ),
       graalVMNativeImageOptions ++= Seq(
         "--no-fallback",
@@ -63,12 +63,12 @@ lazy val beesightDetection =
     .settings(
       name := "beesight-detection",
       libraryDependencies ++= List(
-        "co.fs2"                %% "fs2-core"                   % "3.10.2",
-        "io.github.iltotore"    %% "iron"                       % "3.3.0",
-        "org.typelevel"         %% "cats-core"                  % "2.12.0",
-        "org.typelevel"         %% "cats-effect"                % "3.5.4",
-        "org.scalatest"         %% "scalatest"                  % "3.2.18" % Test,
-        "org.typelevel"         %% "cats-effect-testing-scalatest" % "1.7.0" % Test,
+        "co.fs2"                %% "fs2-core"                   % "3.13.0",
+        "io.github.iltotore"    %% "iron"                       % "3.3.2",
+        "org.typelevel"         %% "cats-core"                  % "2.13.0",
+        "org.typelevel"         %% "cats-effect"                % "3.7.0",
+        "org.scalatest"         %% "scalatest"                  % "3.2.20" % Test,
+        "org.typelevel"         %% "cats-effect-testing-scalatest" % "1.8.0" % Test,
       ),
     )
 
