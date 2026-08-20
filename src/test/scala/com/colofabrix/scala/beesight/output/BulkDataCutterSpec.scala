@@ -13,7 +13,7 @@ import org.scalatest.wordspec.AnyWordSpec
 class BulkDataCutterSpec extends AnyWordSpec with Matchers {
 
   private val resultsFile =
-    Paths.get("src/test/resources/bulk_detection_spec/data_cutter_results.csv").toFile
+    Paths.get("src/test/resources/data_cutter_results.csv").toFile
 
   private val config: Config =
     Config.default
@@ -62,8 +62,6 @@ class BulkDataCutterSpec extends AnyWordSpec with Matchers {
 
   }
 
-  // -- Helpers ----------------------------------------------------------------
-
   private def computeExpectedStart(row: TestRow): Int =
     row.takeoff match {
       case Some(t) => math.max(0, t - keepBefore)
@@ -100,8 +98,6 @@ class BulkDataCutterSpec extends AnyWordSpec with Matchers {
       .compile
       .toVector
       .unsafeRunSync()
-
-  // -- CSV loading ------------------------------------------------------------
 
   final private case class TestRow(
     filename: String,

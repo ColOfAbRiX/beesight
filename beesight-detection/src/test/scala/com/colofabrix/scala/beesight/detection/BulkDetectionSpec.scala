@@ -3,9 +3,8 @@ package com.colofabrix.scala.beesight.detection
 import cats.effect.IO
 import cats.syntax.all.given
 import com.colofabrix.scala.beesight.*
-import com.colofabrix.scala.beesight.input.CsvFileReader
+import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.colofabrix.scala.beesight.model.*
-import com.colofabrix.scala.beesight.model.formats.FlysightPoint
 import java.io.File
 import java.nio.file.Paths
 import org.scalatest.matchers.should.Matchers
@@ -13,7 +12,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import scala.concurrent.duration.*
 import scala.io.Source
 
-class BulkDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues with FlightStagesMatchers {
+class BulkDetectionSpec extends AnyWordSpec with Matchers with IOValues with FlightStagesMatchers {
 
   private val flysightDir =
     Paths.get("src/test/resources/bulk_detection_spec/flysight")
@@ -36,10 +35,8 @@ class BulkDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues wi
               val filename = expected.filename
               val zipName  = filename.replaceAll("(?i)\\.csv$", ".zip")
               val filePath = flysightDir.resolve(zipName)
-              val points   = CsvFileReader.readCsv[FlysightPoint](filePath)
 
-              Tools
-                .detectPoints(points)
+              detectLastEvents(filePath)
                 .map { result =>
                   val matcher     = matchStages(expected.toFlightEvents)
                   val matchResult = matcher(result)
@@ -79,10 +76,8 @@ class BulkDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues wi
               val filename = expected.filename
               val zipName  = filename.replaceAll("(?i)\\.csv$", ".zip")
               val filePath = flysightDir.resolve(zipName)
-              val points   = CsvFileReader.readCsv[FlysightPoint](filePath)
 
-              Tools
-                .detectPoints(points)
+              detectLastEvents(filePath)
                 .map { result =>
                   val matcher     = matchStages(expected.toFlightEvents)
                   val matchResult = matcher(result)
@@ -111,6 +106,25 @@ class BulkDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues wi
 
   }
 
+  private def detectLastEvents(filePath: java.nio.file.Path): IO[FlightEvents] =
+    FlysightTestReader
+      .readCsvStream(filePath)
+      .through(FlightStagesDetection(DetectionConfig.default).streamDetect)
+      .compile
+      .last
+      .map {
+        _.fold(FlightEvents.empty) { output =>
+          FlightEvents(
+            takeoff = output.takeoff,
+            freefall = output.freefall,
+            canopy = output.canopy,
+            landing = output.landing,
+          )
+        }
+      }
+
+  // CSV summary loading
+
   final private case class TestFileRow(
     filename: String,
     takeoff: Option[FlightEventPoint],
@@ -128,7 +142,7 @@ class BulkDetectionSpec extends AnyWordSpec with Matchers with IOConfigValues wi
   private def loadSummary(file: File): List[TestFileRow] =
     val lines =
       Source
-        .fromFile(resultsFile.toFile)
+        .fromFile(file)
         .getLines()
         .toList
         .filterNot(_.isBlank)

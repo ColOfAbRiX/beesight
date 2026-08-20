@@ -22,7 +22,7 @@ lazy val commonSettings = Seq(
 )
 
 // The CLI application is the root project. The detection engine is a library subproject.
-lazy val root =
+lazy val beesight =
   project
     .in(file("."))
     .aggregate(beesightDetection)
@@ -30,7 +30,7 @@ lazy val root =
     .enablePlugins(GraalVMNativeImagePlugin)
     .settings(commonSettings)
     .settings(
-      name := "beesight-cli",
+      name := "beesight",
       libraryDependencies ++= List(
         "co.fs2"                %% "fs2-core"                   % "3.13.0",
         "co.fs2"                %% "fs2-io"                     % "3.13.0",
@@ -65,6 +65,7 @@ lazy val beesightDetection =
       libraryDependencies ++= List(
         "co.fs2"                %% "fs2-core"                   % "3.13.0",
         "io.github.iltotore"    %% "iron"                       % "3.3.2",
+        "org.gnieh"             %% "fs2-data-csv"               % "1.14.1" % Test,
         "org.typelevel"         %% "cats-core"                  % "2.13.0",
         "org.typelevel"         %% "cats-effect"                % "3.7.0",
         "org.scalatest"         %% "scalatest"                  % "3.2.20" % Test,

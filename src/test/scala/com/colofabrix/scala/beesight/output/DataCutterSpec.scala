@@ -564,15 +564,18 @@ class DataCutterSpec extends AnyFreeSpec with Matchers {
     freefall: Option[FlightEventPoint] = None,
     canopy: Option[FlightEventPoint] = None,
     landing: Option[FlightEventPoint] = None,
-  ): Vector[OutputFlightPoint[Int]] = (0 until n).map { i =>
-    OutputFlightPoint[Int](
-      takeoff = takeoff,
-      freefall = freefall,
-      canopy = canopy,
-      landing = landing,
-      source = i,
-    )
-  }.toVector
+  ): Vector[OutputFlightPoint[Int]] = 
+    (0 until n)
+      .map { i =>
+        OutputFlightPoint[Int](
+          takeoff = takeoff,
+          freefall = freefall,
+          canopy = canopy,
+          landing = landing,
+          source = i,
+        )
+      }
+      .toVector
 
   private def runCutter(
     config: Config,
