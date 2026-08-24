@@ -1,13 +1,12 @@
-package com.colofabrix.scala.beesight.detection.math
+package com.colofabrix.scala.beesight.math
 
-import com.colofabrix.scala.beesight.detection.model.*
-import com.colofabrix.scala.beesight.model.GeoVector
+import com.colofabrix.scala.beesight.model.*
 import java.time.Instant
 
 /**
  * Provides linear interpolation functions for various flight data types.
  */
-private[detection] object Interpolation {
+private[beesight] object Interpolation {
 
   /**
    * Linearly interpolates between two Double values based on time.
@@ -59,7 +58,7 @@ private[detection] object Interpolation {
       acceleration = interpolate_(k1.acceleration, k2.acceleration)(t),
     )
 
-  private def tParam(t1: Instant, t2: Instant, time: Instant): Double = (time.toEpochMilli - t1.toEpochMilli).toDouble /
-    (t2.toEpochMilli - t1.toEpochMilli)
+  private def tParam(t1: Instant, t2: Instant, time: Instant): Double =
+    ((time.toEpochMilli - t1.toEpochMilli).toDouble / (t2.toEpochMilli - t1.toEpochMilli))
 
 }

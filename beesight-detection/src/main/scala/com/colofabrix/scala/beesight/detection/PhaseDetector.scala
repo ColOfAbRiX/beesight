@@ -5,7 +5,7 @@ import cats.syntax.all.*
 import com.colofabrix.scala.beesight.collections.NEW.*
 import com.colofabrix.scala.beesight.config.*
 import com.colofabrix.scala.beesight.detection.PhaseDetector.*
-import com.colofabrix.scala.beesight.detection.model.*
+import com.colofabrix.scala.beesight.detection.model.{ DetectorState, DetectingState, FillingState, FocusPosition, Step, Transition, WindowEntry }
 import com.colofabrix.scala.beesight.detection.model.DetectionConfigActions.*
 import com.colofabrix.scala.beesight.detection.stages.StageHandler
 import com.colofabrix.scala.beesight.model.*

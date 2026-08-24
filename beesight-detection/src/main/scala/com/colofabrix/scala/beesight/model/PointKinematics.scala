@@ -1,12 +1,11 @@
-package com.colofabrix.scala.beesight.detection.model
+package com.colofabrix.scala.beesight.model
 
-import com.colofabrix.scala.beesight.model.GeoVector
 import java.time.Instant
 
 /**
  * Represents complete kinematic state of a flight point including position, velocity, and acceleration.
  */
-final private[detection] case class PointKinematics(
+final private[beesight] case class PointKinematics(
   time: Instant,
   altitude: Double,
   speed: GeoVector,

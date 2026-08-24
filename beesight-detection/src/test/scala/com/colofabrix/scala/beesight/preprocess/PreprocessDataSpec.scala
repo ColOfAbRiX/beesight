@@ -1,10 +1,9 @@
-package com.colofabrix.scala.beesight.detection.preprocess
+package com.colofabrix.scala.beesight.preprocess
 
 import cats.effect.IO
 import com.colofabrix.scala.beesight.IOValues
 import com.colofabrix.scala.beesight.config.*
-import com.colofabrix.scala.beesight.detection.model.IndexedDataPoint
-import com.colofabrix.scala.beesight.model.GeoVector
+import com.colofabrix.scala.beesight.model.*
 import fs2.Stream
 import io.github.iltotore.iron.*
 import java.time.Instant
@@ -72,7 +71,7 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
       }
 
       "should handle empty input" in {
-        val expected = List.empty[IndexedDataPoint]
+        val expected = List.empty[DataPoint]
         val actual   = runPreprocess(List.empty)
 
         actual shouldBe expected
@@ -432,20 +431,19 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
     northSpeed: Double = 0.0,
     eastSpeed: Double = 0.0,
     verticalSpeed: Double = 0.0,
-  ): IndexedDataPoint =
-    IndexedDataPoint(
+  ): DataPoint =
+    DataPoint(
       time = Instant.ofEpochSecond(seconds),
-      idx = 0L,
       altitude = altitude,
       speed = GeoVector(north = northSpeed, east = eastSpeed, vertical = verticalSpeed),
     )
 
   private def runPreprocess(
-    points: List[IndexedDataPoint],
+    points: List[DataPoint],
     config: DetectionConfig = DetectionConfig.default,
-  ): List[IndexedDataPoint] =
+  ): List[DataPoint] =
     Stream
-      .emits[IO, IndexedDataPoint](points)
+      .emits[IO, DataPoint](points)
       .through(PreprocessData(config).preprocess)
       .compile
       .toList

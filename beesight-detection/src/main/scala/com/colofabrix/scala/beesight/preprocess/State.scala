@@ -1,6 +1,6 @@
-package com.colofabrix.scala.beesight.detection.preprocess
+package com.colofabrix.scala.beesight.preprocess
 
-import com.colofabrix.scala.beesight.detection.model.*
+import com.colofabrix.scala.beesight.model.*
 
 /**
  * Pairs a data point with its computed kinematics for use in the despiking window.

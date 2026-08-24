@@ -2,8 +2,8 @@ package com.colofabrix.scala.beesight.detection.stages
 
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
 import com.colofabrix.scala.beesight.config.DetectionConfig
-import com.colofabrix.scala.beesight.detection.model.{ IndexedDataPoint, WindowEntry }
-import com.colofabrix.scala.beesight.model.EventType
+import com.colofabrix.scala.beesight.detection.model.WindowEntry
+import com.colofabrix.scala.beesight.model.*
 
 /**
  * Template for a flight-stage detector implementing the trigger → validate → inflection pipeline.

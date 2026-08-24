@@ -1,4 +1,4 @@
-package com.colofabrix.scala.beesight.detection.math
+package com.colofabrix.scala.beesight.math
 
 import com.colofabrix.scala.beesight.collections.*
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.*

@@ -1,10 +1,10 @@
-package com.colofabrix.scala.beesight.detection.math
+package com.colofabrix.scala.beesight.math
 
 import com.colofabrix.scala.beesight.collections.NEW
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
 import com.colofabrix.scala.beesight.model.GeoVector
 
-private[detection] object Stats {
+private[beesight] object Stats {
 
   /**
    * Component-wise median of GeoVectors extracted from a window.

@@ -1,14 +1,13 @@
-package com.colofabrix.scala.beesight.detection.math
+package com.colofabrix.scala.beesight.math
 
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.*
-import com.colofabrix.scala.beesight.detection.model.*
 import com.colofabrix.scala.beesight.model.*
 import java.time.Duration
 
 /**
  * Computes kinematic properties (speed, acceleration) from flight data points.
  */
-private[detection] object Kinematics {
+private[beesight] object Kinematics {
 
   /**
    * Computes acceleration by comparing velocity changes between two consecutive data points.

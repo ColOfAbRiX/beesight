@@ -1,8 +1,8 @@
-package com.colofabrix.scala.beesight.detection.preprocess
+package com.colofabrix.scala.beesight.preprocess
 
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
 import com.colofabrix.scala.beesight.config.DetectionConfig
-import com.colofabrix.scala.beesight.detection.math.Interpolation
+import com.colofabrix.scala.beesight.math.Interpolation
 import java.time.Instant
 
 /**

@@ -5,11 +5,11 @@ import cats.syntax.all.*
 import com.colofabrix.scala.beesight.collections.*
 import com.colofabrix.scala.beesight.collections.NEW.*
 import com.colofabrix.scala.beesight.config.DetectionConfig
-import com.colofabrix.scala.beesight.detection.math.*
-import com.colofabrix.scala.beesight.detection.model.*
+import com.colofabrix.scala.beesight.detection.model.{ DetectorState, DetectingState, FillingState, FocusPosition, Step, Transition, WindowEntry }
 import com.colofabrix.scala.beesight.detection.model.DetectionConfigActions.*
-import com.colofabrix.scala.beesight.detection.preprocess.PreprocessData
+import com.colofabrix.scala.beesight.math.*
 import com.colofabrix.scala.beesight.model.*
+import com.colofabrix.scala.beesight.preprocess.PreprocessData
 import com.colofabrix.scala.beesight.utils.*
 import scala.annotation.tailrec
 
@@ -53,7 +53,7 @@ final class FlightStagesDetection private (config: DetectionConfig) {
     pointStream =>
       pointStream
         .through(applyIndex)
-        .through(preprocessor.preprocess)
+        .through(preprocessor.preprocessIndexed)
         .statefulMapEmits(initialStreamState, drainState) {
           case (currentPoint, state: FillingState) =>
             handleFilling(currentPoint)

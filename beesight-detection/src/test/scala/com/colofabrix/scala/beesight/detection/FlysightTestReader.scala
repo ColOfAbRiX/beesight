@@ -1,8 +1,7 @@
 package com.colofabrix.scala.beesight.detection
 
 import cats.effect.IO
-import com.colofabrix.scala.beesight.detection.model.DataPoint
-import com.colofabrix.scala.beesight.model.GeoVector
+import com.colofabrix.scala.beesight.model.*
 import fs2.data.csv.*
 import java.io.FileInputStream
 import java.nio.file.Path

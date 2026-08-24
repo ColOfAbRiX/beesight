@@ -1,7 +1,6 @@
-package com.colofabrix.scala.beesight.detection.math
+package com.colofabrix.scala.beesight.math
 
-import com.colofabrix.scala.beesight.detection.model.*
-import com.colofabrix.scala.beesight.model.GeoVector
+import com.colofabrix.scala.beesight.model.*
 import java.time.Instant
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers

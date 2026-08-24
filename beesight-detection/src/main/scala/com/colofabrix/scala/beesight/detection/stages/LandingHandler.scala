@@ -3,8 +3,8 @@ package com.colofabrix.scala.beesight.detection.stages
 import cats.syntax.option.*
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
 import com.colofabrix.scala.beesight.config.LandingConfig
-import com.colofabrix.scala.beesight.detection.math.Stats
 import com.colofabrix.scala.beesight.detection.model.WindowEntry
+import com.colofabrix.scala.beesight.math.Stats
 
 /**
  * Detects landing by identifying sustained near-zero velocity and low speed variance.
