@@ -94,6 +94,17 @@ sealed private[beesight] trait NonEmptyWindow[A] {
     val newBuffer = sliceBuffer(start, count)
     new NonEmptyFilled(newBuffer, 0, count - 1, count)
 
+  /** Folds over the `n` most recently added elements (zero-allocation alternative to `takeNewest` + `foldLeft`). */
+  def foldNewest[B](n: Int)(z: B)(f: (B, A) => B): B =
+    val count = Math.max(1, Math.min(n, length))
+    val start = length - count
+    var acc   = z
+    var i     = start
+    while i < length do
+      acc = f(acc, readAt(i))
+      i += 1
+    acc
+
   // Focus (Zipper) //
 
   /** Returns the element at the current focus position. */
@@ -142,10 +153,10 @@ object NonEmptyWindow {
    * A non-empty window that is still being filled (1 ≤ length < capacity).
    */
   final class NonEmptyFilling[A] private[NonEmptyWindow] (
-    protected val buffer: Array[Any],
-    protected val head: Int,
-    private val len: Int,
-    protected val focusIdx: Int,
+    protected var buffer: Array[Any],
+    protected var head: Int,
+    private var len: Int,
+    protected var focusIdx: Int,
     val capacity: Int,
   ) extends NonEmptyWindow[A] {
 
@@ -170,16 +181,16 @@ object NonEmptyWindow {
       push(a)._2
 
     def push(a: A): (Option[A], NonEmptyWindow[A]) =
-      val newLen    = len + 1
-      val newBuffer = buffer.clone()
-      val tail      = (head + len) % capacity
-      newBuffer(tail) = a
+      val tail = (head + len) % capacity
+      buffer(tail) = a
+      len += 1
 
-      if newLen >= capacity then
+      if len >= capacity then
         val newFocusIdx = Math.min(focusIdx, capacity - 1)
-        (None, new NonEmptyFilled(newBuffer, head, newFocusIdx, capacity))
+        focusIdx = newFocusIdx
+        (None, new NonEmptyFilled(buffer, head, focusIdx, capacity))
       else
-        (None, new NonEmptyFilling(newBuffer, head, newLen, focusIdx, capacity))
+        (None, this)
 
     // Focus (Zipper) //
 
@@ -208,9 +219,9 @@ object NonEmptyWindow {
    * A non-empty window that has reached capacity (length == capacity).
    */
   final class NonEmptyFilled[A] private[NonEmptyWindow] (
-    protected val buffer: Array[Any],
-    protected val head: Int,
-    protected val focusIdx: Int,
+    protected var buffer: Array[Any],
+    protected var head: Int,
+    protected var focusIdx: Int,
     val capacity: Int,
   ) extends NonEmptyWindow[A] {
 
@@ -232,12 +243,11 @@ object NonEmptyWindow {
       (Some(out), window)
 
     def pushReturning(a: A): (A, NonEmptyFilled[A]) =
-      val outgoing  = buffer(head).asInstanceOf[A]
-      val newBuffer = buffer.clone()
-      newBuffer(head) = a
-      val newHead     = (head + 1) % capacity
-      val newFocusIdx = Math.max(0, focusIdx - 1)
-      (outgoing, new NonEmptyFilled(newBuffer, newHead, newFocusIdx, capacity))
+      val outgoing = buffer(head).asInstanceOf[A]
+      buffer(head) = a
+      head = (head + 1) % capacity
+      focusIdx = Math.max(0, focusIdx - 1)
+      (outgoing, this)
 
     def shrinkReturning(n: Int): (Vector[A], Option[NonEmptyFilled[A]]) =
       val toRemove  = Math.max(0, Math.min(n, capacity))

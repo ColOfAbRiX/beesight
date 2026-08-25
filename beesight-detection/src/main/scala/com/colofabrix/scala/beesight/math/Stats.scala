@@ -31,6 +31,36 @@ private[beesight] object Stats {
     )
 
   /**
+   * Component-wise median of GeoVectors from the `n` newest elements of a window plus one extra GeoVector.
+   * Zero-allocation alternative to `takeNewest` + `enqueue` + `medianBy`.
+   */
+  def medianGeoVectorWithExtra[A](window: NEW[A], n: Int, extra: GeoVector)(f: A => GeoVector): GeoVector =
+    val count    = Math.max(1, Math.min(n, window.length))
+    val total    = count + 1
+    val eastArr  = new Array[Double](total)
+    val northArr = new Array[Double](total)
+    val vertArr  = new Array[Double](total)
+    var i        = 0
+
+    window.foldNewest(n)(()) { (_, a) =>
+      val v = f(a)
+      eastArr(i) = v.east
+      northArr(i) = v.north
+      vertArr(i) = v.vertical
+      i += 1
+    }
+
+    eastArr(i) = extra.east
+    northArr(i) = extra.north
+    vertArr(i) = extra.vertical
+
+    GeoVector(
+      north = median(northArr),
+      east = median(eastArr),
+      vertical = median(vertArr),
+    )
+
+  /**
    * Population standard deviation of values extracted from a window.
    */
   def stdDevBy[A](window: NEW[A])(f: A => Double): Double =
