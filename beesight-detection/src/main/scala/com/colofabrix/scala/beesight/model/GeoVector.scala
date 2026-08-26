@@ -79,11 +79,11 @@ private[beesight] object GeoVector {
 
     /** Horizontal speed: magnitude of the north and east components. */
     def horizontal: Double =
-      sqrt(pow(self.east, 2) + pow(self.north, 2))
+      sqrt(self.east * self.east + self.north * self.north)
 
     /** 3D magnitude (Euclidean norm) of the vector. */
     def magnitude: Double =
-      sqrt(pow(self.east, 2) + pow(self.north, 2) + pow(self.vertical, 2))
+      sqrt(self.east * self.east + self.north * self.north + self.vertical * self.vertical)
 
   }
 

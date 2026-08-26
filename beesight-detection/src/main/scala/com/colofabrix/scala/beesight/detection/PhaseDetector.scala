@@ -5,7 +5,7 @@ import cats.syntax.all.*
 import com.colofabrix.scala.beesight.collections.NEW.*
 import com.colofabrix.scala.beesight.config.*
 import com.colofabrix.scala.beesight.detection.PhaseDetector.*
-import com.colofabrix.scala.beesight.detection.model.{ DetectorState, DetectingState, FillingState, FocusPosition, Step, Transition, WindowEntry }
+import com.colofabrix.scala.beesight.detection.model.{ DetectingState, DetectorState, FillingState, FocusPosition, Step, Transition, WindowEntry }
 import com.colofabrix.scala.beesight.detection.model.DetectionConfigActions.*
 import com.colofabrix.scala.beesight.detection.stages.StageHandler
 import com.colofabrix.scala.beesight.model.*
@@ -15,6 +15,11 @@ import scala.annotation.tailrec
  * Orchestrates per-phase stage handlers, sweeping the focus across the window to find transitions.
  */
 final private[detection] class PhaseDetector private (config: DetectionConfig) {
+
+  private val takeoffHandler  = StageHandler(config, EventType.Takeoff)
+  private val freefallHandler = StageHandler(config, EventType.Freefall)
+  private val canopyHandler   = StageHandler(config, EventType.Canopy)
+  private val landingHandler  = StageHandler(config, EventType.Landing)
 
   def detect(): Transition[DetectingState, Vector[FlightEvents]] =
     IndexedState { state =>
@@ -54,7 +59,14 @@ final private[detection] class PhaseDetector private (config: DetectionConfig) {
     val stageConfig    = config.getEventConfigs(eventType)
     val eventTypeFocus = config.getBackwindowSize(eventType)
     val phase          = FlightPhase.fromEvent(eventType)
-    val stageHandler   = StageHandler(config, eventType)
+
+    val stageHandler =
+      eventType match {
+        case EventType.Takeoff  => takeoffHandler
+        case EventType.Freefall => freefallHandler
+        case EventType.Canopy   => canopyHandler
+        case EventType.Landing  => landingHandler
+      }
 
     val initialFocus =
       currentState.focusType match {

@@ -128,9 +128,7 @@ class StatsSpec extends AnyFreeSpec with Matchers {
       "with noisy data" - {
 
         "should find inflection in noisy decreasing-then-stable data" in {
-          val window = filledWindow(
-            10.2, 8.1, 6.3, 3.8, 2.1, 1.9, 2.1, 2.0, 1.8, 2.2,
-          )
+          val window = filledWindow(10.2, 8.1, 6.3, 3.8, 2.1, 1.9, 2.1, 2.0, 1.8, 2.2)
           val result = Stats.findInflectionBy(window)(identity)
 
           result shouldBe defined
@@ -138,9 +136,7 @@ class StatsSpec extends AnyFreeSpec with Matchers {
         }
 
         "should find inflection in noisy stable-then-increasing data" in {
-          val window = filledWindow(
-            5.1, 4.9, 5.2, 4.8, 5.0, 7.1, 8.9, 11.2, 12.8, 15.1,
-          )
+          val window = filledWindow(5.1, 4.9, 5.2, 4.8, 5.0, 7.1, 8.9, 11.2, 12.8, 15.1)
           val result = Stats.findInflectionBy(window)(identity)
 
           result shouldBe defined
@@ -148,9 +144,7 @@ class StatsSpec extends AnyFreeSpec with Matchers {
         }
 
         "should find inflection in noisy increasing-then-stable data" in {
-          val window = filledWindow(
-            1.1, 2.9, 5.2, 6.8, 9.1, 10.2, 9.8, 10.1, 10.3, 9.9,
-          )
+          val window = filledWindow(1.1, 2.9, 5.2, 6.8, 9.1, 10.2, 9.8, 10.1, 10.3, 9.9)
           val result = Stats.findInflectionBy(window)(identity)
 
           result shouldBe defined
@@ -158,9 +152,7 @@ class StatsSpec extends AnyFreeSpec with Matchers {
         }
 
         "should find inflection in noisy stable-then-decreasing data" in {
-          val window = filledWindow(
-            10.1, 9.9, 10.2, 10.0, 9.8, 8.1, 5.9, 4.2, 1.8, 0.1,
-          )
+          val window = filledWindow(10.1, 9.9, 10.2, 10.0, 9.8, 8.1, 5.9, 4.2, 1.8, 0.1)
           val result = Stats.findInflectionBy(window)(identity)
 
           result shouldBe defined
@@ -245,9 +237,7 @@ class StatsSpec extends AnyFreeSpec with Matchers {
         }
 
         "should handle large values" in {
-          val window = filledWindow(
-            1e6, 1e6, 1e6, 1e6, 1e6, 2e6, 3e6, 4e6, 5e6,
-          )
+          val window = filledWindow(1e6, 1e6, 1e6, 1e6, 1e6, 2e6, 3e6, 4e6, 5e6)
           val result = Stats.findInflectionBy(window)(identity)
 
           result shouldBe defined
@@ -255,9 +245,7 @@ class StatsSpec extends AnyFreeSpec with Matchers {
         }
 
         "should handle very small differences" in {
-          val window = filledWindow(
-            1.0001, 1.0002, 1.0003, 1.0004, 1.0005, 1.0005, 1.0005, 1.0005,
-          )
+          val window = filledWindow(1.0001, 1.0002, 1.0003, 1.0004, 1.0005, 1.0005, 1.0005, 1.0005)
           val result = Stats.findInflectionBy(window)(identity)
 
           result shouldBe defined
@@ -270,9 +258,7 @@ class StatsSpec extends AnyFreeSpec with Matchers {
 
         "freefall onset: stable altitude then rapid descent speed" in {
           // Vertical speed: near-zero, then rapidly increasing
-          val window = filledWindow(
-            0.5, 0.3, 0.8, 0.2, 0.6, 5.0, 15.0, 30.0, 45.0, 55.0,
-          )
+          val window = filledWindow(0.5, 0.3, 0.8, 0.2, 0.6, 5.0, 15.0, 30.0, 45.0, 55.0)
           val result = Stats.findInflectionBy(window)(identity)
 
           result shouldBe defined
@@ -281,9 +267,7 @@ class StatsSpec extends AnyFreeSpec with Matchers {
 
         "canopy opening: high descent speed then moderate" in {
           // Vertical speed decreasing from freefall to canopy speed
-          val window = filledWindow(
-            55.0, 54.0, 53.0, 50.0, 40.0, 15.0, 14.0, 13.0, 13.0, 13.0,
-          )
+          val window = filledWindow(55.0, 54.0, 53.0, 50.0, 40.0, 15.0, 14.0, 13.0, 13.0, 13.0)
           val result = Stats.findInflectionBy(window)(identity)
 
           result shouldBe defined
@@ -292,9 +276,7 @@ class StatsSpec extends AnyFreeSpec with Matchers {
 
         "landing: canopy speed then near-zero" in {
           // Vertical speed decreasing to near-zero
-          val window = filledWindow(
-            13.0, 12.0, 10.0, 5.0, 1.0, 0.2, 0.1, 0.0, 0.1, 0.0,
-          )
+          val window = filledWindow(13.0, 12.0, 10.0, 5.0, 1.0, 0.2, 0.1, 0.0, 0.1, 0.0)
           val result = Stats.findInflectionBy(window)(identity)
 
           result shouldBe defined
@@ -303,9 +285,7 @@ class StatsSpec extends AnyFreeSpec with Matchers {
 
         "takeoff: ground then climbing" in {
           // Horizontal speed: zero then increasing
-          val window = filledWindow(
-            0.0, 0.1, 0.0, 0.1, 0.2, 5.0, 15.0, 25.0, 35.0, 40.0,
-          )
+          val window = filledWindow(0.0, 0.1, 0.0, 0.1, 0.2, 5.0, 15.0, 25.0, 35.0, 40.0)
           val result = Stats.findInflectionBy(window)(identity)
 
           result shouldBe defined
@@ -357,7 +337,8 @@ class StatsSpec extends AnyFreeSpec with Matchers {
 
   private def filledWindow(first: Double, rest: Double*): NonEmptyFilled[Double] =
     val elements = first +: rest
-    elements.tail
+    elements
+      .tail
       .foldLeft(NonEmptyWindow(elements.size, first))((w, e) => w.enqueue(e))
       .asInstanceOf[NonEmptyFilled[Double]]
 
