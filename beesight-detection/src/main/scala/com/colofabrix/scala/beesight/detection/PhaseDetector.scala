@@ -24,7 +24,9 @@ final private[detection] class PhaseDetector private (config: DetectionConfig) {
   def detect(): Transition[DetectingState, Vector[FlightEvents]] =
     IndexedState { state =>
       detectors(state)
-        .foldLeft(None: Detector)(_ <+> _)
+        .foldLeft(None: Detector) { (accumulator, eventType) =>
+          accumulator.orElse(runDetectionOnWindow(state, eventType))
+        }
         .getOrElse {
           val nextState   = state.copy(focusType = FocusPosition.StageFocus)
           val emitNothing = Vector.empty[FlightEvents]
@@ -32,22 +34,15 @@ final private[detection] class PhaseDetector private (config: DetectionConfig) {
         }
     }
 
-  private val detectors: DetectingState => List[Detector] = {
-    case state @ DetectingState(_, FlightPhase.BeforeTakeoff, _) =>
-      runDetectionOnWindow(state, EventType.Takeoff) ::
-      runDetectionOnWindow(state, EventType.Freefall) ::
-      Nil
-    case state @ DetectingState(_, FlightPhase.Climbing, _) =>
-      runDetectionOnWindow(state, EventType.Freefall) ::
-      runDetectionOnWindow(state, EventType.Landing) ::
-      Nil
-    case state @ DetectingState(_, FlightPhase.Freefall, _) =>
-      runDetectionOnWindow(state, EventType.Canopy) ::
-      runDetectionOnWindow(state, EventType.Landing) ::
-      Nil
-    case state @ DetectingState(_, FlightPhase.UnderCanopy, _) =>
-      runDetectionOnWindow(state, EventType.Landing) ::
-      Nil
+  private val detectors: DetectingState => List[EventType] = {
+    case DetectingState(_, FlightPhase.BeforeTakeoff, _) =>
+      EventType.Takeoff :: EventType.Freefall :: Nil
+    case DetectingState(_, FlightPhase.Climbing, _) =>
+      EventType.Freefall :: EventType.Landing :: Nil
+    case DetectingState(_, FlightPhase.Freefall, _) =>
+      EventType.Canopy :: EventType.Landing :: Nil
+    case DetectingState(_, FlightPhase.UnderCanopy, _) =>
+      EventType.Landing :: Nil
     case _ @DetectingState(_, FlightPhase.Landed, _) =>
       Nil
   }

@@ -5,12 +5,13 @@ import cats.syntax.all.*
 import com.colofabrix.scala.beesight.collections.*
 import com.colofabrix.scala.beesight.collections.NEW.*
 import com.colofabrix.scala.beesight.config.DetectionConfig
-import com.colofabrix.scala.beesight.detection.model.{ DetectorState, DetectingState, FillingState, FocusPosition, Step, Transition, WindowEntry }
+import com.colofabrix.scala.beesight.detection.model.{ DetectingState, DetectorState, FillingState, FocusPosition, Step, Transition, WindowEntry }
 import com.colofabrix.scala.beesight.detection.model.DetectionConfigActions.*
 import com.colofabrix.scala.beesight.math.*
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.preprocess.PreprocessData
 import com.colofabrix.scala.beesight.utils.*
+import java.time.Duration as JavaDuration
 import scala.annotation.tailrec
 
 /**
@@ -164,13 +165,27 @@ final class FlightStagesDetection private (config: DetectionConfig) {
     currentPoint: IndexedDataPoint,
   ): WindowEntry =
     val smoothingWindowSize = config.freefall.smoothingWindowSize
+    val smoothingCap        = Math.min(smoothingWindowSize.value, previousWindow.length)
+    val previousPoint       = previousWindow.newest.point
 
-    val smoothingWindow =
-      previousWindow
-        .takeNewest(smoothingWindowSize.value)
-        .map(_.point)
+    val dt = JavaDuration.between(previousPoint.time, currentPoint.time).toMillis / 1000.0
 
-    val kinematics             = Kinematics.computeSmoothed(smoothingWindow, currentPoint)
+    val currentSpeed =
+      if smoothingCap <= 1 then
+        currentPoint.speed
+      else
+        Stats.medianGeoVectorWithExtra(previousWindow, smoothingCap - 1, currentPoint.speed)(_.point.speed)
+
+    val currentAcceleration = (currentPoint.speed - previousPoint.speed) / dt
+
+    val kinematics =
+      PointKinematics(
+        time = currentPoint.time,
+        altitude = currentPoint.altitude,
+        speed = currentSpeed,
+        acceleration = currentAcceleration,
+      )
+
     val previousPhaseEvents    = previousWindow.oldest.phase
     val previousDetectedEvents = previousWindow.oldest.detectedEvents
 
