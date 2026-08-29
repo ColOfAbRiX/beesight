@@ -24,12 +24,16 @@ private[beesight] enum FlightPhase(val sequence: Int) {
  */
 private[beesight] object FlightPhase {
 
-  private[beesight] def fromEvent(event: EventType): FlightPhase =
-    event match {
-      case EventType.Takeoff  => FlightPhase.Climbing
-      case EventType.Freefall => FlightPhase.Freefall
-      case EventType.Canopy   => FlightPhase.UnderCanopy
-      case EventType.Landing  => FlightPhase.Landed
-    }
+  extension (self: EventType) {
+
+    def nextFlightPhase: FlightPhase =
+      self match {
+        case EventType.Takeoff  => FlightPhase.Climbing
+        case EventType.Freefall => FlightPhase.Freefall
+        case EventType.Canopy   => FlightPhase.UnderCanopy
+        case EventType.Landing  => FlightPhase.Landed
+      }
+
+  }
 
 }

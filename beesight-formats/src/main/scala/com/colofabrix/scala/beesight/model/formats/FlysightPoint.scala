@@ -98,15 +98,14 @@ private[beesight] object FlysightPoint {
       .map(_.name)
       .toSet
 
-  given flysightFormatAdapter: FileFormatAdapter[FlysightPoint] with {
 
-    def toDataPoint(point: FlysightPoint): DataPoint =
-      DataPoint(
-        time = point.time.toInstant,
-        altitude = point.hMSL,
-        speed = GeoVector(north = point.velN, east = point.velE, vertical = point.velD),
-      )
-
+  given flysightNormalizer: NormalizedPoint[FlysightPoint] with {
+    def time(point: FlysightPoint): Instant =
+      point.time.toInstant
+    def altitude(point: FlysightPoint): Double =
+      point.hMSL
+    def speed(point: FlysightPoint): GeoVector =
+      GeoVector(north = point.velN, east = point.velE, vertical = point.velD)
   }
 
   given csvRowDecoder: CsvRowDecoder[FlysightPoint, String] with {
@@ -151,15 +150,6 @@ private[beesight] object FlysightPoint {
 
     def apply(row: FlysightPoint): CsvRow[String] =
       CsvRow.fromNelHeaders(flysightFields(row))
-
-  }
-
-  given outputFlightRowEncoder: CsvRowEncoder[OutputFlightPoint[FlysightPoint], String] with {
-
-    def apply(row: OutputFlightPoint[FlysightPoint]): CsvRow[String] =
-      CsvRow.fromNelHeaders(
-        flysightFields(row.source).append(("phase", row.phase.toString)),
-      )
 
   }
 

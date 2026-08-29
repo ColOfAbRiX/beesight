@@ -28,10 +28,9 @@ object Main extends IODeclineReaderApp[Config] {
 
   override def runWithReader: IOConfig[ExitCode] =
     for
-      inputFiles  <- FileOps.discoverCsvFiles()
-      _           <- s"Processing ${inputFiles.size} CSV files".stdout
-      summaryRows <- inputFiles.configTraverse(FileProcessor.processFile)
-      _           <- ResultsSummary.writeSummaryCsv(summaryRows)
+      inputFiles <- FileOps.discoverCsvFiles()
+      _          <- s"Processing ${inputFiles.size} CSV files".stdout
+      _          <- inputFiles.configTraverse(FileProcessor.processFile)
     yield ExitCode.Success
 
 }

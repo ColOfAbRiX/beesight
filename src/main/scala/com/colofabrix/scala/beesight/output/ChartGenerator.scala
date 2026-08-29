@@ -3,8 +3,7 @@ package com.colofabrix.scala.beesight.output
 import cats.syntax.all.*
 import com.colofabrix.scala.beesight.config.Config
 import com.colofabrix.scala.beesight.model.*
-import com.colofabrix.scala.beesight.model.formats.FileFormatAdapter
-import com.colofabrix.scala.beesight.{ IOConfig, * }
+import com.colofabrix.scala.beesight.*
 import java.nio.file.*
 
 /**
@@ -15,7 +14,7 @@ final private[beesight] class ChartGenerator private (config: Config) {
   /**
    * Returns a pipe that generates an HTML chart from the stream of OutputFlightPoints
    */
-  def chartPipe[A: FileFormatAdapter](outputCsvFile: Path): fs2.Pipe[IOConfig, OutputFlightPoint[A], Nothing] =
+  def chartPipe[A: NormalizedPoint](outputFile: Path): fs2.Pipe[IOConfig, (FlightEvents, A), Nothing] =
     stream =>
       if config.flags.createGraph && !config.flags.dryRun then
         stream
@@ -25,7 +24,7 @@ final private[beesight] class ChartGenerator private (config: Config) {
           }
           .evalMap { state =>
             for
-              outputPath <- computeChartPath(outputCsvFile)
+              outputPath <- computeChartPath(outputFile)
               html        = createHtmlFromState(state)
               _          <- writeHtmlFile(html, outputPath)
             yield ()
@@ -34,23 +33,24 @@ final private[beesight] class ChartGenerator private (config: Config) {
       else
         stream.drain
 
-  private def updateChartState[A: FileFormatAdapter](
+  private def updateChartState[A: NormalizedPoint](
     state: ChartState[A],
-    point: OutputFlightPoint[A],
+    data: (FlightEvents, A),
     idx: Long,
   ): ChartState[A] =
+    val (events, point) = data
+
     val sep = if idx == 0 then "" else ","
 
     // Update data builders
-    val dataPoint    = FileFormatAdapter[A].toDataPoint(point.source)
     val newIndices   = state.indices.append(sep).append(idx)
-    val newAltitudes = state.altitudes.append(sep).append(dataPoint.altitude)
-    val newVelDs     = state.velDs.append(sep).append(dataPoint.speed.vertical)
+    val newAltitudes = state.altitudes.append(sep).append(point.altitude)
+    val newVelDs     = state.velDs.append(sep).append(point.speed.vertical)
 
     // Detect phase transition
     val transition =
-      if state.prevPhase != point.phase && point.phase != FlightPhase.BeforeTakeoff then
-        Some(PhaseTransition(point.phase, idx, dataPoint.altitude))
+      if state.prevPhase != events.phase && events.phase != FlightPhase.BeforeTakeoff then
+        Some(PhaseTransition(events.phase, idx, point.altitude))
       else
         None
 
@@ -59,27 +59,27 @@ final private[beesight] class ChartGenerator private (config: Config) {
       altitudes = newAltitudes,
       velDs = newVelDs,
       transitions = state.transitions ++ transition.toList,
-      prevPhase = point.phase,
-      lastStages = extractStages(point),
+      prevPhase = events.phase,
+      lastStages = extractStages(events),
     )
 
-  private def extractStages[A](point: OutputFlightPoint[A]): FlightEvents =
+  private def extractStages[A](events: FlightEvents): FlightEvents =
     FlightEvents(
-      takeoff = point.takeoff,
-      freefall = point.freefall,
-      canopy = point.canopy,
-      landing = point.landing,
+      takeoff = events.takeoff,
+      freefall = events.freefall,
+      canopy = events.canopy,
+      landing = events.landing,
     )
 
-  private def computeChartPath(outputCsvFile: Path): IOConfig[Path] =
+  private def computeChartPath(outputFile: Path): IOConfig[Path] =
     val baseName =
-      outputCsvFile
+      outputFile
         .getFileName
         .toString
         .replaceFirst("\\.[^.]+$", "")
 
     val chartFilePath =
-      outputCsvFile
+      outputFile
         .resolveSibling(s"$baseName.html")
         .toAbsolutePath
         .normalize

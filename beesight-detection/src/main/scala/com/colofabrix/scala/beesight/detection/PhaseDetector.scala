@@ -53,7 +53,7 @@ final private[detection] class PhaseDetector private (config: DetectionConfig) {
   ): Option[(FillingState, Vector[FlightEvents])] =
     val stageConfig    = config.getEventConfigs(eventType)
     val eventTypeFocus = config.getBackwindowSize(eventType)
-    val phase          = FlightPhase.fromEvent(eventType)
+    val phase          = FlightPhase.nextFlightPhase(eventType)
 
     val stageHandler =
       eventType match {
@@ -106,7 +106,7 @@ final private[detection] class PhaseDetector private (config: DetectionConfig) {
             val nextToProcess =
               afterDetection.map { data =>
                 val eventPoint     = FlightEventPoint(detectedPoint.idx, detectedPoint.altitude)
-                val detectedEvents = data.detectedEvents.setEvent(state.eventType, eventPoint)
+                val detectedEvents = data.detectedEvents.setEventPoint(state.eventType, eventPoint)
 
                 WindowEntry(
                   point = data.point,

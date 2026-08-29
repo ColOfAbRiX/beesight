@@ -45,6 +45,15 @@ final class FlightStagesDetection private (config: DetectionConfig) {
    *
    * Consumes a stream of [[DataPoint]] and emits, for each point, the [[FlightEvents]] accumulated so far.
    */
+  def streamDetect2[F[_], A: NormalizedPoint]: fs2.Pipe[F, A, FlightEvents] =
+    _.map(point => DataPoint(point.time, point.altitude, point.speed))
+      .through(mainDetectionPipe)
+
+  /**
+   * Streaming pipe that detects flight stages using the provided configuration.
+   *
+   * Consumes a stream of [[DataPoint]] and emits, for each point, the [[FlightEvents]] accumulated so far.
+   */
   def streamDetect[F[_]]: fs2.Pipe[F, DataPoint, FlightEvents] =
     mainDetectionPipe
 

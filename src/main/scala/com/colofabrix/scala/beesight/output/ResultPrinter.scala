@@ -15,12 +15,12 @@ final private[beesight] class ResultPrinter private (config: Config) {
   /**
    * Streaming pipe that collects the last detection state and prints a human-readable summary.
    */
-  def printStagesPipe: fs2.Pipe[IOConfig, OutputFlightPoint[?], Nothing] =
+  def printStagesPipe: fs2.Pipe[IOConfig, (FlightEvents, ?), Nothing] =
     data =>
       if config.flags.writeCsv then
         data
-          .fold(Option.empty[FlightEvents]) { (_, point) =>
-            Some(extractStages(point))
+          .fold(Option.empty[FlightEvents]) { case (_, (events, _)) =>
+            Some(extractStages(events))
           }
           .evalMap {
             case Some(stages) => IOConfig.stdout(stages.show)
@@ -30,12 +30,12 @@ final private[beesight] class ResultPrinter private (config: Config) {
       else
         data.drain
 
-  private def extractStages(point: OutputFlightPoint[?]): FlightEvents =
+  private def extractStages(events: FlightEvents): FlightEvents =
     FlightEvents(
-      takeoff = point.takeoff,
-      freefall = point.freefall,
-      canopy = point.canopy,
-      landing = point.landing,
+      takeoff = events.takeoff,
+      freefall = events.freefall,
+      canopy = events.canopy,
+      landing = events.landing,
     )
 
   //  Show Instances  //

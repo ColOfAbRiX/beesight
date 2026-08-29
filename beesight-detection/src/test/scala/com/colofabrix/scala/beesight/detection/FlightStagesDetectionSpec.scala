@@ -97,7 +97,7 @@ class FlightStagesDetectionSpec extends AnyWordSpec with Matchers with IOValues 
   }
 
   /**
-   * Derives the current FlightPhase from FlightEvents, matching the OutputFlightPoint.phase logic.
+   * Derives the current FlightPhase from FlightEvents
    */
   private def toPhase(events: FlightEvents): FlightPhase =
     if (events.landing.isDefined) FlightPhase.Landed

@@ -24,7 +24,7 @@ class FlightEventsSpec extends AnyFreeSpec with Matchers {
 
       "should set takeoff and leave others unchanged" in {
         val point  = FlightEventPoint(10, 500.0)
-        val result = FlightEvents.empty.setEvent(EventType.Takeoff, point)
+        val result = FlightEvents.empty.setEventPoint(EventType.Takeoff, point)
         result.takeoff shouldBe Some(point)
         result.freefall shouldBe None
         result.canopy shouldBe None
@@ -33,7 +33,7 @@ class FlightEventsSpec extends AnyFreeSpec with Matchers {
 
       "should set freefall and leave others unchanged" in {
         val point  = FlightEventPoint(50, 4000.0)
-        val result = FlightEvents.empty.setEvent(EventType.Freefall, point)
+        val result = FlightEvents.empty.setEventPoint(EventType.Freefall, point)
         result.takeoff shouldBe None
         result.freefall shouldBe Some(point)
         result.canopy shouldBe None
@@ -42,7 +42,7 @@ class FlightEventsSpec extends AnyFreeSpec with Matchers {
 
       "should set canopy and leave others unchanged" in {
         val point  = FlightEventPoint(200, 1200.0)
-        val result = FlightEvents.empty.setEvent(EventType.Canopy, point)
+        val result = FlightEvents.empty.setEventPoint(EventType.Canopy, point)
         result.takeoff shouldBe None
         result.freefall shouldBe None
         result.canopy shouldBe Some(point)
@@ -51,7 +51,7 @@ class FlightEventsSpec extends AnyFreeSpec with Matchers {
 
       "should set landing and leave others unchanged" in {
         val point  = FlightEventPoint(350, 50.0)
-        val result = FlightEvents.empty.setEvent(EventType.Landing, point)
+        val result = FlightEvents.empty.setEventPoint(EventType.Landing, point)
         result.takeoff shouldBe None
         result.freefall shouldBe None
         result.canopy shouldBe None
@@ -66,10 +66,10 @@ class FlightEventsSpec extends AnyFreeSpec with Matchers {
 
         val result =
           FlightEvents.empty
-            .setEvent(EventType.Takeoff, takeoffPt)
-            .setEvent(EventType.Freefall, freefallPt)
-            .setEvent(EventType.Canopy, canopyPt)
-            .setEvent(EventType.Landing, landingPt)
+            .setEventPoint(EventType.Takeoff, takeoffPt)
+            .setEventPoint(EventType.Freefall, freefallPt)
+            .setEventPoint(EventType.Canopy, canopyPt)
+            .setEventPoint(EventType.Landing, landingPt)
 
         result.takeoff shouldBe Some(takeoffPt)
         result.freefall shouldBe Some(freefallPt)
@@ -83,8 +83,8 @@ class FlightEventsSpec extends AnyFreeSpec with Matchers {
 
         val result =
           FlightEvents.empty
-            .setEvent(EventType.Takeoff, first)
-            .setEvent(EventType.Takeoff, second)
+            .setEventPoint(EventType.Takeoff, first)
+            .setEventPoint(EventType.Takeoff, second)
 
         result.takeoff shouldBe Some(second)
       }

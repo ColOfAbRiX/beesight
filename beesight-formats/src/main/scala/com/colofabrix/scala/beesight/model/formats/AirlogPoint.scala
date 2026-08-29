@@ -110,20 +110,18 @@ private[beesight] object AirlogPoint {
       .map(_.name)
       .toSet
 
-  given airlogFormatAdapter: FileFormatAdapter[AirlogPoint] with {
-
-    def toDataPoint(point: AirlogPoint): DataPoint =
+  given airlogNormalizer: NormalizedPoint[AirlogPoint] with {
+    def time(point: AirlogPoint): Instant =
+      point.time
+    def altitude(point: AirlogPoint): Double =
+      point.altitude.barometric
+    def speed(point: AirlogPoint): GeoVector =
       val headingRad = Math.toRadians(point.motion.heading)
-      DataPoint(
-        time = point.time,
-        altitude = point.altitude.gps,
-        speed = GeoVector(
-          north = point.motion.speed * Math.cos(headingRad),
-          east = point.motion.speed * Math.sin(headingRad),
-          vertical = point.motion.sink,
-        ),
+      GeoVector(
+        north = point.motion.speed * Math.cos(headingRad),
+        east = point.motion.speed * Math.sin(headingRad),
+        vertical = point.motion.sink,
       )
-
   }
 
   given csvRowDecoder: CsvRowDecoder[AirlogPoint, String] with {
@@ -170,15 +168,6 @@ private[beesight] object AirlogPoint {
 
     def apply(row: AirlogPoint): CsvRow[String] =
       CsvRow.fromNelHeaders(airlogFields(row))
-
-  }
-
-  given outputFlightRowEncoder: CsvRowEncoder[OutputFlightPoint[AirlogPoint], String] with {
-
-    def apply(row: OutputFlightPoint[AirlogPoint]): CsvRow[String] =
-      CsvRow.fromNelHeaders(
-        airlogFields(row.source).append(("phase", row.phase.toString)),
-      )
 
   }
 

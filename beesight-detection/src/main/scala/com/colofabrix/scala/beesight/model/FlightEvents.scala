@@ -30,13 +30,20 @@ private[beesight] object FlightEvents {
 
   extension (self: FlightEvents) {
 
-    private[beesight] def setEvent(eventType: EventType, value: FlightEventPoint): FlightEvents =
+    def setEventPoint(eventType: EventType, value: FlightEventPoint): FlightEvents =
       eventType match {
         case EventType.Takeoff  => self.copy(takeoff = Some(value))
         case EventType.Freefall => self.copy(freefall = Some(value))
         case EventType.Canopy   => self.copy(canopy = Some(value))
         case EventType.Landing  => self.copy(landing = Some(value))
       }
+
+    def phase: FlightPhase =
+      if (self.landing.isDefined) FlightPhase.Landed
+      else if (self.canopy.isDefined) FlightPhase.UnderCanopy
+      else if (self.freefall.isDefined) FlightPhase.Freefall
+      else if (self.takeoff.isDefined) FlightPhase.Climbing
+      else FlightPhase.BeforeTakeoff
 
   }
 
