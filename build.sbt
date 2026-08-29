@@ -28,8 +28,8 @@ lazy val commonSettings =
 lazy val beesight =
   project
     .in(file("."))
-    .aggregate(beesightDetection, beesightBenchmarks)
-    .dependsOn(beesightDetection % "compile->compile;test->test")
+    .aggregate(beesightFormats, beesightDetection, beesightBenchmarks)
+    .dependsOn(beesightFormats, beesightDetection % "compile->compile;test->test")
     .enablePlugins(GraalVMNativeImagePlugin)
     .settings(commonSettings)
     .settings(
@@ -56,6 +56,20 @@ lazy val beesight =
         "-H:+UnlockExperimentalVMOptions",
         "-H:IncludeResources=reference.conf",
         "-H:ConfigurationFileDirectories=src/main/resources/META-INF/native-image",
+      ),
+    )
+
+lazy val beesightFormats =
+  project
+    .in(file("beesight-formats"))
+    .dependsOn(beesightDetection % "compile->compile;test->test")
+    .settings(commonSettings)
+    .settings(
+      name                 := "beesight-formats",
+      libraryDependencies ++= List(
+        "org.gnieh"     %% "fs2-data-csv" % "1.14.1",
+        "org.typelevel"  %% "cats-core"    % "2.13.0",
+        "org.scalatest"  %% "scalatest"    % "3.2.20" % Test,
       ),
     )
 
@@ -94,14 +108,8 @@ addCommandAlias(
   "styleCheck",
   "; set ThisBuild / scalacOptions += \"-Wunused:all\"; scalafixAll --check; session clear; scalafmtCheckAll"
 )
-addCommandAlias(
-  "nativeImage",
-  "GraalVMNativeImage / packageBin"
-)
-addCommandAlias(
-  "bench",
-  "beesightBenchmarks/Jmh/run -i 10 -wi 5 -f 2 -t 1"
-)
+addCommandAlias("nativeImage", "GraalVMNativeImage / packageBin")
+addCommandAlias("bench","beesightBenchmarks/Jmh/run -i 10 -wi 5 -f 2 -t 1")
 addCommandAlias(
   "benchPipeline",
   "beesightBenchmarks/runMain com.colofabrix.scala.beesight.detection.bench.PipelineBenchmark"
