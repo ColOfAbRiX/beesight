@@ -45,24 +45,15 @@ final class FlightStagesDetection private (config: DetectionConfig) {
    *
    * Consumes a stream of [[DataPoint]] and emits, for each point, the [[FlightEvents]] accumulated so far.
    */
-  def streamDetect2[F[_], A: NormalizedPoint]: fs2.Pipe[F, A, FlightEvents] =
-    _.map(point => DataPoint(point.time, point.altitude, point.speed))
-      .through(mainDetectionPipe)
-
-  /**
-   * Streaming pipe that detects flight stages using the provided configuration.
-   *
-   * Consumes a stream of [[DataPoint]] and emits, for each point, the [[FlightEvents]] accumulated so far.
-   */
-  def streamDetect[F[_]]: fs2.Pipe[F, DataPoint, FlightEvents] =
-    mainDetectionPipe
+  def streamDetect[F[_], A: NormalizedPoint]: fs2.Pipe[F, A, FlightEvents] =
+    _.through(mainDetectionPipe)
 
   //  Stream Pipeline  //
 
-  private def mainDetectionPipe2[F[_], A: NormalizedPoint]: fs2.Pipe[F, A, FlightEvents] =
+  private def mainDetectionPipe[F[_], A: NormalizedPoint]: fs2.Pipe[F, A, FlightEvents] =
     pointStream =>
       pointStream
-        .through(applyIndex2)
+        .through(IndexedDataPoint.stream)
         .through(preprocessor.preprocessIndexed)
         .statefulMapEmits(initialStreamState, drainState) {
           case (currentPoint, state: FillingState) =>
@@ -74,39 +65,6 @@ final class FlightStagesDetection private (config: DetectionConfig) {
             handleDetecting(currentPoint)
               .run(state)
               .value
-        }
-
-  private def mainDetectionPipe[F[_]]: fs2.Pipe[F, DataPoint, FlightEvents] =
-    pointStream =>
-      pointStream
-        .through(applyIndex)
-        .through(preprocessor.preprocessIndexed)
-        .statefulMapEmits(initialStreamState, drainState) {
-          case (currentPoint, state: FillingState) =>
-            handleFilling(currentPoint)
-              .as(Vector.empty[FlightEvents])
-              .run(state)
-              .value
-          case (currentPoint, state: DetectingState) =>
-            handleDetecting(currentPoint)
-              .run(state)
-              .value
-        }
-
-  private def applyIndex2[F[_], A: NormalizedPoint]: fs2.Pipe[F, A, IndexedDataPoint] =
-    pointStream =>
-      pointStream
-        .zipWithIndex
-        .map {
-          case (point, idx) => IndexedDataPoint(point.time, idx, point.altitude, point.speed)
-        }
-
-  private def applyIndex[F[_]]: fs2.Pipe[F, DataPoint, IndexedDataPoint] =
-    pointStream =>
-      pointStream
-        .zipWithIndex
-        .map {
-          case (DataPoint(time, altitude, speed), idx) => IndexedDataPoint(time, idx, altitude, speed)
         }
 
   private def initialStreamState(first: IndexedDataPoint): (DetectorState, Vector[FlightEvents]) =

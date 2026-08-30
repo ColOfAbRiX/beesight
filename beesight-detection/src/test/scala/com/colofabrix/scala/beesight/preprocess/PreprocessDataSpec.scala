@@ -12,6 +12,11 @@ import org.scalatest.matchers.should.Matchers
 
 class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
 
+  private val dummyPoint = IndexedDataPoint(Instant.EPOCH, 0, 0.0, GeoVector.zero)
+
+  private def extract(np: NormalizedPoint[IndexedDataPoint]): (Instant, Double, GeoVector) =
+    (np.time(dummyPoint), np.altitude(dummyPoint), np.speed(dummyPoint))
+
   "PreprocessData" - {
 
     "preprocess pipe" - {
@@ -23,7 +28,7 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
         val expected = (1 to 5).map(i => point(i.toLong)).toList
         val actual   = runPreprocess(points, config)
 
-        actual shouldBe expected
+        actual.map(extract) shouldBe expected.map(p => (p.time, p.altitude, p.speed))
       }
 
       "should output points in order" in {
@@ -33,7 +38,7 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
         val expected = (1 to 10).map(i => point(i.toLong)).toList
         val actual   = runPreprocess(points, config)
 
-        actual shouldBe expected
+        actual.map(extract) shouldBe expected.map(p => (p.time, p.altitude, p.speed))
       }
 
       "should handle minimum window size of 2" in {
@@ -43,7 +48,7 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
         val expected = (1 to 5).map(i => point(i.toLong)).toList
         val actual   = runPreprocess(points, config)
 
-        actual shouldBe expected
+        actual.map(extract) shouldBe expected.map(p => (p.time, p.altitude, p.speed))
       }
 
       "should pass through normal data unchanged" in {
@@ -67,21 +72,21 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
           )
         val actual = runPreprocess(points, config)
 
-        actual shouldBe expected
+        actual.map(extract) shouldBe expected.map(p => (p.time, p.altitude, p.speed))
       }
 
       "should handle empty input" in {
-        val expected = List.empty[DataPoint]
+        val expected = List.empty[(Instant, Double, GeoVector)]
         val actual   = runPreprocess(List.empty)
 
-        actual shouldBe expected
+        actual.map(extract) shouldBe expected
       }
 
       "should handle single point input" in {
         val expected = List(point(1))
         val actual   = runPreprocess(List(point(1)))
 
-        actual shouldBe expected
+        actual.map(extract) shouldBe expected.map(p => (p.time, p.altitude, p.speed))
       }
 
       "should handle input smaller than window" in {
@@ -91,7 +96,7 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
         val expected = List(point(1), point(2), point(3))
         val actual   = runPreprocess(points, config)
 
-        actual shouldBe expected
+        actual.map(extract) shouldBe expected.map(p => (p.time, p.altitude, p.speed))
       }
 
       "should handle exact window size input" in {
@@ -101,7 +106,7 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
         val expected = List(point(1), point(2), point(3))
         val actual   = runPreprocess(points, config)
 
-        actual shouldBe expected
+        actual.map(extract) shouldBe expected.map(p => (p.time, p.altitude, p.speed))
       }
 
       "should handle window size + 1 input" in {
@@ -111,7 +116,7 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
         val expected = List(point(1), point(2), point(3), point(4))
         val actual   = runPreprocess(points, config)
 
-        actual shouldBe expected
+        actual.map(extract) shouldBe expected.map(p => (p.time, p.altitude, p.speed))
       }
 
     }
@@ -143,7 +148,7 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
 
         val actual = runPreprocess(points, config)
 
-        actual shouldBe expected
+        actual.map(extract) shouldBe expected.map(p => (p.time, p.altitude, p.speed))
       }
 
       "should not modify data when acceleration is below threshold" in {
@@ -168,7 +173,7 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
 
         val actual = runPreprocess(points, config)
 
-        actual shouldBe expected
+        actual.map(extract) shouldBe expected.map(p => (p.time, p.altitude, p.speed))
       }
 
       "should handle multi-point spike lasting 4 points" in {
@@ -213,7 +218,7 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
 
         val actual = runPreprocess(points, config)
 
-        actual shouldEqual expected
+        actual.map(extract) shouldEqual expected.map(p => (p.time, p.altitude, p.speed))
       }
 
     }
@@ -235,10 +240,10 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
         val actual = runPreprocess(points, config)
 
         // Spiked points should be smoothed toward neighbors
-        actual(1).speed.vertical should be < 100.0
-        actual(2).speed.vertical should be < 100.0
+        extract(actual(1))._3.vertical should be < 100.0
+        extract(actual(2))._3.vertical should be < 100.0
         // Non-spike points should be preserved
-        actual(0).speed.vertical shouldBe 10.0
+        extract(actual(0))._3.vertical shouldBe 10.0
       }
 
     }
@@ -294,9 +299,9 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
 
         val actual = runPreprocess(points, config)
 
-        actual.zip(points).foreach {
+        actual.map(extract).zip(points).foreach {
           case (a, e) =>
-            a.speed.vertical shouldBe e.speed.vertical
+            a._3.vertical shouldBe e.speed.vertical
         }
       }
 
@@ -319,7 +324,7 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
 
         actual.size shouldBe 5
         // All have the same speed, so no despiking needed
-        actual.foreach(_.speed.vertical shouldBe 10.0)
+        actual.map(extract).foreach(_._3.vertical shouldBe 10.0)
       }
 
     }
@@ -333,7 +338,7 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
         val expected = (1 to 15).map(i => point(i.toLong)).toList
         val actual   = runPreprocess(points, config)
 
-        actual shouldBe expected
+        actual.map(extract) shouldBe expected.map(p => (p.time, p.altitude, p.speed))
       }
 
       "should work with window size 2" in {
@@ -343,7 +348,7 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
         val expected = (1 to 5).map(i => point(i.toLong)).toList
         val actual   = runPreprocess(points, config)
 
-        actual shouldBe expected
+        actual.map(extract) shouldBe expected.map(p => (p.time, p.altitude, p.speed))
       }
 
     }
@@ -372,7 +377,7 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
 
         val actual = runPreprocess(points, config)
 
-        actual shouldBe expected
+        actual.map(extract) shouldBe expected.map(p => (p.time, p.altitude, p.speed))
       }
 
       "should preserve varying speeds in all directions" in {
@@ -397,7 +402,7 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
 
         val actual = runPreprocess(points, config)
 
-        actual shouldBe expected
+        actual.map(extract) shouldBe expected.map(p => (p.time, p.altitude, p.speed))
       }
 
       "should handle large stream of points" in {
@@ -407,7 +412,7 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
         val expected = (1 to 100).map(i => point(i.toLong, altitude = 1000.0 - i * 10)).toList
         val actual   = runPreprocess(points, config)
 
-        actual shouldBe expected
+        actual.map(extract) shouldBe expected.map(p => (p.time, p.altitude, p.speed))
       }
 
     }
@@ -431,19 +436,20 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
     northSpeed: Double = 0.0,
     eastSpeed: Double = 0.0,
     verticalSpeed: Double = 0.0,
-  ): DataPoint =
-    DataPoint(
+  ): IndexedDataPoint =
+    IndexedDataPoint(
       time = Instant.ofEpochSecond(seconds),
+      idx = 0,
       altitude = altitude,
       speed = GeoVector(north = northSpeed, east = eastSpeed, vertical = verticalSpeed),
     )
 
   private def runPreprocess(
-    points: List[DataPoint],
+    points: List[IndexedDataPoint],
     config: DetectionConfig = DetectionConfig.default,
-  ): List[DataPoint] =
+  ): List[NormalizedPoint[IndexedDataPoint]] =
     Stream
-      .emits[IO, DataPoint](points)
+      .emits[IO, IndexedDataPoint](points)
       .through(PreprocessData(config).preprocess)
       .compile
       .toList

@@ -12,7 +12,7 @@ private[beesight] object Kinematics {
   /**
    * Computes acceleration by comparing velocity changes between two consecutive data points.
    */
-  def compute(prev: IndexedDataPoint, curr: IndexedDataPoint): PointKinematics =
+  def compute[A: NormalizedPoint](prev: A, curr: IndexedDataPoint): PointKinematics =
     val dt           = Duration.between(prev.time, curr.time).toMillis / 1000.0
     val acceleration = (curr.speed - prev.speed) / dt
 
@@ -26,10 +26,7 @@ private[beesight] object Kinematics {
   /**
    * Computes smoothed kinematics using median speed from a sliding window.
    */
-  def computeSmoothed(
-    previousWindow: NonEmptyFilled[IndexedDataPoint],
-    currentPoint: IndexedDataPoint,
-  ): PointKinematics =
+  def computeSmoothed[A: NormalizedPoint](previousWindow: NonEmptyFilled[A], currentPoint: A): PointKinematics =
     val previousPoint = previousWindow.newest
 
     val currentWindow = previousWindow.enqueue(currentPoint)

@@ -11,7 +11,7 @@ import java.util.zip.ZipInputStream
 import scala.io.Source
 
 /**
- * Test-only reader that parses Flysight CSV/ZIP files directly into DataPoint.
+ * Test-only reader that parses Flysight CSV/ZIP files directly into IndexedDataPoint.
  * Independent of the CLI's CsvFileReader and format adapters.
  */
 private[detection] object FlysightTestReader {
@@ -22,25 +22,26 @@ private[detection] object FlysightTestReader {
       catch case t: Exception => Left(new DecoderError(t.getMessage()))
     }
 
-  private given CsvRowDecoder[DataPoint, String] with
-    def apply(row: CsvRow[String]): DecoderResult[DataPoint] =
+  private given CsvRowDecoder[IndexedDataPoint, String] with
+    def apply(row: CsvRow[String]): DecoderResult[IndexedDataPoint] =
       for
         time <- row.as[OffsetDateTime]("time")
         hMSL <- row.as[Double]("hMSL")
         velN <- row.as[Double]("velN")
         velE <- row.as[Double]("velE")
         velD <- row.as[Double]("velD")
-      yield DataPoint(
+      yield IndexedDataPoint(
         time = time.toInstant,
+        idx = 0,
         altitude = hMSL,
         speed = GeoVector(north = velN, east = velE, vertical = velD),
       )
 
   /**
-   * Reads a Flysight CSV or ZIP file and returns a stream of DataPoint.
+   * Reads a Flysight CSV or ZIP file and returns a stream of IndexedDataPoint.
    * Handles the units row by skipping the first decode failure.
    */
-  def readCsvStream(filePath: Path): fs2.Stream[IO, DataPoint] =
+  def readCsvStream(filePath: Path): fs2.Stream[IO, IndexedDataPoint] =
     val rawLines =
       if isZipFile(filePath) then readLinesFromZip(filePath)
       else readLinesFromFile(filePath)
@@ -49,7 +50,7 @@ private[detection] object FlysightTestReader {
       .filter(line => line.trim.nonEmpty && !line.trim.startsWith("#"))
       .through(trimHeaderFields)
       .intersperse("\n")
-      .through(lenient.attemptDecodeUsingHeaders[DataPoint]())
+      .through(lenient.attemptDecodeUsingHeaders[IndexedDataPoint]())
       .zipWithIndex
       .flatMap {
         case (Right(a), _) =>

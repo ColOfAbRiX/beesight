@@ -6,6 +6,7 @@ import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.colofabrix.scala.beesight.math.*
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.utils.*
+import java.time.Instant
 
 /**
  * Removes GPS data spikes and smooths velocity readings via a small sliding window.
@@ -17,25 +18,14 @@ final class PreprocessData private (config: DetectionConfig) {
 
   /**
    * Streaming pipe that preprocesses raw flight data points.
-   *
-   * Consumes a stream of [[DataPoint]] and emits despiked [[DataPoint]].
    */
-  def preprocess[F[_]]: fs2.Pipe[F, DataPoint, DataPoint] =
-    pointStream =>
-      pointStream
-        .zipWithIndex
-        .map {
-          case (DataPoint(time, altitude, speed), idx) => IndexedDataPoint(time, idx, altitude, speed)
-        }
-        .through(preprocessIndexed)
-        .map { idp => 
-          DataPoint(idp.time, idp.altitude, idp.speed)
-        }
+  def preprocess[F[_], A: NormalizedPoint]: fs2.Pipe[F, A, NormalizedPoint[A]] =
+    _.through(IndexedDataPoint.stream)
+      .through(preprocessIndexed)
+      .map(NormalizedPoint.extractAs[IndexedDataPoint, A])
 
   /**
    * Streaming pipe that preprocesses indexed flight data points.
-   *
-   * Internal implementation used by [[preprocess]] and by the detection engine.
    */
   private[beesight] def preprocessIndexed[F[_]]: fs2.Pipe[F, IndexedDataPoint, IndexedDataPoint] =
     _.statefulMapEmits(initialState, drainWindow) { (currentPoint, window) =>

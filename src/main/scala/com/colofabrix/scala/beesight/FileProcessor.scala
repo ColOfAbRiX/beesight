@@ -56,7 +56,7 @@ private[beesight] object FileProcessor {
     CsvRowEncoder[A, String],
   ): fs2.Stream[IOConfig, Unit] = {
     val detector     = FlightStagesDetection(cfg.detectionConfig)
-    val eventsStream = csvStream.through(detector.streamDetect2)
+    val eventsStream = csvStream.through(detector.streamDetect)
 
     (eventsStream zip csvStream)
       .through(DataCutter(cfg).cutPipe)

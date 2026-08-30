@@ -2,15 +2,6 @@ package com.colofabrix.scala.beesight.model
 
 import java.time.Instant
 
-/**
- * Internal representation of a flight data point with time, altitude, and velocity.
- */
-final private[beesight] case class DataPoint(
-  time: Instant,
-  altitude: Double,
-  speed: GeoVector,
-)
-
 private[beesight] trait NormalizedPoint[A] {
   def time(point: A): Instant
   def altitude(point: A): Double
@@ -20,6 +11,13 @@ private[beesight] trait NormalizedPoint[A] {
 object NormalizedPoint {
 
   def apply[A: NormalizedPoint]: NormalizedPoint[A] = summon
+
+  def extractAs[A: NormalizedPoint, B](a: A): NormalizedPoint[B] =
+    new NormalizedPoint[B] { 
+      def time(point: B): Instant = a.time
+      def altitude(point: B): Double = a.altitude
+      def speed(point: B): GeoVector = a.speed
+    }
 
 }
 
