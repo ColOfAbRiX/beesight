@@ -24,7 +24,7 @@ class DataCutterSpec extends AnyFreeSpec with Matchers {
             landing = Some(eventAt(45))
           )
         val result = runCutter(cfg, points)
-        result.count(_.source < 20) shouldBe 5
+        result.count(_._2 < 20) shouldBe 5
       }
 
       "should start emitting from index (takeoff - keepBeforeTakeoff)" in {
@@ -37,7 +37,7 @@ class DataCutterSpec extends AnyFreeSpec with Matchers {
             landing = Some(eventAt(35))
           )
         val result = runCutter(cfg, points)
-        result.head.source shouldBe (20 - 3)
+        result.head._2 shouldBe (20 - 3)
       }
 
       "should not include points before the keepBeforeTakeoff window" in {
@@ -64,7 +64,7 @@ class DataCutterSpec extends AnyFreeSpec with Matchers {
             landing = Some(eventAt(15))
           )
         val result = runCutter(cfg, points)
-        result.head.source shouldBe 0
+        result.head._2 shouldBe 0
       }
 
       "should retain zero points before takeoff when keepBeforeTakeoff is 0" in {
@@ -77,8 +77,8 @@ class DataCutterSpec extends AnyFreeSpec with Matchers {
             landing = Some(eventAt(35))
           )
         val result = runCutter(cfg, points)
-        result.head.source shouldBe 20
-        result.count(_.source < 20) shouldBe 0
+        result.head._2 shouldBe 20
+        result.count(_._2 < 20) shouldBe 0
       }
 
       "should handle takeoff at index 0 with keepBeforeTakeoff > 0" in {
@@ -91,7 +91,7 @@ class DataCutterSpec extends AnyFreeSpec with Matchers {
             landing = Some(eventAt(25))
           )
         val result = runCutter(cfg, points)
-        result.head.source shouldBe 0
+        result.head._2 shouldBe 0
       }
 
       "should handle takeoff at index 0 with keepBeforeTakeoff = 0" in {
@@ -104,7 +104,7 @@ class DataCutterSpec extends AnyFreeSpec with Matchers {
             landing = Some(eventAt(25))
           )
         val result = runCutter(cfg, points)
-        result.head.source shouldBe 0
+        result.head._2 shouldBe 0
       }
 
       "should work with keepBeforeTakeoff = 1" in {
@@ -117,8 +117,8 @@ class DataCutterSpec extends AnyFreeSpec with Matchers {
             landing = Some(eventAt(35))
           )
         val result = runCutter(cfg, points)
-        result.head.source shouldBe 19
-        result.count(_.source < 20) shouldBe 1
+        result.head._2 shouldBe 19
+        result.count(_._2 < 20) shouldBe 1
       }
 
       "should work with large keepBeforeTakeoff covering entire pre-takeoff region" in {
@@ -131,8 +131,8 @@ class DataCutterSpec extends AnyFreeSpec with Matchers {
             landing = Some(eventAt(25))
           )
         val result = runCutter(cfg, points)
-        result.head.source shouldBe 0
-        result.count(_.source < 10) shouldBe 10
+        result.head._2 shouldBe 0
+        result.count(_._2 < 10) shouldBe 10
       }
 
     }
@@ -175,7 +175,7 @@ class DataCutterSpec extends AnyFreeSpec with Matchers {
             landing = Some(eventAt(30))
           )
         val result = runCutter(cfg, points)
-        result.count(_.source > 30) shouldBe 5
+        result.count(_._2 > 30) shouldBe 5
       }
 
       "should stop emitting after keepAfterLanding points past landing" in {
@@ -188,7 +188,7 @@ class DataCutterSpec extends AnyFreeSpec with Matchers {
             landing = Some(eventAt(30))
           )
         val result = runCutter(cfg, points)
-        result.last.source shouldBe 33
+        result.last._2 shouldBe 33
       }
 
       "should emit zero points after landing when keepAfterLanding is 0" in {
@@ -201,7 +201,7 @@ class DataCutterSpec extends AnyFreeSpec with Matchers {
             landing = Some(eventAt(30))
           )
         val result = runCutter(cfg, points)
-        result.count(_.source > 30) shouldBe 0
+        result.count(_._2 > 30) shouldBe 0
       }
 
       "should work with keepAfterLanding = 1" in {
@@ -214,7 +214,7 @@ class DataCutterSpec extends AnyFreeSpec with Matchers {
             landing = Some(eventAt(30))
           )
         val result = runCutter(cfg, points)
-        result.count(_.source > 30) shouldBe 1
+        result.count(_._2 > 30) shouldBe 1
       }
 
       "should keep all remaining points when keepAfterLanding exceeds available points" in {
@@ -227,8 +227,8 @@ class DataCutterSpec extends AnyFreeSpec with Matchers {
             landing = Some(eventAt(45))
           )
         val result = runCutter(cfg, points)
-        result.last.source shouldBe 49
-        result.count(_.source > 45) shouldBe 4
+        result.last._2 shouldBe 49
+        result.count(_._2 > 45) shouldBe 4
       }
 
       "should include the landing point itself in the output" in {
@@ -254,8 +254,8 @@ class DataCutterSpec extends AnyFreeSpec with Matchers {
             landing = Some(eventAt(29))
           )
         val result = runCutter(cfg, points)
-        result.last.source shouldBe 29
-        result.count(_.source > 29) shouldBe 0
+        result.last._2 shouldBe 29
+        result.count(_._2 > 29) shouldBe 0
       }
 
     }
@@ -266,8 +266,8 @@ class DataCutterSpec extends AnyFreeSpec with Matchers {
         val cfg    = configWith(keepBefore = 3, keepAfter = 5)
         val points = annotatedStream(30, takeoff = Some(eventAt(10)), freefall = Some(eventAt(15)), landing = None)
         val result = runCutter(cfg, points)
-        result.head.source shouldBe 7
-        result.last.source shouldBe 29
+        result.head._2 shouldBe 7
+        result.last._2 shouldBe 29
         result.size shouldBe (30 - 7)
       }
 
@@ -275,7 +275,7 @@ class DataCutterSpec extends AnyFreeSpec with Matchers {
         val cfg    = configWith(keepBefore = 50, keepAfter = 1)
         val points = annotatedStream(50, takeoff = Some(eventAt(5)), freefall = Some(eventAt(10)), landing = None)
         val result = runCutter(cfg, points)
-        result.last.source shouldBe 49
+        result.last._2 shouldBe 49
       }
 
     }
@@ -348,8 +348,8 @@ class DataCutterSpec extends AnyFreeSpec with Matchers {
             landing = Some(eventAt(35))
           )
         val result = runCutter(cfg, points)
-        result.head.source shouldBe 12
-        result.last.source shouldBe 39
+        result.head._2 shouldBe 12
+        result.last._2 shouldBe 39
         result.size shouldBe (39 - 12 + 1)
       }
 
@@ -456,7 +456,7 @@ class DataCutterSpec extends AnyFreeSpec with Matchers {
             landing = Some(eventAt(25))
           )
         val result = runCutter(cfg, points)
-        result.foreach(p => p.source shouldBe sources(result)(result.indexOf(p)))
+        result.foreach(p => p._2 shouldBe sources(result)(result.indexOf(p)))
       }
 
       "should preserve event annotations on emitted points" in {
@@ -467,9 +467,9 @@ class DataCutterSpec extends AnyFreeSpec with Matchers {
         val points   = annotatedStream(30, takeoff = takeoff, freefall = freefall, landing = landing)
         val result   = runCutter(cfg, points)
         result.foreach { p =>
-          p.takeoff shouldBe takeoff
-          p.freefall shouldBe freefall
-          p.landing shouldBe landing
+          p._1.takeoff shouldBe takeoff
+          p._1.freefall shouldBe freefall
+          p._1.landing shouldBe landing
         }
       }
 
@@ -514,8 +514,8 @@ class DataCutterSpec extends AnyFreeSpec with Matchers {
             landing = Some(eventAt(8))
           )
         val result = runCutter(cfg, points)
-        result.head.source shouldBe 2
-        result.last.source shouldBe 11
+        result.head._2 shouldBe 2
+        result.last._2 shouldBe 11
       }
 
     }
@@ -526,16 +526,16 @@ class DataCutterSpec extends AnyFreeSpec with Matchers {
         val cfg    = configWith(keepBefore = 3, keepAfter = 5)
         val points = annotatedStream(20, takeoff = Some(eventAt(19)), freefall = Some(eventAt(19)), landing = None)
         val result = runCutter(cfg, points)
-        result.head.source shouldBe 16
-        result.last.source shouldBe 19
+        result.head._2 shouldBe 16
+        result.last._2 shouldBe 19
       }
 
       "should handle takeoff at second-to-last index" in {
         val cfg    = configWith(keepBefore = 2, keepAfter = 50)
         val points = annotatedStream(20, takeoff = Some(eventAt(18)), freefall = Some(eventAt(18)), landing = None)
         val result = runCutter(cfg, points)
-        result.head.source shouldBe 16
-        result.last.source shouldBe 19
+        result.head._2 shouldBe 16
+        result.last._2 shouldBe 19
       }
 
     }
@@ -564,32 +564,34 @@ class DataCutterSpec extends AnyFreeSpec with Matchers {
     freefall: Option[FlightEventPoint] = None,
     canopy: Option[FlightEventPoint] = None,
     landing: Option[FlightEventPoint] = None,
-  ): Vector[OutputFlightPoint[Int]] = 
+  ): Vector[(FlightEvents, Int)] =
     (0 until n)
       .map { i =>
-        OutputFlightPoint[Int](
-          takeoff = takeoff,
-          freefall = freefall,
-          canopy = canopy,
-          landing = landing,
-          source = i,
+        (
+          FlightEvents(
+            takeoff = takeoff,
+            freefall = freefall,
+            canopy = canopy,
+            landing = landing,
+          ),
+          i,
         )
       }
       .toVector
 
   private def runCutter(
     config: Config,
-    points: Vector[OutputFlightPoint[Int]],
-  ): Vector[OutputFlightPoint[Int]] =
+    points: Vector[(FlightEvents, Int)],
+  ): Vector[(FlightEvents, Int)] =
     val cutter = DataCutter(config)
     fs2.Stream
-      .emits[IO, OutputFlightPoint[Int]](points)
+      .emits[IO, (FlightEvents, Int)](points)
       .through(cutter.cutPipe[IO, Int])
       .compile
       .toVector
       .unsafeRunSync()
 
-  private def sources(points: Vector[OutputFlightPoint[Int]]): Vector[Int] =
-    points.map(_.source)
+  private def sources(points: Vector[(FlightEvents, Int)]): Vector[Int] =
+    points.map(_._2)
 
 }

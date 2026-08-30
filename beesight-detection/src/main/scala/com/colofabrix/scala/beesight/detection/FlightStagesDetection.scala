@@ -59,6 +59,23 @@ final class FlightStagesDetection private (config: DetectionConfig) {
 
   //  Stream Pipeline  //
 
+  private def mainDetectionPipe2[F[_], A: NormalizedPoint]: fs2.Pipe[F, A, FlightEvents] =
+    pointStream =>
+      pointStream
+        .through(applyIndex2)
+        .through(preprocessor.preprocessIndexed)
+        .statefulMapEmits(initialStreamState, drainState) {
+          case (currentPoint, state: FillingState) =>
+            handleFilling(currentPoint)
+              .as(Vector.empty[FlightEvents])
+              .run(state)
+              .value
+          case (currentPoint, state: DetectingState) =>
+            handleDetecting(currentPoint)
+              .run(state)
+              .value
+        }
+
   private def mainDetectionPipe[F[_]]: fs2.Pipe[F, DataPoint, FlightEvents] =
     pointStream =>
       pointStream
@@ -74,6 +91,14 @@ final class FlightStagesDetection private (config: DetectionConfig) {
             handleDetecting(currentPoint)
               .run(state)
               .value
+        }
+
+  private def applyIndex2[F[_], A: NormalizedPoint]: fs2.Pipe[F, A, IndexedDataPoint] =
+    pointStream =>
+      pointStream
+        .zipWithIndex
+        .map {
+          case (point, idx) => IndexedDataPoint(point.time, idx, point.altitude, point.speed)
         }
 
   private def applyIndex[F[_]]: fs2.Pipe[F, DataPoint, IndexedDataPoint] =

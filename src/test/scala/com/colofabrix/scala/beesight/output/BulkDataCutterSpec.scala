@@ -49,11 +49,11 @@ class BulkDataCutterSpec extends AnyWordSpec with Matchers {
             result.size shouldBe finalExpectedSize
 
             if result.nonEmpty then {
-              result.head.source shouldBe finalExpectedStart
-              result.last.source shouldBe (finalExpectedEnd - 1)
+              result.head._2 shouldBe finalExpectedStart
+              result.last._2 shouldBe (finalExpectedEnd - 1)
 
               // Verify contiguous indices
-              val indices = result.map(_.source)
+              val indices = result.map(_._2)
               indices shouldBe (finalExpectedStart until finalExpectedEnd).toVector
             }
           }
@@ -74,26 +74,28 @@ class BulkDataCutterSpec extends AnyWordSpec with Matchers {
       case None    => row.rowsCount
     }
 
-  private def buildAnnotatedStream(row: TestRow): Vector[OutputFlightPoint[Int]] =
+  private def buildAnnotatedStream(row: TestRow): Vector[(FlightEvents, Int)] =
     val takeoffEvent  = row.takeoff.map(i => FlightEventPoint(index = i.toLong, altitude = 0.0))
     val freefallEvent = row.freefall.map(i => FlightEventPoint(index = i.toLong, altitude = 0.0))
     val canopyEvent   = row.canopy.map(i => FlightEventPoint(index = i.toLong, altitude = 0.0))
     val landingEvent  = row.landing.map(i => FlightEventPoint(index = i.toLong, altitude = 0.0))
 
     (0 until row.rowsCount).map { i =>
-      OutputFlightPoint[Int](
-        takeoff = takeoffEvent,
-        freefall = freefallEvent,
-        canopy = canopyEvent,
-        landing = landingEvent,
-        source = i,
+      (
+        FlightEvents(
+          takeoff = takeoffEvent,
+          freefall = freefallEvent,
+          canopy = canopyEvent,
+          landing = landingEvent,
+        ),
+        i,
       )
     }.toVector
 
-  private def runCutter(points: Vector[OutputFlightPoint[Int]]): Vector[OutputFlightPoint[Int]] =
+  private def runCutter(points: Vector[(FlightEvents, Int)]): Vector[(FlightEvents, Int)] =
     val cutter = DataCutter(config)
     fs2.Stream
-      .emits[IO, OutputFlightPoint[Int]](points)
+      .emits[IO, (FlightEvents, Int)](points)
       .through(cutter.cutPipe[IO, Int])
       .compile
       .toVector
