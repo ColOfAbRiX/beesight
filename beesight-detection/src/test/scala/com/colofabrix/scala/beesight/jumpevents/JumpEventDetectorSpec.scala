@@ -1,4 +1,4 @@
-package com.colofabrix.scala.beesight.detection
+package com.colofabrix.scala.beesight.jumpevents
 
 import com.colofabrix.scala.beesight.IOValues
 import com.colofabrix.scala.beesight.config.DetectionConfig
@@ -10,12 +10,12 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import scala.io.Source
 
-class FlightStagesDetectionSpec extends AnyWordSpec with Matchers with IOValues {
+class JumpEventsDetectorSpec extends AnyWordSpec with Matchers with IOValues {
 
   private val inputData =
     Paths.get("src/test/resources/file_detection_spec/input_data.zip")
 
-  "FlightStagesDetection" should {
+  "JumpEventsDetector" should {
 
     "output the same number of rows as the input" in {
       val inputLineCount = countCsvLinesInZip(inputData.toFile)
@@ -23,7 +23,7 @@ class FlightStagesDetectionSpec extends AnyWordSpec with Matchers with IOValues 
       val processedResults =
         FlysightTestReader
           .readCsvStream(inputData)
-          .through(FlightStagesDetection(DetectionConfig.default).streamDetect)
+          .through(JumpEventsDetector(DetectionConfig.default).streamDetect)
           .compile
           .toList
           .result()
@@ -35,7 +35,7 @@ class FlightStagesDetectionSpec extends AnyWordSpec with Matchers with IOValues 
       val processedResults =
         FlysightTestReader
           .readCsvStream(inputData)
-          .through(FlightStagesDetection(DetectionConfig.default).streamDetect)
+          .through(JumpEventsDetector(DetectionConfig.default).streamDetect)
           .compile
           .toList
           .result()
@@ -56,7 +56,7 @@ class FlightStagesDetectionSpec extends AnyWordSpec with Matchers with IOValues 
       val processedResults =
         FlysightTestReader
           .readCsvStream(inputData)
-          .through(FlightStagesDetection(DetectionConfig.default).streamDetect)
+          .through(JumpEventsDetector(DetectionConfig.default).streamDetect)
           .compile
           .toList
           .result()
@@ -74,7 +74,7 @@ class FlightStagesDetectionSpec extends AnyWordSpec with Matchers with IOValues 
       val processedResults =
         FlysightTestReader
           .readCsvStream(inputData)
-          .through(FlightStagesDetection(DetectionConfig.default).streamDetect)
+          .through(JumpEventsDetector(DetectionConfig.default).streamDetect)
           .compile
           .toList
           .result()
@@ -86,7 +86,7 @@ class FlightStagesDetectionSpec extends AnyWordSpec with Matchers with IOValues 
       val processedResults =
         FlysightTestReader
           .readCsvStream(inputData)
-          .through(FlightStagesDetection(DetectionConfig.default).streamDetect)
+          .through(JumpEventsDetector(DetectionConfig.default).streamDetect)
           .compile
           .toList
           .result()

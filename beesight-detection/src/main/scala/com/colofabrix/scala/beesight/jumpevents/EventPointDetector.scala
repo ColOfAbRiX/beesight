@@ -1,25 +1,25 @@
-package com.colofabrix.scala.beesight.detection
+package com.colofabrix.scala.beesight.jumpevents
 
 import cats.data.*
 import cats.syntax.all.*
 import com.colofabrix.scala.beesight.collections.NEW.*
 import com.colofabrix.scala.beesight.config.*
-import com.colofabrix.scala.beesight.detection.PhaseDetector.*
-import com.colofabrix.scala.beesight.detection.model.{ DetectingState, DetectorState, FillingState, FocusPosition, Step, Transition, WindowEntry }
-import com.colofabrix.scala.beesight.detection.model.DetectionConfigActions.*
-import com.colofabrix.scala.beesight.detection.stages.StageHandler
+import com.colofabrix.scala.beesight.jumpevents.EventPointDetector.*
+import com.colofabrix.scala.beesight.jumpevents.model.{ DetectingState, DetectorState, FillingState, FocusPosition, Step, Transition, WindowEntry }
+import com.colofabrix.scala.beesight.jumpevents.model.DetectorConfigActions.*
+import com.colofabrix.scala.beesight.jumpevents.handlers.EventHandler
 import com.colofabrix.scala.beesight.model.*
 import scala.annotation.tailrec
 
 /**
- * Orchestrates per-phase stage handlers, sweeping the focus across the window to find transitions.
+ * Orchestrates per-event handlers, sweeping the focus across the window to find transitions.
  */
-final private[detection] class PhaseDetector private (config: DetectionConfig) {
+final private[jumpevents] class EventPointDetector private (config: DetectionConfig) {
 
-  private val takeoffHandler  = StageHandler(config, EventType.Takeoff)
-  private val freefallHandler = StageHandler(config, EventType.Freefall)
-  private val canopyHandler   = StageHandler(config, EventType.Canopy)
-  private val landingHandler  = StageHandler(config, EventType.Landing)
+  private val takeoffHandler  = EventHandler(config, EventType.Takeoff)
+  private val freefallHandler = EventHandler(config, EventType.Freefall)
+  private val canopyHandler   = EventHandler(config, EventType.Canopy)
+  private val landingHandler  = EventHandler(config, EventType.Landing)
 
   def detect(): Transition[DetectingState, Vector[FlightEvents]] =
     IndexedState { state =>
@@ -131,13 +131,13 @@ final private[detection] class PhaseDetector private (config: DetectionConfig) {
 
 }
 
-object PhaseDetector {
+object EventPointDetector {
 
   final private case class LoopState(
     eventType: EventType,
     leftElements: Int,
     rightElements: Int,
-    stageHandler: StageHandler,
+    stageHandler: EventHandler,
     maxFocus: Int,
     loopFocus: Int,
     processingWindow: NonEmptyFilled[WindowEntry],
@@ -153,7 +153,7 @@ object PhaseDetector {
   private type Detector =
     Option[(DetectorState, Vector[FlightEvents])]
 
-  private[detection] def apply(config: DetectionConfig): PhaseDetector =
-    new PhaseDetector(config)
+  private[jumpevents] def apply(config: DetectionConfig): EventPointDetector =
+    new EventPointDetector(config)
 
 }

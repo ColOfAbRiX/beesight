@@ -1,12 +1,12 @@
-package com.colofabrix.scala.beesight.detection.model
+package com.colofabrix.scala.beesight.jumpevents.model
 
 import com.colofabrix.scala.beesight.config.*
 import com.colofabrix.scala.beesight.model.EventType
 
 /**
- * Extension methods for looking up stage-specific configurations from DetectionConfig.
+ * Extension methods for looking up event-specific configurations from DetectionConfig.
  */
-private[detection] object DetectionConfigActions {
+private[jumpevents] object DetectorConfigActions {
 
   extension (self: DetectionConfig) {
 

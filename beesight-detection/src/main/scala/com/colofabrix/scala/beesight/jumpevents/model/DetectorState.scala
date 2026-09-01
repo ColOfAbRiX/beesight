@@ -1,4 +1,4 @@
-package com.colofabrix.scala.beesight.detection.model
+package com.colofabrix.scala.beesight.jumpevents.model
 
 import cats.data.IndexedState
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.*
@@ -7,18 +7,18 @@ import com.colofabrix.scala.beesight.model.*
 /**
  * Common supertype for detection pipeline states.
  */
-sealed private[detection] trait DetectorState
+sealed private[jumpevents] trait DetectorState
 
 /**
  * State while the sliding window is still accumulating initial points.
  */
-final private[detection] case class FillingState(
+final private[jumpevents] case class FillingState(
   window: NonEmptyFilling[WindowEntry],
   phase: FlightPhase,
   focusType: FocusPosition,
 ) extends DetectorState
 
-private[detection] object FillingState {
+private[jumpevents] object FillingState {
 
   extension (self: FillingState) {
     def toDetecting: DetectingState =
@@ -28,9 +28,9 @@ private[detection] object FillingState {
 }
 
 /**
- * State when the sliding window is full and actively detecting flight stages.
+ * State when the sliding window is full and actively detecting flight event points.
  */
-final private[detection] case class DetectingState(
+final private[jumpevents] case class DetectingState(
   window: NonEmptyFilled[WindowEntry],
   phase: FlightPhase,
   focusType: FocusPosition,
@@ -39,7 +39,7 @@ final private[detection] case class DetectingState(
 /**
  * A single data point enriched with kinematics, current phase, and accumulated detection events.
  */
-final private[detection] case class WindowEntry(
+final private[jumpevents] case class WindowEntry(
   point: IndexedPoint,
   kinematics: PointKinematics,
   phase: FlightPhase,
@@ -47,14 +47,14 @@ final private[detection] case class WindowEntry(
 )
 
 /**
- * Controls whether the focus starts at position zero or at the stage-specific backtrack offset.
+ * Controls whether the focus starts at position zero or at the event-specific backtrack offset.
  */
-private[detection] enum FocusPosition {
+private[jumpevents] enum FocusPosition {
   case Zero, StageFocus
 }
 
-private[detection] type Transition[S <: DetectorState, A] =
+private[jumpevents] type Transition[S <: DetectorState, A] =
   IndexedState[S, DetectorState, A]
 
-private[detection] type Step[S <: DetectorState, A] =
+private[jumpevents] type Step[S <: DetectorState, A] =
   IndexedState[S, S, A]

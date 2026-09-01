@@ -3,7 +3,7 @@ package com.colofabrix.scala.beesight
 import cats.effect.IO
 import cats.syntax.all.*
 import com.colofabrix.scala.beesight.config.Config
-import com.colofabrix.scala.beesight.detection.*
+import com.colofabrix.scala.beesight.jumpevents.*
 import com.colofabrix.scala.beesight.input.*
 import com.colofabrix.scala.beesight.input.formats.*
 import com.colofabrix.scala.beesight.model.*
@@ -55,7 +55,7 @@ private[beesight] object FileProcessor {
   )(using
     CsvRowEncoder[A, String],
   ): fs2.Stream[IOConfig, Unit] = {
-    val detector     = FlightStagesDetection(cfg.detectionConfig)
+    val detector     = JumpEventsDetector(cfg.detectionConfig)
     val eventsStream = csvStream.through(detector.streamDetect)
 
     (eventsStream zip csvStream)

@@ -1,15 +1,15 @@
-package com.colofabrix.scala.beesight.detection.stages
+package com.colofabrix.scala.beesight.jumpevents.handlers
 
 import cats.syntax.option.*
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
 import com.colofabrix.scala.beesight.config.LandingConfig
-import com.colofabrix.scala.beesight.detection.model.WindowEntry
+import com.colofabrix.scala.beesight.jumpevents.model.WindowEntry
 import com.colofabrix.scala.beesight.math.Stats
 
 /**
  * Detects landing by identifying sustained near-zero velocity and low speed variance.
  */
-final private[stages] class LandingHandler private (config: LandingConfig) extends StageHandler {
+final private[handlers] class LandingHandler private (config: LandingConfig) extends EventHandler {
 
   protected def detectTrigger(window: NonEmptyFilled[WindowEntry]): Boolean =
     val kinematics = window.focus.kinematics
@@ -47,7 +47,7 @@ final private[stages] class LandingHandler private (config: LandingConfig) exten
 
 }
 
-private[stages] object LandingHandler {
+private[handlers] object LandingHandler {
 
   def apply(config: LandingConfig): LandingHandler =
     new LandingHandler(config)

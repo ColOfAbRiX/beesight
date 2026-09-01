@@ -1,12 +1,12 @@
-package com.colofabrix.scala.beesight.detection
+package com.colofabrix.scala.beesight.jumpevents
 
 import cats.data.*
 import cats.syntax.all.*
 import com.colofabrix.scala.beesight.collections.*
 import com.colofabrix.scala.beesight.collections.NEW.*
 import com.colofabrix.scala.beesight.config.DetectionConfig
-import com.colofabrix.scala.beesight.detection.model.{ DetectingState, DetectorState, FillingState, FocusPosition, Step, Transition, WindowEntry }
-import com.colofabrix.scala.beesight.detection.model.DetectionConfigActions.*
+import com.colofabrix.scala.beesight.jumpevents.model.{ DetectingState, DetectorState, FillingState, FocusPosition, Step, Transition, WindowEntry }
+import com.colofabrix.scala.beesight.jumpevents.model.DetectorConfigActions.*
 import com.colofabrix.scala.beesight.math.*
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.preprocess.PreprocessData
@@ -15,12 +15,12 @@ import java.time.Duration as JavaDuration
 import scala.annotation.tailrec
 
 /**
- * Detects flight stages from flight data streams.
+ * Detects flight event points from flight data streams.
  *
  * The detection engine works purely on [[DataPoint]] and emits the accumulated [[FlightEvents]] for each point. Format
  * adaptation (e.g. from a specific CSV format to [[DataPoint]]) is the responsibility of the caller.
  */
-final class FlightStagesDetection private (config: DetectionConfig) {
+final class JumpEventsDetector private (config: DetectionConfig) {
 
   //  Configuration / Derived Values  //
 
@@ -35,15 +35,13 @@ final class FlightStagesDetection private (config: DetectionConfig) {
   private val preprocessor: PreprocessData =
     PreprocessData(config)
 
-  private val phaseDetector: PhaseDetector =
-    PhaseDetector(config)
+  private val eventPointDetector: EventPointDetector =
+    EventPointDetector(config)
 
   //  Public API  //
 
   /**
-   * Streaming pipe that detects flight stages using the provided configuration.
-   *
-   * Consumes a stream of [[DataPoint]] and emits, for each point, the [[FlightEvents]] accumulated so far.
+   * Streaming pipe that detects flight event points using the provided configuration.
    */
   def streamDetect[F[_], A: PointReader]: fs2.Pipe[F, A, FlightEvents] =
     _.through(mainDetectionPipe)
@@ -93,7 +91,7 @@ final class FlightStagesDetection private (config: DetectionConfig) {
     @tailrec
     def loop(state: DetectingState, iteration: Int, result: Vector[FlightEvents]): Vector[FlightEvents] =
       val (nextState, beforeDetectionEmits) =
-        phaseDetector
+        eventPointDetector
           .detect()
           .run(state)
           .value
@@ -136,7 +134,7 @@ final class FlightStagesDetection private (config: DetectionConfig) {
   private def handleDetecting(currentPoint: IndexedPoint): Transition[DetectingState, Vector[FlightEvents]] =
     for {
       oldestData      <- pushCurrentWindowEntry(currentPoint)
-      additionalEmits <- phaseDetector.detect()
+      additionalEmits <- eventPointDetector.detect()
       allToEmit        = oldestData.detectedEvents +: additionalEmits
     } yield allToEmit
 
@@ -191,11 +189,11 @@ final class FlightStagesDetection private (config: DetectionConfig) {
 }
 
 /**
- * Factory for FlightStagesDetection.
+ * Factory for JumpEventsDetector.
  */
-object FlightStagesDetection {
+object JumpEventsDetector {
 
-  def apply(config: DetectionConfig): FlightStagesDetection =
-    new FlightStagesDetection(config)
+  def apply(config: DetectionConfig): JumpEventsDetector =
+    new JumpEventsDetector(config)
 
 }

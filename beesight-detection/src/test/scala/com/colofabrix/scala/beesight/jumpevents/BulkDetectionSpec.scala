@@ -1,4 +1,4 @@
-package com.colofabrix.scala.beesight.detection
+package com.colofabrix.scala.beesight.jumpevents
 
 import cats.effect.IO
 import cats.syntax.all.given
@@ -12,7 +12,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import scala.concurrent.duration.*
 import scala.io.Source
 
-class BulkDetectionSpec extends AnyWordSpec with Matchers with IOValues with FlightStagesMatchers {
+class BulkDetectionSpec extends AnyWordSpec with Matchers with IOValues with JumpEventMatchers {
 
   private val flysightDir =
     Paths.get("src/test/resources/bulk_detection_spec/flysight")
@@ -20,9 +20,9 @@ class BulkDetectionSpec extends AnyWordSpec with Matchers with IOValues with Fli
   private val resultsFile =
     Paths.get("src/test/resources/bulk_detection_spec/points_results.csv")
 
-  "FlightStagesDetection" should {
+  "JumpEventsDetector" should {
 
-    "detect all flight stages correctly for untagged files" in {
+    "detect all flight events correctly for untagged files" in {
       val expectedSuccessRate = 99.0
 
       val untaggedLines = loadSummary(resultsFile.toFile).filter(_.tag.isEmpty)
@@ -38,7 +38,7 @@ class BulkDetectionSpec extends AnyWordSpec with Matchers with IOValues with Fli
 
               detectLastEvents(filePath)
                 .map { result =>
-                  val matcher     = matchStages(expected.toFlightEvents)
+                  val matcher     = matchEvents(expected.toFlightEvents)
                   val matchResult = matcher(result)
 
                   if (!matchResult.matches) {
@@ -63,7 +63,7 @@ class BulkDetectionSpec extends AnyWordSpec with Matchers with IOValues with Fli
 
     }
 
-    "detect all flight stages correctly for PROBLEMATIC files" in {
+    "detect all flight events correctly for PROBLEMATIC files" in {
       val expectedSuccessRate = 54.0
 
       val taggedLines = loadSummary(resultsFile.toFile).filter(_.tag.nonEmpty)
@@ -79,7 +79,7 @@ class BulkDetectionSpec extends AnyWordSpec with Matchers with IOValues with Fli
 
               detectLastEvents(filePath)
                 .map { result =>
-                  val matcher     = matchStages(expected.toFlightEvents)
+                  val matcher     = matchEvents(expected.toFlightEvents)
                   val matchResult = matcher(result)
 
                   if (!matchResult.matches) {
@@ -109,7 +109,7 @@ class BulkDetectionSpec extends AnyWordSpec with Matchers with IOValues with Fli
   private def detectLastEvents(filePath: java.nio.file.Path): IO[FlightEvents] =
     FlysightTestReader
       .readCsvStream(filePath)
-      .through(FlightStagesDetection(DetectionConfig.default).streamDetect)
+      .through(JumpEventsDetector(DetectionConfig.default).streamDetect)
       .compile
       .last
       .map {

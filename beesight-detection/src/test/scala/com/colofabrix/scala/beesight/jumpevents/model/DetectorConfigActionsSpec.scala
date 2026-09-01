@@ -1,16 +1,16 @@
-package com.colofabrix.scala.beesight.detection.model
+package com.colofabrix.scala.beesight.jumpevents.model
 
 import com.colofabrix.scala.beesight.config.*
-import com.colofabrix.scala.beesight.detection.model.DetectionConfigActions.*
+import com.colofabrix.scala.beesight.jumpevents.model.DetectorConfigActions.*
 import com.colofabrix.scala.beesight.model.EventType
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
-class DetectionConfigActionsSpec extends AnyFreeSpec with Matchers {
+class DetectorConfigActionsSpec extends AnyFreeSpec with Matchers {
 
   private val config = DetectionConfig.default
 
-  "DetectionConfigActions" - {
+  "DetectorConfigActions" - {
 
     "getEventConfigs" - {
 

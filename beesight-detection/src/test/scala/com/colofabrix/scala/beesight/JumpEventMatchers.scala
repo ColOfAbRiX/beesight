@@ -4,9 +4,9 @@ import com.colofabrix.scala.beesight.model.*
 import org.scalatest.matchers.{ Matcher, MatchResult }
 
 /**
- * Custom ScalaTest matchers for FlightStagesPoints comparison with tolerances
+ * Custom ScalaTest matchers for FlightEvents comparison with tolerances
  */
-trait FlightStagesMatchers {
+trait JumpEventMatchers {
 
   private val tolerances: Map[String, Long] =
     Map(
@@ -17,9 +17,9 @@ trait FlightStagesMatchers {
     )
 
   /**
-   * Matches FlightStagesPoints against expected values with per-field tolerances
+   * Matches FlightEvents against expected values with per-field tolerances
    */
-  def matchStages(expected: FlightEvents): Matcher[FlightEvents] =
+  def matchEvents(expected: FlightEvents): Matcher[FlightEvents] =
     (obtained: FlightEvents) => {
       val fieldResults =
         List(
@@ -34,9 +34,9 @@ trait FlightStagesMatchers {
 
       MatchResult(
         matches = failures.isEmpty,
-        rawFailureMessage = s"\n    FlightStagesPoints did not match:\n${failures.mkString("\n")}",
+        rawFailureMessage = s"\n    FlightEvents did not match:\n${failures.mkString("\n")}",
         rawNegatedFailureMessage =
-          s"FlightStagesPoints matched when it should not have. Matched: ${passes.mkString(", ")}",
+          s"FlightEvents matched when it should not have. Matched: ${passes.mkString(", ")}",
       )
     }
 

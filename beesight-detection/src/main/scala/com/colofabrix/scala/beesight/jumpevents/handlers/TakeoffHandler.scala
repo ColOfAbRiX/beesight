@@ -1,16 +1,16 @@
-package com.colofabrix.scala.beesight.detection.stages
+package com.colofabrix.scala.beesight.jumpevents.handlers
 
 import cats.syntax.option.*
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
 import com.colofabrix.scala.beesight.config.TakeoffConfig
-import com.colofabrix.scala.beesight.detection.model.WindowEntry
+import com.colofabrix.scala.beesight.jumpevents.model.WindowEntry
 import com.colofabrix.scala.beesight.math.Stats
 import java.time.Duration
 
 /**
  * Detects takeoff by identifying the onset of climbing speed and horizontal movement.
  */
-final private[stages] class TakeoffHandler private (config: TakeoffConfig) extends StageHandler {
+final private[handlers] class TakeoffHandler private (config: TakeoffConfig) extends EventHandler {
 
   protected def detectTrigger(window: NonEmptyFilled[WindowEntry]): Boolean =
     val kinematics = window.focus.kinematics
@@ -44,7 +44,7 @@ final private[stages] class TakeoffHandler private (config: TakeoffConfig) exten
 
 }
 
-private[stages] object TakeoffHandler {
+private[handlers] object TakeoffHandler {
 
   def apply(config: TakeoffConfig): TakeoffHandler =
     new TakeoffHandler(config)

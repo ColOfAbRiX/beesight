@@ -1,4 +1,4 @@
-package com.colofabrix.scala.beesight.detection
+package com.colofabrix.scala.beesight.jumpevents
 
 import cats.effect.IO
 import com.colofabrix.scala.beesight.model.*
@@ -14,7 +14,7 @@ import scala.io.Source
  * Test-only reader that parses Flysight CSV/ZIP files directly into IndexedPoint.
  * Independent of the CLI's CsvFileReader and format adapters.
  */
-private[detection] object FlysightTestReader {
+private[beesight] object FlysightTestReader {
 
   private given CellDecoder[OffsetDateTime] =
     CellDecoder[String].emap { value =>

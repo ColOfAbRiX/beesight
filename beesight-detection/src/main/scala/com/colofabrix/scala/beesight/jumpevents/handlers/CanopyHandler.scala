@@ -1,17 +1,17 @@
-package com.colofabrix.scala.beesight.detection.stages
+package com.colofabrix.scala.beesight.jumpevents.handlers
 
 import cats.syntax.option.*
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
 import com.colofabrix.scala.beesight.config.{ CanopyConfig, FreefallConfig }
-import com.colofabrix.scala.beesight.detection.model.WindowEntry
+import com.colofabrix.scala.beesight.jumpevents.model.WindowEntry
 import com.colofabrix.scala.beesight.math.Stats
 import java.time.Duration
 
 /**
  * Detects canopy deployment by identifying the transition from freefall to slower descent.
  */
-final private[stages] class CanopyHandler private (config: CanopyConfig, freefallConfig: FreefallConfig)
-  extends StageHandler {
+final private[handlers] class CanopyHandler private (config: CanopyConfig, freefallConfig: FreefallConfig)
+  extends EventHandler {
 
   protected def detectTrigger(window: NonEmptyFilled[WindowEntry]): Boolean =
     val kinematics = window.focus.kinematics
@@ -60,7 +60,7 @@ final private[stages] class CanopyHandler private (config: CanopyConfig, freefal
 
 }
 
-private[stages] object CanopyHandler {
+private[handlers] object CanopyHandler {
 
   def apply(config: CanopyConfig, freefallConfig: FreefallConfig): CanopyHandler =
     new CanopyHandler(config, freefallConfig)

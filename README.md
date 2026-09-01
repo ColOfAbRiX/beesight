@@ -177,15 +177,13 @@ sbt styleCheck
 src/main/scala/com/colofabrix/scala/beesight/
 ├── collections/       # NonEmptyWindow sliding window data structure
 ├── config/            # CLI and detection configuration
-├── detection/         # Flight stage detection engine
-│   ├── math/          # Interpolation, kinematics, statistics
-│   ├── model/         # Detection state and data types
-│   ├── preprocess/    # Data smoothing and despiking
-│   └── stages/        # Per-phase detection handlers
-├── input/             # CSV/ZIP file reading
+├── jumpevents/        # Jump event point detection engine
+│   ├── handlers/      # Per-event detection handlers (takeoff, freefall, canopy, landing)
+│   └── model/         # Detector state and config actions
+├── math/              # Interpolation, kinematics, statistics
 ├── model/             # Domain types (flight phases, events, vectors)
-│   ├── derivation/    # CSV codec derivations
-│   └── formats/       # File format adapters (Flysight, Airlog)
+├── preprocess/        # Data smoothing and despiking
+├── input/             # CSV/ZIP file reading
 ├── output/            # CSV writing, chart generation, result printing
 └── utils/             # Stream utilities and helpers
 ```

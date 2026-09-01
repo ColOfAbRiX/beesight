@@ -1,14 +1,14 @@
-package com.colofabrix.scala.beesight.detection.stages
+package com.colofabrix.scala.beesight.jumpevents.handlers
 
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
 import com.colofabrix.scala.beesight.config.DetectionConfig
-import com.colofabrix.scala.beesight.detection.model.WindowEntry
+import com.colofabrix.scala.beesight.jumpevents.model.WindowEntry
 import com.colofabrix.scala.beesight.model.*
 
 /**
- * Template for a flight-stage detector implementing the trigger → validate → inflection pipeline.
+ * Template for a flight-event detector implementing the trigger → validate → inflection pipeline.
  */
-private[detection] trait StageHandler {
+private[jumpevents] trait EventHandler {
 
   protected def detectTrigger(window: NonEmptyFilled[WindowEntry]): Boolean
 
@@ -25,9 +25,9 @@ private[detection] trait StageHandler {
 
 }
 
-private[detection] object StageHandler {
+private[jumpevents] object EventHandler {
 
-  def apply(config: DetectionConfig, eventType: EventType): StageHandler =
+  def apply(config: DetectionConfig, eventType: EventType): EventHandler =
     eventType match {
       case EventType.Takeoff  => TakeoffHandler(config.takeoff)
       case EventType.Freefall => FreefallHandler(config.freefall)

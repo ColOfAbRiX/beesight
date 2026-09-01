@@ -3,7 +3,7 @@ package com.colofabrix.scala.beesight.detection.bench
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import com.colofabrix.scala.beesight.config.DetectionConfig
-import com.colofabrix.scala.beesight.detection.{ FlightStagesDetection, FlysightTestReader }
+import com.colofabrix.scala.beesight.jumpevents.{ JumpEventsDetector, FlysightTestReader }
 import com.colofabrix.scala.beesight.model.*
 import java.nio.file.Path
 import scala.concurrent.duration.*
@@ -17,7 +17,7 @@ import scala.concurrent.duration.*
  * Reliability improvements over raw single-pass timing:
  *   - Full-file warmup (all files, 3 passes) for JIT compilation
  *   - 3 measurement passes with per-file median aggregation
- *   - Reuses the same FlightStagesDetection instance across files
+ *   - Reuses the same JumpEventsDetector instance across files
  *   - Pre-counts CSV rows before measurement to avoid I/O during timing
  *   - Forces GC between warmup and measurement phases
  *
@@ -68,7 +68,7 @@ object PipelineBenchmark {
     println()
 
     val config    = DetectionConfig.default
-    val detector  = FlightStagesDetection(config)
+    val detector  = JumpEventsDetector(config)
     val zipFiles  = collectZipFiles()
 
     if zipFiles.isEmpty then
@@ -192,7 +192,7 @@ object PipelineBenchmark {
    * Timed run of a single file through the pipeline.
    * Returns wall-clock milliseconds.
    */
-  private def timedRun(detector: FlightStagesDetection, filePath: Path): Long =
+  private def timedRun(detector: JumpEventsDetector, filePath: Path): Long =
     val start = System.nanoTime()
     val _ =
       FlysightTestReader
