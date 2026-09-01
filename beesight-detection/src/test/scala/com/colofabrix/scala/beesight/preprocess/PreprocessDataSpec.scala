@@ -12,10 +12,8 @@ import org.scalatest.matchers.should.Matchers
 
 class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
 
-  private val dummyPoint = IndexedDataPoint(Instant.EPOCH, 0, 0.0, GeoVector.zero)
-
-  private def extract(np: NormalizedPoint[IndexedDataPoint]): (Instant, Double, GeoVector) =
-    (np.time(dummyPoint), np.altitude(dummyPoint), np.speed(dummyPoint))
+  private def extract(dp: DataPoint): (Instant, Double, GeoVector) =
+    (dp.time, dp.altitude, dp.speed)
 
   "PreprocessData" - {
 
@@ -436,20 +434,19 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
     northSpeed: Double = 0.0,
     eastSpeed: Double = 0.0,
     verticalSpeed: Double = 0.0,
-  ): IndexedDataPoint =
-    IndexedDataPoint(
+  ): DataPoint =
+    DataPoint(
       time = Instant.ofEpochSecond(seconds),
-      idx = 0,
       altitude = altitude,
       speed = GeoVector(north = northSpeed, east = eastSpeed, vertical = verticalSpeed),
     )
 
   private def runPreprocess(
-    points: List[IndexedDataPoint],
+    points: List[DataPoint],
     config: DetectionConfig = DetectionConfig.default,
-  ): List[NormalizedPoint[IndexedDataPoint]] =
+  ): List[DataPoint] =
     Stream
-      .emits[IO, IndexedDataPoint](points)
+      .emits[IO, DataPoint](points)
       .through(PreprocessData(config).preprocess)
       .compile
       .toList

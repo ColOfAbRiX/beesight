@@ -14,7 +14,7 @@ final private[beesight] class ChartGenerator private (config: Config) {
   /**
    * Returns a pipe that generates an HTML chart from the stream of OutputFlightPoints
    */
-  def chartPipe[A: NormalizedPoint](outputFile: Path): fs2.Pipe[IOConfig, (FlightEvents, A), Nothing] =
+  def chartPipe[A: PointReader](outputFile: Path): fs2.Pipe[IOConfig, (FlightEvents, A), Nothing] =
     stream =>
       if config.flags.createGraph && !config.flags.dryRun then
         stream
@@ -33,7 +33,7 @@ final private[beesight] class ChartGenerator private (config: Config) {
       else
         stream.drain
 
-  private def updateChartState[A: NormalizedPoint](
+  private def updateChartState[A: PointReader](
     state: ChartState[A],
     data: (FlightEvents, A),
     idx: Long,

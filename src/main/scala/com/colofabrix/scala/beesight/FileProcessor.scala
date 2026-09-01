@@ -34,7 +34,7 @@ private[beesight] object FileProcessor {
           .as(())
       }
 
-  private def processFileAs[A: NormalizedPoint](
+  private def processFileAs[A: PointReader](
     inputFile: Path,
   )(using
     CsvRowDecoder[A, String],
@@ -48,7 +48,7 @@ private[beesight] object FileProcessor {
       _          <- processingPipeline(cfg, csvStream, outputFile).compile.last
     yield ()
 
-  private def processingPipeline[A: NormalizedPoint](
+  private def processingPipeline[A: PointReader](
     cfg: Config,
     csvStream: fs2.Stream[IOConfig, A],
     outputCsvFile: Path,

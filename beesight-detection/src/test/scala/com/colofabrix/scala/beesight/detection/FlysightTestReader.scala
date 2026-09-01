@@ -5,13 +5,13 @@ import com.colofabrix.scala.beesight.model.*
 import fs2.data.csv.*
 import java.io.FileInputStream
 import java.nio.file.Path
-import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
+import java.time.OffsetDateTime
 import java.util.zip.ZipInputStream
 import scala.io.Source
 
 /**
- * Test-only reader that parses Flysight CSV/ZIP files directly into IndexedDataPoint.
+ * Test-only reader that parses Flysight CSV/ZIP files directly into IndexedPoint.
  * Independent of the CLI's CsvFileReader and format adapters.
  */
 private[detection] object FlysightTestReader {
@@ -22,26 +22,28 @@ private[detection] object FlysightTestReader {
       catch case t: Exception => Left(new DecoderError(t.getMessage()))
     }
 
-  private given CsvRowDecoder[IndexedDataPoint, String] with
-    def apply(row: CsvRow[String]): DecoderResult[IndexedDataPoint] =
+  private given CsvRowDecoder[IndexedPoint, String] with
+    def apply(row: CsvRow[String]): DecoderResult[IndexedPoint] =
       for
         time <- row.as[OffsetDateTime]("time")
         hMSL <- row.as[Double]("hMSL")
         velN <- row.as[Double]("velN")
         velE <- row.as[Double]("velE")
         velD <- row.as[Double]("velD")
-      yield IndexedDataPoint(
-        time = time.toInstant,
+      yield IndexedPoint(
         idx = 0,
-        altitude = hMSL,
-        speed = GeoVector(north = velN, east = velE, vertical = velD),
+        DataPoint(
+          time = time.toInstant,
+          altitude = hMSL,
+          speed = GeoVector(north = velN, east = velE, vertical = velD),
+        )
       )
 
   /**
-   * Reads a Flysight CSV or ZIP file and returns a stream of IndexedDataPoint.
+   * Reads a Flysight CSV or ZIP file and returns a stream of IndexedPoint.
    * Handles the units row by skipping the first decode failure.
    */
-  def readCsvStream(filePath: Path): fs2.Stream[IO, IndexedDataPoint] =
+  def readCsvStream(filePath: Path): fs2.Stream[IO, IndexedPoint] =
     val rawLines =
       if isZipFile(filePath) then readLinesFromZip(filePath)
       else readLinesFromFile(filePath)
@@ -50,7 +52,7 @@ private[detection] object FlysightTestReader {
       .filter(line => line.trim.nonEmpty && !line.trim.startsWith("#"))
       .through(trimHeaderFields)
       .intersperse("\n")
-      .through(lenient.attemptDecodeUsingHeaders[IndexedDataPoint]())
+      .through(lenient.attemptDecodeUsingHeaders[IndexedPoint]())
       .zipWithIndex
       .flatMap {
         case (Right(a), _) =>

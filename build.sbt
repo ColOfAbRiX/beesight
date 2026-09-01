@@ -94,7 +94,7 @@ lazy val beesightBenchmarks =
   project
     .in(file("beesight-benchmarks"))
     .enablePlugins(JmhPlugin)
-    .dependsOn(beesightDetection)
+    .dependsOn(beesightDetection % "compile->test")
     .settings(commonSettings)
     .settings(
       name := "beesight-benchmarks",

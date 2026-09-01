@@ -40,7 +40,7 @@ final private[detection] case class DetectingState(
  * A single data point enriched with kinematics, current phase, and accumulated detection events.
  */
 final private[detection] case class WindowEntry(
-  point: IndexedDataPoint,
+  point: IndexedPoint,
   kinematics: PointKinematics,
   phase: FlightPhase,
   detectedEvents: FlightEvents,

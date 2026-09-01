@@ -16,7 +16,7 @@ private[detection] trait StageHandler {
 
   protected def findInflection(window: NonEmptyFilled[WindowEntry]): Option[Int]
 
-  def stageDetection(window: NonEmptyFilled[WindowEntry]): Option[(Int, IndexedDataPoint)] =
+  def stageDetection(window: NonEmptyFilled[WindowEntry]): Option[(Int, IndexedPoint)] =
     for {
       detectionIdx  <- if (detectTrigger(window) && validateTrigger(window)) then findInflection(window) else None
       detectionPoint = window.focusAt(detectionIdx).focus.point

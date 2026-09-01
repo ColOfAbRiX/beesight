@@ -45,16 +45,16 @@ final class FlightStagesDetection private (config: DetectionConfig) {
    *
    * Consumes a stream of [[DataPoint]] and emits, for each point, the [[FlightEvents]] accumulated so far.
    */
-  def streamDetect[F[_], A: NormalizedPoint]: fs2.Pipe[F, A, FlightEvents] =
+  def streamDetect[F[_], A: PointReader]: fs2.Pipe[F, A, FlightEvents] =
     _.through(mainDetectionPipe)
 
   //  Stream Pipeline  //
 
-  private def mainDetectionPipe[F[_], A: NormalizedPoint]: fs2.Pipe[F, A, FlightEvents] =
+  private def mainDetectionPipe[F[_], A: PointReader]: fs2.Pipe[F, A, FlightEvents] =
     pointStream =>
       pointStream
-        .through(IndexedDataPoint.stream)
-        .through(preprocessor.preprocessIndexed)
+        .through(preprocessor.preprocess)
+        .through(IndexedPoint.stream)
         .statefulMapEmits(initialStreamState, drainState) {
           case (currentPoint, state: FillingState) =>
             handleFilling(currentPoint)
@@ -67,12 +67,10 @@ final class FlightStagesDetection private (config: DetectionConfig) {
               .value
         }
 
-  private def initialStreamState(first: IndexedDataPoint): (DetectorState, Vector[FlightEvents]) =
+  private def initialStreamState(first: IndexedPoint): (DetectorState, Vector[FlightEvents]) =
     val firstKinematics =
       PointKinematics(
-        time = first.time,
-        altitude = first.altitude,
-        speed = first.speed,
+        point = DataPoint.fromReader(first),
         acceleration = GeoVector.zero,
       )
 
@@ -122,7 +120,7 @@ final class FlightStagesDetection private (config: DetectionConfig) {
 
   //  State Handlers  //
 
-  private def handleFilling(currentPoint: IndexedDataPoint): Transition[FillingState, Unit] =
+  private def handleFilling(currentPoint: IndexedPoint): Transition[FillingState, Unit] =
     IndexedState.modify { previousState =>
       val currentData = buildCurrentWindowEntry(previousState.window, currentPoint)
       val window      = previousState.window.enqueue(currentData)
@@ -135,7 +133,7 @@ final class FlightStagesDetection private (config: DetectionConfig) {
       }
     }
 
-  private def handleDetecting(currentPoint: IndexedDataPoint): Transition[DetectingState, Vector[FlightEvents]] =
+  private def handleDetecting(currentPoint: IndexedPoint): Transition[DetectingState, Vector[FlightEvents]] =
     for {
       oldestData      <- pushCurrentWindowEntry(currentPoint)
       additionalEmits <- phaseDetector.detect()
@@ -144,7 +142,7 @@ final class FlightStagesDetection private (config: DetectionConfig) {
 
   //  State Operations  //
 
-  private def pushCurrentWindowEntry(currentPoint: IndexedDataPoint): Step[DetectingState, WindowEntry] =
+  private def pushCurrentWindowEntry(currentPoint: IndexedPoint): Step[DetectingState, WindowEntry] =
     IndexedState { previousState =>
       val currentData                 = buildCurrentWindowEntry(previousState.window, currentPoint)
       val (oldestData, currentWindow) = previousState.window.pushReturning(currentData)
@@ -154,7 +152,7 @@ final class FlightStagesDetection private (config: DetectionConfig) {
 
   private def buildCurrentWindowEntry(
     previousWindow: NEW[WindowEntry],
-    currentPoint: IndexedDataPoint,
+    currentPoint: IndexedPoint,
   ): WindowEntry =
     val smoothingWindowSize = config.freefall.smoothingWindowSize
     val smoothingCap        = Math.min(smoothingWindowSize.value, previousWindow.length)
@@ -172,9 +170,11 @@ final class FlightStagesDetection private (config: DetectionConfig) {
 
     val kinematics =
       PointKinematics(
-        time = currentPoint.time,
-        altitude = currentPoint.altitude,
-        speed = currentSpeed,
+        point = DataPoint(
+          time = currentPoint.time,
+          altitude = currentPoint.altitude,
+          speed = currentSpeed
+        ),
         acceleration = currentAcceleration,
       )
 

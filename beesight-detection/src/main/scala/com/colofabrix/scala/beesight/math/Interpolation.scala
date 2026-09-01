@@ -31,15 +31,14 @@ private[beesight] object Interpolation {
     )
 
   /**
-   * Linearly interpolates between two IndexedDataPoint values to a target time.
+   * Linearly interpolates between two data points values to a target time.
    */
-  def interpolate[A](p1: IndexedDataPoint, p2: IndexedDataPoint, time: Instant): IndexedDataPoint =
+  def interpolate[A: PointReader](p1: A, p2: A, time: Instant): DataPoint =
     interpolate_(p1, p2, time)(tParam(p1.time, p2.time, time))
 
-  private def interpolate_(p1: IndexedDataPoint, p2: IndexedDataPoint, time: Instant)(t: Double): IndexedDataPoint =
-    IndexedDataPoint(
+  private def interpolate_[A: PointReader](p1: A, p2: A, time: Instant)(t: Double): DataPoint =
+    DataPoint(
       time = time,
-      idx = p1.idx,
       altitude = interpolate_(p1.altitude, p2.altitude)(t),
       speed = interpolate_(p1.speed, p2.speed)(t),
     )
@@ -52,9 +51,7 @@ private[beesight] object Interpolation {
 
   private def interpolate_(k1: PointKinematics, k2: PointKinematics, time: Instant)(t: Double): PointKinematics =
     PointKinematics(
-      time = time,
-      altitude = interpolate_(k1.altitude, k2.altitude)(t),
-      speed = interpolate_(k1.speed, k2.speed)(t),
+      point = interpolate(k1.point, k2.point, time),
       acceleration = interpolate_(k1.acceleration, k2.acceleration)(t),
     )
 

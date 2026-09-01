@@ -11,7 +11,7 @@ class AirlogPointAdapterSpec extends AnyFreeSpec with Matchers {
 
   private val normalizer = AirlogPoint.airlogNormalizer
 
-  "AirlogPoint NormalizedPoint" - {
+  "AirlogPoint PointReader" - {
 
     "field mapping" - {
 

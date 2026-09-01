@@ -17,8 +17,8 @@ final private[stages] class CanopyHandler private (config: CanopyConfig, freefal
     val kinematics = window.focus.kinematics
 
     val speedTrigger =
-      kinematics.speed.vertical > 0.0 &&
-      kinematics.speed.vertical < config.verticalSpeedThreshold
+      kinematics.point.speed.vertical > 0.0 &&
+      kinematics.point.speed.vertical < config.verticalSpeedThreshold
 
     val accelerationTrigger =
       kinematics.acceleration.vertical < 0.0
@@ -30,22 +30,22 @@ final private[stages] class CanopyHandler private (config: CanopyConfig, freefal
         .freefall
         .fold(Double.MaxValue)(_.altitude)
 
-    val isBelowFreefall = kinematics.altitude < freefallAltitude
+    val isBelowFreefall = kinematics.point.altitude < freefallAltitude
 
-    val isAboveMinAltitude = kinematics.altitude > config.minCanopyAltitude
+    val isAboveMinAltitude = kinematics.point.altitude > config.minCanopyAltitude
 
     speedTrigger && accelerationTrigger && isBelowFreefall && isAboveMinAltitude
 
   protected def validateTrigger(window: NonEmptyFilled[WindowEntry]): Boolean =
     val focus  = window.focus.kinematics
     val newest = window.newest.kinematics
-    val dt     = Duration.between(focus.time, newest.time).toMillis / 1000.0
+    val dt     = Duration.between(focus.point.time, newest.point.time).toMillis / 1000.0
 
     val canopyDistance = config.validationVerticalSpeed * dt
-    val isBelowCanopy  = newest.altitude < focus.altitude - canopyDistance
+    val isBelowCanopy  = newest.point.altitude < focus.point.altitude - canopyDistance
 
     val freefallDistance = freefallConfig.verticalSpeedThreshold * dt
-    val isAboveFreefall  = newest.altitude > focus.altitude - freefallDistance
+    val isAboveFreefall  = newest.point.altitude > focus.point.altitude - freefallDistance
 
     isBelowCanopy && isAboveFreefall
 
@@ -53,7 +53,7 @@ final private[stages] class CanopyHandler private (config: CanopyConfig, freefal
     val discoveredInflection =
       for {
         backWindow <- window.left
-        inflection <- Stats.findInflectionBy(backWindow)(_.kinematics.speed.vertical)
+        inflection <- Stats.findInflectionBy(backWindow)(_.kinematics.point.speed.vertical)
       } yield inflection
 
     discoveredInflection orElse window.focusIndex.some

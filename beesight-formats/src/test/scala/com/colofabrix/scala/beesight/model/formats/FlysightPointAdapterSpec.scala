@@ -9,7 +9,7 @@ class FlysightPointAdapterSpec extends AnyFreeSpec with Matchers {
 
   private val normalizer = FlysightPoint.flysightNormalizer
 
-  "FlysightPoint NormalizedPoint" - {
+  "FlysightPoint PointReader" - {
 
     "field mapping" - {
 

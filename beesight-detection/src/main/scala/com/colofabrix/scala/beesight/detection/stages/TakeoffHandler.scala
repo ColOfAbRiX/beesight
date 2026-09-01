@@ -16,28 +16,28 @@ final private[stages] class TakeoffHandler private (config: TakeoffConfig) exten
     val kinematics = window.focus.kinematics
 
     val speedTrigger =
-      kinematics.speed.vertical < config.verticalSpeedThreshold &&
-      kinematics.speed.horizontal > config.horizontalSpeedThreshold
+      kinematics.point.speed.vertical < config.verticalSpeedThreshold &&
+      kinematics.point.speed.horizontal > config.horizontalSpeedThreshold
 
     val isBelowMaxAltitude =
-      kinematics.altitude < config.maxTakeoffAltitude
+      kinematics.point.altitude < config.maxTakeoffAltitude
 
     isBelowMaxAltitude && speedTrigger
 
   protected def validateTrigger(window: NonEmptyFilled[WindowEntry]): Boolean =
     val focus  = window.focus.kinematics
     val newest = window.newest.kinematics
-    val dt     = Duration.between(focus.time, newest.time).toMillis / 1000.0
+    val dt     = Duration.between(focus.point.time, newest.point.time).toMillis / 1000.0
 
     val validationDistance = config.validationVerticalSpeed * dt
 
-    newest.altitude > focus.altitude - validationDistance
+    newest.point.altitude > focus.point.altitude - validationDistance
 
   protected def findInflection(window: NonEmptyFilled[WindowEntry]): Option[Int] =
     val discoveredInflection =
       for {
         backWindow <- window.left
-        inflection <- Stats.findInflectionBy(backWindow)(_.kinematics.speed.vertical)
+        inflection <- Stats.findInflectionBy(backWindow)(_.kinematics.point.speed.vertical)
       } yield inflection
 
     discoveredInflection orElse window.focusIndex.some

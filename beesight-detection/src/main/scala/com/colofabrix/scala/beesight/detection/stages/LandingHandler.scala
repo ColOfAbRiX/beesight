@@ -15,11 +15,11 @@ final private[stages] class LandingHandler private (config: LandingConfig) exten
     val kinematics = window.focus.kinematics
 
     val isVerticalSpeedStable =
-      Stats.stdDevBy(window)(_.kinematics.speed.vertical) < config.stabilityThreshold
+      Stats.stdDevBy(window)(_.kinematics.point.speed.vertical) < config.stabilityThreshold
 
     val speedTrigger =
-      Math.abs(kinematics.speed.vertical) < config.verticalSpeedThreshold &&
-      Math.abs(kinematics.speed.horizontal) < config.horizontalSpeedThreshold
+      Math.abs(kinematics.point.speed.vertical) < config.verticalSpeedThreshold &&
+      Math.abs(kinematics.point.speed.horizontal) < config.horizontalSpeedThreshold
 
     val canopyAltitude =
       window
@@ -28,7 +28,7 @@ final private[stages] class LandingHandler private (config: LandingConfig) exten
         .canopy
         .fold(Double.MaxValue)(_.altitude)
 
-    val isBelowCanopy = kinematics.altitude < canopyAltitude
+    val isBelowCanopy = kinematics.point.altitude < canopyAltitude
 
     isVerticalSpeedStable && speedTrigger && isBelowCanopy
 
@@ -36,7 +36,7 @@ final private[stages] class LandingHandler private (config: LandingConfig) exten
     window
       .right
       .map { stabilityWindow =>
-        Stats.stdDevBy(stabilityWindow)(_.kinematics.speed.vertical) < config.stabilityThreshold
+        Stats.stdDevBy(stabilityWindow)(_.kinematics.point.speed.vertical) < config.stabilityThreshold
       }
       .getOrElse(false)
 

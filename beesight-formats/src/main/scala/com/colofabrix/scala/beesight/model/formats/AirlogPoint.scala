@@ -110,7 +110,7 @@ private[beesight] object AirlogPoint {
       .map(_.name)
       .toSet
 
-  given airlogNormalizer: NormalizedPoint[AirlogPoint] with {
+  given airlogNormalizer: PointReader[AirlogPoint] with {
     def time(point: AirlogPoint): Instant =
       point.time
     def altitude(point: AirlogPoint): Double =

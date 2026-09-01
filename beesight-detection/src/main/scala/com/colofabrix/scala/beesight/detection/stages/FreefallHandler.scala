@@ -16,29 +16,29 @@ final private[stages] class FreefallHandler private (config: FreefallConfig) ext
     val kinematics = window.focus.kinematics
 
     val speedTrigger =
-      kinematics.speed.vertical > config.verticalSpeedThreshold
+      kinematics.point.speed.vertical > config.verticalSpeedThreshold
 
     val accelerationTrigger =
       kinematics.acceleration > config.accelerationThreshold &&
-      kinematics.speed.vertical > config.accelerationMinVelocity
+      kinematics.point.speed.vertical > config.accelerationMinVelocity
 
     val isAboveMinAltitude =
-      kinematics.altitude > config.minFreefallAltitude
+      kinematics.point.altitude > config.minFreefallAltitude
 
     isAboveMinAltitude && (speedTrigger || accelerationTrigger)
 
   protected def validateTrigger(window: NonEmptyFilled[WindowEntry]): Boolean =
     val focus  = window.focus.kinematics
     val newest = window.newest.kinematics
-    val dt     = Duration.between(focus.time, newest.time).toMillis / 1000.0
+    val dt     = Duration.between(focus.point.time, newest.point.time).toMillis / 1000.0
 
     val validationDistance = config.validationVerticalSpeed * dt
 
-    newest.altitude < focus.altitude - validationDistance
+    newest.point.altitude < focus.point.altitude - validationDistance
 
   protected def findInflection(window: NonEmptyFilled[WindowEntry]): Option[Int] =
     val backWindow           = window.leftInclusive
-    val discoveredInflection = Stats.findInflectionBy(backWindow)(_.kinematics.speed.vertical)
+    val discoveredInflection = Stats.findInflectionBy(backWindow)(_.kinematics.point.speed.vertical)
 
     discoveredInflection orElse window.focusIndex.some
 

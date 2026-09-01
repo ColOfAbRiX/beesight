@@ -2,27 +2,21 @@ package com.colofabrix.scala.beesight.model
 
 import java.time.Instant
 
-private[beesight] trait NormalizedPoint[A] {
-  def time(point: A): Instant
-  def altitude(point: A): Double
-  def speed(point: A): GeoVector
-}
+final case class DataPoint(
+  time: Instant,
+  altitude: Double,
+  speed: GeoVector
+)
 
-object NormalizedPoint {
+object DataPoint {
 
-  def apply[A: NormalizedPoint]: NormalizedPoint[A] = summon
+  given PointReader[DataPoint] with {
+    def time(point: DataPoint): Instant    = point.time
+    def altitude(point: DataPoint): Double = point.altitude
+    def speed(point: DataPoint): GeoVector = point.speed
+  }
 
-  def extractAs[A: NormalizedPoint, B](a: A): NormalizedPoint[B] =
-    new NormalizedPoint[B] { 
-      def time(point: B): Instant = a.time
-      def altitude(point: B): Double = a.altitude
-      def speed(point: B): GeoVector = a.speed
-    }
-
-}
-
-extension [A: NormalizedPoint](self: A) {
-  def time: Instant    = NormalizedPoint[A].time(self)
-  def altitude: Double = NormalizedPoint[A].altitude(self)
-  def speed: GeoVector = NormalizedPoint[A].speed(self)
+  def fromReader[A: PointReader](a: A): DataPoint =
+    DataPoint(a.time, a.altitude, a.speed)
+    
 }

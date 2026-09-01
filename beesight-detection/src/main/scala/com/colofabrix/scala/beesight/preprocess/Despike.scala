@@ -3,6 +3,7 @@ package com.colofabrix.scala.beesight.preprocess
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
 import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.colofabrix.scala.beesight.math.Interpolation
+import com.colofabrix.scala.beesight.model.PointKinematics
 import java.time.Instant
 
 /**
@@ -10,7 +11,10 @@ import java.time.Instant
  */
 private[preprocess] object Despike {
 
-  def despike(config: DetectionConfig, currentWindow: NonEmptyFilled[SpikeEntry]): NonEmptyFilled[SpikeEntry] =
+  def despike(
+    config: DetectionConfig,
+    currentWindow: NonEmptyFilled[PointKinematics]
+  ): NonEmptyFilled[PointKinematics] =
     val oldest       = currentWindow.oldest
     val newest       = currentWindow.newest
     val focused      = currentWindow.focusAt(1)
@@ -22,23 +26,11 @@ private[preprocess] object Despike {
     val expectedVelocity = expectedPoint.speed.vertical
     val deviation        = Math.abs(actualVelocity - expectedVelocity)
 
-    if deviation > config.global.accelerationClip then
-      val interpolatedData = interpolate(oldest, newest, secondOldest.point.time)
-      focused.modifyFocus(_ => interpolatedData)
-    else
+    if deviation <= config.global.accelerationClip then
       focused
-
-  private def interpolate(w1: SpikeEntry, w2: SpikeEntry, time: Instant): SpikeEntry =
-    val interpolatedKinematics =
-      for {
-        k1    <- w1.kinematics
-        k2    <- w2.kinematics
-        result = Interpolation.interpolate(k1, k2, time)
-      } yield result
-
-    SpikeEntry(
-      point = Interpolation.interpolate(w1.point, w2.point, time),
-      kinematics = interpolatedKinematics,
-    )
+    else
+      focused.modifyFocus { _ =>
+        Interpolation.interpolate(oldest, newest, secondOldest.point.time)
+      }
 
 }
