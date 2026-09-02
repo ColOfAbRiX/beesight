@@ -3,14 +3,13 @@ package com.colofabrix.scala.beesight.jumpevents
 import cats.effect.IO
 import cats.syntax.all.given
 import com.colofabrix.scala.beesight.*
+import com.colofabrix.scala.beesight.TestFilesHandler.given
 import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.colofabrix.scala.beesight.model.*
-import java.io.File
 import java.nio.file.Paths
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import scala.concurrent.duration.*
-import scala.io.Source
 import com.colofabrix.scala.beesight.matchers.JumpEventMatchers
 
 class JumpEventsDetectorBulkSpec extends AnyWordSpec with Matchers with IOValues with JumpEventMatchers {
@@ -26,7 +25,11 @@ class JumpEventsDetectorBulkSpec extends AnyWordSpec with Matchers with IOValues
     "detect all flight events correctly for untagged files" in {
       val expectedSuccessRate = 99.0
 
-      val untaggedLines = loadSummary(resultsFile.toFile).filter(_.tag.isEmpty)
+      val untaggedLines =
+        TestFilesHandler
+          .readCsv[JumpEventsResult](resultsFile)
+          .streamResult()
+          .filter(_.tag.isEmpty)
 
       val failures =
         untaggedLines
@@ -45,7 +48,7 @@ class JumpEventsDetectorBulkSpec extends AnyWordSpec with Matchers with IOValues
                   if (!matchResult.matches) {
                     List(s"  [$idx] $filename${matchResult.failureMessage}")
                   } else {
-                    Nil
+                    List.empty
                   }
                 }
           }
@@ -67,7 +70,11 @@ class JumpEventsDetectorBulkSpec extends AnyWordSpec with Matchers with IOValues
     "detect all flight events correctly for PROBLEMATIC files" in {
       val expectedSuccessRate = 54.0
 
-      val taggedLines = loadSummary(resultsFile.toFile).filter(_.tag.nonEmpty)
+      val taggedLines =
+        TestFilesHandler
+          .readCsv[JumpEventsResult](resultsFile)
+          .streamResult()
+          .filter(_.tag.nonEmpty)
 
       val failures =
         taggedLines
@@ -86,7 +93,7 @@ class JumpEventsDetectorBulkSpec extends AnyWordSpec with Matchers with IOValues
                   if (!matchResult.matches) {
                     List(s"  [$idx] $filename${matchResult.failureMessage}")
                   } else {
-                    Nil
+                    List.empty
                   }
                 }
           }
@@ -108,71 +115,14 @@ class JumpEventsDetectorBulkSpec extends AnyWordSpec with Matchers with IOValues
   }
 
   private def detectLastEvents(filePath: java.nio.file.Path): IO[FlightEvents] =
-    FlysightTestReader
-      .readCsvStream(filePath)
+    TestFilesHandler
+      .readCsv[DataPoint](filePath)
       .through(JumpEventsDetector(DetectionConfig.default).streamDetect)
       .compile
       .last
       .map {
-        _.fold(FlightEvents.empty) { output =>
-          FlightEvents(
-            takeoff = output.takeoff,
-            freefall = output.freefall,
-            canopy = output.canopy,
-            landing = output.landing,
-          )
-        }
+        case Some(events) => events
+        case None         => FlightEvents.empty
       }
-
-  // CSV summary loading
-
-  final private case class TestFileRow(
-    filename: String,
-    takeoff: Option[EventPoint],
-    freefall: Option[EventPoint],
-    canopy: Option[EventPoint],
-    landing: Option[EventPoint],
-    tag: Option[String],
-  ) {
-
-    def toFlightEvents: FlightEvents =
-      FlightEvents(takeoff, freefall, canopy, landing)
-
-  }
-
-  private def loadSummary(file: File): List[TestFileRow] =
-    val lines =
-      Source
-        .fromFile(file)
-        .getLines()
-        .toList
-        .filterNot(_.isBlank)
-
-    val header =
-      lines
-        .head
-        .split(",")
-        .zipWithIndex
-        .toMap
-
-    lines
-      .tail
-      .filter(_.trim.nonEmpty)
-      .map { line =>
-        val cols     = line.split(",", -1)
-        val filename = cols(header("filename"))
-
-        TestFileRow(
-          filename = filename,
-          takeoff = parseOptLong(cols.lift(header("takeoff_pt"))).map(EventPoint(_, 0.0)),
-          freefall = parseOptLong(cols.lift(header("freefall_pt"))).map(EventPoint(_, 0.0)),
-          canopy = parseOptLong(cols.lift(header("canopy_pt"))).map(EventPoint(_, 0.0)),
-          landing = parseOptLong(cols.lift(header("landing_pt"))).map(EventPoint(_, 0.0)),
-          tag = cols.lift(header("tag")).filter(_.trim.nonEmpty),
-        )
-      }
-
-  private def parseOptLong(value: Option[String]): Option[Long] =
-    value.filter(_.trim.nonEmpty).map(_.trim.toLong)
 
 }

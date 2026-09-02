@@ -1,7 +1,6 @@
 package com.colofabrix.scala.beesight.swoop
 
-import java.nio.file.Path
-import scala.io.Source
+import fs2.data.csv.*
 
 final private[beesight] case class GSwoopResult(
   filename: String,
@@ -39,47 +38,44 @@ final private[beesight] case class GSwoopResult(
 
 private[beesight] object GSwoopResult {
 
-  /** Loads the expected values of all recordings from the summary CSV. */
-  def loadAll(path: Path): List[GSwoopResult] =
-    val lines =
-      Source
-        .fromFile(path.toFile)
-        .getLines()
-        .toList
-        .filterNot(_.isBlank)
+  given CsvRowDecoder[GSwoopResult, String] with
+    def apply(row: CsvRow[String]): DecoderResult[GSwoopResult] =
+      for
+        filename                    <- row.as[String]("filename")
+        turnInitiationAltitude      <- optDouble(row, "turn_initiation_altitude")
+        rolloutStartAltitude        <- optDouble(row, "rollout_start_altitude")
+        finishedRolloutAltitude     <- optDouble(row, "finished_rollout_altitude")
+        maxVerticalSpeed            <- optDouble(row, "max_vertical_speed")
+        maxTotalSpeed               <- optDouble(row, "max_total_speed")
+        maxHorizontalSpeed          <- optDouble(row, "max_horizontal_speed")
+        degreesOfRotation           <- optDouble(row, "degrees_of_rotation")
+        timeToExecuteTurn           <- optDouble(row, "time_to_execute_turn")
+        timeDuringRollout           <- optDouble(row, "time_during_rollout")
+        timeAloftDuringSwoop        <- optDouble(row, "time_aloft_during_swoop")
+        entryGateSpeed              <- optDouble(row, "entry_gate_speed")
+        distanceToStop              <- optDouble(row, "distance_to_stop")
+        touchdownEstimate           <- optDouble(row, "touchdown_estimate")
+      yield GSwoopResult(
+        filename = filename,
+        turnInitiationAltitude = turnInitiationAltitude,
+        rolloutStartAltitude = rolloutStartAltitude,
+        finishedRolloutAltitude = finishedRolloutAltitude,
+        maxVerticalSpeed = maxVerticalSpeed,
+        maxTotalSpeed = maxTotalSpeed,
+        maxHorizontalSpeed = maxHorizontalSpeed,
+        degreesOfRotation = degreesOfRotation,
+        timeToExecuteTurn = timeToExecuteTurn,
+        timeDuringRollout = timeDuringRollout,
+        timeAloftDuringSwoop = timeAloftDuringSwoop,
+        entryGateSpeed = entryGateSpeed,
+        distanceToStop = distanceToStop,
+        touchdownEstimate = touchdownEstimate,
+      )
 
-    val header =
-      lines.head
-        .split(",")
-        .zipWithIndex
-        .toMap
-
-    lines
-      .tail
-      .filter(_.trim.nonEmpty)
-      .map(parse(header, _))
-
-  private def parse(header: Map[String, Int], line: String): GSwoopResult =
-    val cols = line.split(",", -1)
-
-    GSwoopResult(
-      filename = cols(header("filename")),
-      turnInitiationAltitude = parseOptDouble(cols.lift(header("turn_initiation_altitude"))),
-      rolloutStartAltitude = parseOptDouble(cols.lift(header("rollout_start_altitude"))),
-      finishedRolloutAltitude = parseOptDouble(cols.lift(header("finished_rollout_altitude"))),
-      maxVerticalSpeed = parseOptDouble(cols.lift(header("max_vertical_speed"))),
-      maxTotalSpeed = parseOptDouble(cols.lift(header("max_total_speed"))),
-      maxHorizontalSpeed = parseOptDouble(cols.lift(header("max_horizontal_speed"))),
-      degreesOfRotation = parseOptDouble(cols.lift(header("degrees_of_rotation"))),
-      timeToExecuteTurn = parseOptDouble(cols.lift(header("time_to_execute_turn"))),
-      timeDuringRollout = parseOptDouble(cols.lift(header("time_during_rollout"))),
-      timeAloftDuringSwoop = parseOptDouble(cols.lift(header("time_aloft_during_swoop"))),
-      entryGateSpeed = parseOptDouble(cols.lift(header("entry_gate_speed"))),
-      distanceToStop = parseOptDouble(cols.lift(header("distance_to_stop"))),
-      touchdownEstimate = parseOptDouble(cols.lift(header("touchdown_estimate"))),
-    )
-
-  private def parseOptDouble(value: Option[String]): Option[Double] =
-    value.filter(_.trim.nonEmpty).map(_.trim.toDouble)
+  private def optDouble(row: CsvRow[String], name: String): DecoderResult[Option[Double]] =
+    row.as[String](name).map { s =>
+      val trimmed = s.trim
+      if trimmed.isEmpty then None else Some(trimmed.toDouble)
+    }
 
 }

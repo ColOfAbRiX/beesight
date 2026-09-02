@@ -3,10 +3,16 @@ package com.colofabrix.scala.beesight.detection.bench
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import com.colofabrix.scala.beesight.config.DetectionConfig
-import com.colofabrix.scala.beesight.jumpevents.{ FlysightTestReader, JumpEventsDetector }
+import com.colofabrix.scala.beesight.jumpevents.JumpEventsDetector
 import com.colofabrix.scala.beesight.model.*
+import fs2.data.csv.*
+import java.io.FileInputStream
 import java.nio.file.Path
+import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
+import java.util.zip.ZipInputStream
 import scala.concurrent.duration.*
+import scala.io.Source
 
 /**
  * End-to-end pipeline benchmark that runs the full detection pipeline on real jump data.
@@ -82,7 +88,7 @@ object PipelineBenchmark {
     println("Pre-counting data rows...")
     val pointCounts: Map[String, Long] =
       zipFiles.map { path =>
-        path.getFileName.toString -> FlysightTestReader.countCsvLines(path).toLong
+        path.getFileName.toString -> countCsvLines(path).toLong
       }.toMap
     val totalPoints = pointCounts.values.sum
     println(s"Total data points: $totalPoints")
@@ -187,6 +193,85 @@ object PipelineBenchmark {
         .map(_.toPath)
         .toVector
 
+  private def countCsvLines(filePath: Path): Int =
+    val source =
+      if filePath.toString.toLowerCase.endsWith(".zip") then
+        val zis = new ZipInputStream(new FileInputStream(filePath.toFile))
+        zis.getNextEntry
+        Source.fromInputStream(zis)
+      else
+        Source.fromFile(filePath.toFile)
+
+    try {
+      source
+        .getLines()
+        .drop(1)
+        .count(line => line.trim.nonEmpty && !line.trim.startsWith("#"))
+    }
+    finally {
+      source.close()
+    }
+
+  private def readFlysightStream(filePath: Path): fs2.Stream[IO, DataPoint] =
+    val rawLines =
+      if filePath.toString.toLowerCase.endsWith(".zip") then readLinesFromZip(filePath)
+      else readLinesFromFile(filePath)
+
+    rawLines
+      .filter(line => line.trim.nonEmpty && !line.trim.startsWith("#"))
+      .through(trimHeaderFields)
+      .intersperse("\n")
+      .through(lenient.attemptDecodeUsingHeaders[DataPoint]())
+      .collect { case Right(value) => value }
+
+  private def readLinesFromZip(filePath: Path): fs2.Stream[IO, String] =
+    val zis = new ZipInputStream(new FileInputStream(filePath.toFile))
+    val lines =
+      try {
+        zis.getNextEntry
+        Source.fromInputStream(zis).getLines().toList
+      }
+      finally {
+        zis.close()
+      }
+    fs2.Stream.emits(lines)
+
+  private def readLinesFromFile(filePath: Path): fs2.Stream[IO, String] =
+    val lines =
+      val source = Source.fromFile(filePath.toFile)
+      try source.getLines().toList
+      finally source.close()
+    fs2.Stream.emits(lines)
+
+  private val trimHeaderFields: fs2.Pipe[IO, String, String] =
+    stream =>
+      stream
+        .zipWithIndex
+        .map {
+          case (line, 0) => line.split(",", -1).map(_.trim).mkString(",")
+          case (line, _) => line
+        }
+
+  private given CellDecoder[OffsetDateTime] =
+    CellDecoder[String].emap { value =>
+      try Right(OffsetDateTime.parse(value, DateTimeFormatter.ISO_OFFSET_DATE_TIME))
+      catch case t: Exception => Left(new DecoderError(t.getMessage()))
+    }
+
+  private given CsvRowDecoder[DataPoint, String] with
+    def apply(row: CsvRow[String]): DecoderResult[DataPoint] =
+      for
+        time <- row.as[OffsetDateTime]("time")
+        hMSL <- row.as[Double]("hMSL")
+        velN <- row.as[Double]("velN")
+        velE <- row.as[Double]("velE")
+        velD <- row.as[Double]("velD")
+      yield DataPoint(
+        time = time.toInstant,
+        altitude = hMSL,
+        speed = GeoVector(north = velN, east = velE, vertical = velD),
+      )
+
   /**
    * Timed run of a single file through the pipeline.
    * Returns wall-clock milliseconds.
@@ -194,8 +279,7 @@ object PipelineBenchmark {
   private def timedRun(detector: JumpEventsDetector, filePath: Path): Long =
     val start = System.nanoTime()
     val _     =
-      FlysightTestReader
-        .readCsvStream(filePath)
+      readFlysightStream(filePath)
         .through(detector.streamDetect)
         .compile
         .last

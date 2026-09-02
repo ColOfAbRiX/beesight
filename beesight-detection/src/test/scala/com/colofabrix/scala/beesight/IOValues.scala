@@ -49,4 +49,11 @@ trait IOValues {
 
   }
 
+  extension [A](self: fs2.Stream[IO, A]) {
+
+    def streamResult(timeout: FiniteDuration = 30.seconds): List[A] =
+      self.compile.toList.result(timeout)
+
+  }
+
 }
