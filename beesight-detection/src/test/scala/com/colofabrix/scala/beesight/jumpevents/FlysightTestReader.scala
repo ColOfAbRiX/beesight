@@ -12,32 +12,8 @@ import scala.io.Source
 
 /**
  * Test-only reader that parses Flysight CSV/ZIP files directly into IndexedPoint.
- * Independent of the CLI's CsvFileReader and format adapters.
  */
 private[beesight] object FlysightTestReader {
-
-  private given CellDecoder[OffsetDateTime] =
-    CellDecoder[String].emap { value =>
-      try Right(OffsetDateTime.parse(value, DateTimeFormatter.ISO_OFFSET_DATE_TIME))
-      catch case t: Exception => Left(new DecoderError(t.getMessage()))
-    }
-
-  private given CsvRowDecoder[IndexedPoint, String] with
-    def apply(row: CsvRow[String]): DecoderResult[IndexedPoint] =
-      for
-        time <- row.as[OffsetDateTime]("time")
-        hMSL <- row.as[Double]("hMSL")
-        velN <- row.as[Double]("velN")
-        velE <- row.as[Double]("velE")
-        velD <- row.as[Double]("velD")
-      yield IndexedPoint(
-        idx = 0,
-        DataPoint(
-          time = time.toInstant,
-          altitude = hMSL,
-          speed = GeoVector(north = velN, east = velE, vertical = velD),
-        )
-      )
 
   /**
    * Reads a Flysight CSV or ZIP file and returns a stream of IndexedPoint.
@@ -75,25 +51,54 @@ private[beesight] object FlysightTestReader {
       else
         Source.fromFile(filePath.toFile)
 
-    try
+    try {
       source
         .getLines()
         .drop(1)
         .count(line => line.trim.nonEmpty && !line.trim.startsWith("#"))
-    finally
+    }
+    finally {
       source.close()
+    }
+
+  private given CellDecoder[OffsetDateTime] =
+    CellDecoder[String].emap { value =>
+      try Right(OffsetDateTime.parse(value, DateTimeFormatter.ISO_OFFSET_DATE_TIME))
+      catch case t: Exception => Left(new DecoderError(t.getMessage()))
+    }
+
+  private given CsvRowDecoder[IndexedPoint, String] with
+    def apply(row: CsvRow[String]): DecoderResult[IndexedPoint] =
+      for
+        time <- row.as[OffsetDateTime]("time")
+        hMSL <- row.as[Double]("hMSL")
+        velN <- row.as[Double]("velN")
+        velE <- row.as[Double]("velE")
+        velD <- row.as[Double]("velD")
+      yield IndexedPoint(
+        idx = 0,
+        DataPoint(
+          time = time.toInstant,
+          altitude = hMSL,
+          speed = GeoVector(north = velN, east = velE, vertical = velD),
+        )
+      )
 
   private def isZipFile(filePath: Path): Boolean =
     filePath.toString.toLowerCase.endsWith(".zip")
 
   private def readLinesFromZip(filePath: Path): fs2.Stream[IO, String] =
+    val zis = new ZipInputStream(new FileInputStream(filePath.toFile))
+    
     val lines =
-      val zis = new ZipInputStream(new FileInputStream(filePath.toFile))
-      try
+      try {
         zis.getNextEntry
         Source.fromInputStream(zis).getLines().toList
-      finally
+      }
+      finally {
         zis.close()
+      }
+
     fs2.Stream.emits(lines)
 
   private def readLinesFromFile(filePath: Path): fs2.Stream[IO, String] =

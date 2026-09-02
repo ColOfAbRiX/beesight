@@ -10,9 +10,6 @@ import io.github.iltotore.iron.constraint.numeric.*
  */
 opaque type WindowSize = Int :| GreaterEqual[1]
 
-/**
- * Factory and type class instances for WindowSize.
- */
 object WindowSize {
 
   def apply(value: Int :| GreaterEqual[1]): WindowSize =
@@ -34,9 +31,6 @@ object WindowSize {
  */
 opaque type Percent = Double :| Interval.Closed[0.0, 1.0]
 
-/**
- * Factory and type class instances for Percent.
- */
 object Percent {
 
   def apply(value: Double :| Interval.Closed[0.0, 1.0]): Percent =
@@ -58,9 +52,6 @@ object Percent {
  */
 opaque type KeepPoints = Int :| GreaterEqual[0]
 
-/**
- * Factory and type class instances for KeepPoints.
- */
 object KeepPoints {
 
   def apply(value: Int :| GreaterEqual[0]): KeepPoints =

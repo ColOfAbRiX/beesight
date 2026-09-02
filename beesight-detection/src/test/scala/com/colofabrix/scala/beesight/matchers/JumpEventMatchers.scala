@@ -1,4 +1,4 @@
-package com.colofabrix.scala.beesight
+package com.colofabrix.scala.beesight.matchers
 
 import com.colofabrix.scala.beesight.model.*
 import org.scalatest.matchers.{ Matcher, MatchResult }

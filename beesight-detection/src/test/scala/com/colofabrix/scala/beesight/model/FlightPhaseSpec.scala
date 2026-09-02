@@ -24,31 +24,6 @@ class FlightPhaseSpec extends AnyFreeSpec with Matchers {
 
     }
 
-    "fromEvent mapping" - {
-
-      "should map Takeoff event to Climbing phase" in {
-        FlightPhase.nextFlightPhase(EventType.Takeoff) shouldBe FlightPhase.Climbing
-      }
-
-      "should map Freefall event to Freefall phase" in {
-        FlightPhase.nextFlightPhase(EventType.Freefall) shouldBe FlightPhase.Freefall
-      }
-
-      "should map Canopy event to UnderCanopy phase" in {
-        FlightPhase.nextFlightPhase(EventType.Canopy) shouldBe FlightPhase.UnderCanopy
-      }
-
-      "should map Landing event to Landed phase" in {
-        FlightPhase.nextFlightPhase(EventType.Landing) shouldBe FlightPhase.Landed
-      }
-
-      "should cover all EventType values" in
-      EventType.values.foreach { event =>
-        noException should be thrownBy FlightPhase.nextFlightPhase(event)
-      }
-
-    }
-
   }
 
 }

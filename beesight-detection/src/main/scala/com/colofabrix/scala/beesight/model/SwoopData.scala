@@ -14,8 +14,8 @@ import java.time.Duration
  * @param timeToExecuteTurn  Elapsed time from turn initiation to rollout start
  */
 final private[beesight] case class SwoopData(
-  turnInitiation: SwoopEventPoint,
-  rolloutStart: SwoopEventPoint,
+  turnInitiation: EventPoint,
+  rolloutStart: EventPoint,
   maxVerticalSpeed: Double,
   maxTotalSpeed: Double,
   maxHorizontalSpeed: Double,

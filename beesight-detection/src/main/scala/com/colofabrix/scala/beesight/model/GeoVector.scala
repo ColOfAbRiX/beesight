@@ -16,9 +16,6 @@ final private[beesight] case class GeoVector(
   vertical: Double,
 )
 
-/**
- * Factory, zero constant, arithmetic operators, and type class instances for GeoVector.
- */
 private[beesight] object GeoVector {
 
   /**

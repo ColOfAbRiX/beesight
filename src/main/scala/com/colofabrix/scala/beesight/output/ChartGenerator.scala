@@ -193,9 +193,9 @@ final private[beesight] class ChartGenerator private (config: Config) {
 
     s"var transitionMarkers = [${jsMarkers.mkString(",\n")}];"
 
-  private def formatStage(point: Option[FlightEventPoint]): String =
+  private def formatStage(point: Option[EventPoint]): String =
     point match {
-      case Some(FlightEventPoint(idx, alt)) => f"Point $idx at altitude $alt%.2fm"
+      case Some(EventPoint(idx, alt)) => f"Point $idx at altitude $alt%.2fm"
       case None                             => "Not detected"
     }
 

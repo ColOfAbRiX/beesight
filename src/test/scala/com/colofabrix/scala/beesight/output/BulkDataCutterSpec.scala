@@ -75,10 +75,10 @@ class BulkDataCutterSpec extends AnyWordSpec with Matchers {
     }
 
   private def buildAnnotatedStream(row: TestRow): Vector[(FlightEvents, Int)] =
-    val takeoffEvent  = row.takeoff.map(i => FlightEventPoint(index = i.toLong, altitude = 0.0))
-    val freefallEvent = row.freefall.map(i => FlightEventPoint(index = i.toLong, altitude = 0.0))
-    val canopyEvent   = row.canopy.map(i => FlightEventPoint(index = i.toLong, altitude = 0.0))
-    val landingEvent  = row.landing.map(i => FlightEventPoint(index = i.toLong, altitude = 0.0))
+    val takeoffEvent  = row.takeoff.map(i => EventPoint(index = i.toLong, altitude = 0.0))
+    val freefallEvent = row.freefall.map(i => EventPoint(index = i.toLong, altitude = 0.0))
+    val canopyEvent   = row.canopy.map(i => EventPoint(index = i.toLong, altitude = 0.0))
+    val landingEvent  = row.landing.map(i => EventPoint(index = i.toLong, altitude = 0.0))
 
     (0 until row.rowsCount).map { i =>
       (

@@ -10,9 +10,6 @@ import io.github.iltotore.iron.constraint.numeric.*
  */
 opaque type ProcessLimit = Int :| GreaterEqual[1]
 
-/**
- * Factory and type class instances for ProcessLimit.
- */
 object ProcessLimit {
 
   def apply(value: Int :| GreaterEqual[1]): ProcessLimit =
@@ -34,9 +31,6 @@ object ProcessLimit {
  */
 opaque type Parallelism = Int :| GreaterEqual[1]
 
-/**
- * Factory and type class instances for Parallelism.
- */
 object Parallelism {
 
   def apply(value: Int :| GreaterEqual[1]): Parallelism =

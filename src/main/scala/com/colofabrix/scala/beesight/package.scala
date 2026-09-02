@@ -11,9 +11,6 @@ import com.colofabrix.scala.beesight.config.Config
  */
 type IOConfig[A] = ReaderT[IO, Config, A]
 
-/**
- * Companion alias for constructing IOConfig values via ReaderT factory methods.
- */
 val IOConfig: ReaderT.type = ReaderT
 
 /**

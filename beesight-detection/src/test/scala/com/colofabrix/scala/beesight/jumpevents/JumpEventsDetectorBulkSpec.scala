@@ -11,14 +11,15 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import scala.concurrent.duration.*
 import scala.io.Source
+import com.colofabrix.scala.beesight.matchers.JumpEventMatchers
 
-class BulkDetectionSpec extends AnyWordSpec with Matchers with IOValues with JumpEventMatchers {
+class JumpEventsDetectorBulkSpec extends AnyWordSpec with Matchers with IOValues with JumpEventMatchers {
 
-  private val flysightDir =
-    Paths.get("src/test/resources/jumpevents/bulk_detection_spec/flysight")
+  private val testFilesDir =
+    Paths.get("src/test/resources/test_files")
 
   private val resultsFile =
-    Paths.get("src/test/resources/jumpevents/bulk_detection_spec/points_results.csv")
+    Paths.get("src/test/resources/test_files/jump_events_results.csv")
 
   "JumpEventsDetector" should {
 
@@ -34,7 +35,7 @@ class BulkDetectionSpec extends AnyWordSpec with Matchers with IOValues with Jum
             case (expected, idx) =>
               val filename = expected.filename
               val zipName  = filename.replaceAll("(?i)\\.csv$", ".zip")
-              val filePath = flysightDir.resolve(zipName)
+              val filePath = testFilesDir.resolve(zipName)
 
               detectLastEvents(filePath)
                 .map { result =>
@@ -75,7 +76,7 @@ class BulkDetectionSpec extends AnyWordSpec with Matchers with IOValues with Jum
             case (expected, idx) =>
               val filename = expected.filename
               val zipName  = filename.replaceAll("(?i)\\.csv$", ".zip")
-              val filePath = flysightDir.resolve(zipName)
+              val filePath = testFilesDir.resolve(zipName)
 
               detectLastEvents(filePath)
                 .map { result =>
@@ -127,10 +128,10 @@ class BulkDetectionSpec extends AnyWordSpec with Matchers with IOValues with Jum
 
   final private case class TestFileRow(
     filename: String,
-    takeoff: Option[FlightEventPoint],
-    freefall: Option[FlightEventPoint],
-    canopy: Option[FlightEventPoint],
-    landing: Option[FlightEventPoint],
+    takeoff: Option[EventPoint],
+    freefall: Option[EventPoint],
+    canopy: Option[EventPoint],
+    landing: Option[EventPoint],
     tag: Option[String],
   ) {
 
@@ -163,10 +164,10 @@ class BulkDetectionSpec extends AnyWordSpec with Matchers with IOValues with Jum
 
         TestFileRow(
           filename = filename,
-          takeoff = parseOptLong(cols.lift(header("takeoff_pt"))).map(FlightEventPoint(_, 0.0)),
-          freefall = parseOptLong(cols.lift(header("freefall_pt"))).map(FlightEventPoint(_, 0.0)),
-          canopy = parseOptLong(cols.lift(header("canopy_pt"))).map(FlightEventPoint(_, 0.0)),
-          landing = parseOptLong(cols.lift(header("landing_pt"))).map(FlightEventPoint(_, 0.0)),
+          takeoff = parseOptLong(cols.lift(header("takeoff_pt"))).map(EventPoint(_, 0.0)),
+          freefall = parseOptLong(cols.lift(header("freefall_pt"))).map(EventPoint(_, 0.0)),
+          canopy = parseOptLong(cols.lift(header("canopy_pt"))).map(EventPoint(_, 0.0)),
+          landing = parseOptLong(cols.lift(header("landing_pt"))).map(EventPoint(_, 0.0)),
           tag = cols.lift(header("tag")).filter(_.trim.nonEmpty),
         )
       }

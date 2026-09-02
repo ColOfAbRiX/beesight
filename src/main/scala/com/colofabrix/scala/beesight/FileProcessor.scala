@@ -27,6 +27,7 @@ private[beesight] object FileProcessor {
       .flatMap {
         case FileFormat.FlySight => processFileAs[FlysightPoint](inputFile)
         case FileFormat.Airlog   => processFileAs[AirlogPoint](inputFile)
+        case FileFormat.Dekunu   => processFileAs[DekunuPoint](inputFile)
       }
       .handleErrorWith { error =>
         s"ERROR processing $inputFile: ${error.getMessage}"

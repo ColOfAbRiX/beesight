@@ -23,8 +23,8 @@ final class SwoopDataDetector private (config: SwoopConfig) {
       .map(_.flatten)
 
   private def detect[F[_]: Concurrent, A: PointReader](
-    canopy: FlightEventPoint,
-    landing: FlightEventPoint,
+    canopy: EventPoint,
+    landing: EventPoint,
     stream: fs2.Stream[F, A]
   ): F[Option[SwoopData]] =
     stream
@@ -91,21 +91,13 @@ final class SwoopDataDetector private (config: SwoopConfig) {
     val degreesOfRotation = Heading.cumulativeHeadingChange(turnPhaseSpeeds, config.minHorizontalSpeed)
 
     SwoopData(
-      turnInitiation = toSwoopEventPoint(turnInit),
-      rolloutStart = toSwoopEventPoint(rollout),
+      turnInitiation = EventPoint(turnInit.idx, turnInit.point.altitude),
+      rolloutStart = EventPoint(rollout.idx, rollout.point.altitude),
       maxVerticalSpeed = turnPhaseSpeeds.map(_.vertical).max,
       maxTotalSpeed = turnPhaseSpeeds.map(_.magnitude).max,
       maxHorizontalSpeed = turnAndRolloutSpeeds.map(_.horizontal).max,
       degreesOfRotation = degreesOfRotation,
       timeToExecuteTurn = Duration.between(turnInit.point.time, rollout.point.time),
-    )
-
-  private def toSwoopEventPoint(ip: IndexedPoint): SwoopEventPoint =
-    SwoopEventPoint(
-      index = ip.idx,
-      altitude = ip.point.altitude,
-      time = ip.point.time,
-      speed = ip.point.speed,
     )
 
 }

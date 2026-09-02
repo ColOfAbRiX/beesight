@@ -555,15 +555,15 @@ class DataCutterSpec extends AnyFreeSpec with Matchers {
       ),
     )
 
-  private def eventAt(idx: Long): FlightEventPoint =
-    FlightEventPoint(index = idx, altitude = 1000.0)
+  private def eventAt(idx: Long): EventPoint =
+    EventPoint(index = idx, altitude = 1000.0)
 
   private def annotatedStream(
     n: Int,
-    takeoff: Option[FlightEventPoint] = None,
-    freefall: Option[FlightEventPoint] = None,
-    canopy: Option[FlightEventPoint] = None,
-    landing: Option[FlightEventPoint] = None,
+    takeoff: Option[EventPoint] = None,
+    freefall: Option[EventPoint] = None,
+    canopy: Option[EventPoint] = None,
+    landing: Option[EventPoint] = None,
   ): Vector[(FlightEvents, Int)] =
     (0 until n)
       .map { i =>

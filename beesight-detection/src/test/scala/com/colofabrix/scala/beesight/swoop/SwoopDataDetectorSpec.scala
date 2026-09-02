@@ -20,8 +20,8 @@ class SwoopDataDetectorSpec extends AnyWordSpec with Matchers with IOValues {
 
       val expected =
         SwoopData(
-          turnInitiation = SwoopEventPoint(12, 1380.0, t(22), GeoVector(20.299999999999997, 20.299999999999997, 12.5)),
-          rolloutStart = SwoopEventPoint(15, 1350.0, t(25), GeoVector(24.5, 24.5, 17.0)),
+          turnInitiation = EventPoint(12, 1380.0),
+          rolloutStart = EventPoint(15, 1350.0),
           maxVerticalSpeed = 17.0,
           maxTotalSpeed = 38.59404099080582,
           maxHorizontalSpeed = 54.44722215136416,
@@ -45,7 +45,7 @@ class SwoopDataDetectorSpec extends AnyWordSpec with Matchers with IOValues {
 
     "return None when no landing event" in {
       val data   = Vector(dataPoint(0, 1000, 10, 10, 2), dataPoint(1, 990, 10, 10, 2))
-      val events = FlightEvents.empty.copy(canopy = Some(FlightEventPoint(0, 1000.0)))
+      val events = FlightEvents.empty.copy(canopy = Some(EventPoint(0, 1000.0)))
 
       val actual = detect(data, events)
 
@@ -98,8 +98,8 @@ class SwoopDataDetectorSpec extends AnyWordSpec with Matchers with IOValues {
 
       val expected =
         SwoopData(
-          turnInitiation = SwoopEventPoint(12, 1380.0, t(22), GeoVector(10.5, 10.5, 2.0)),
-          rolloutStart = SwoopEventPoint(18, 1320.0, t(28), GeoVector(18.9, 18.9, 11.0)),
+          turnInitiation = EventPoint(12, 1380.0),
+          rolloutStart = EventPoint(18, 1320.0),
           maxVerticalSpeed = 11.0,
           maxTotalSpeed = 28.90363298964336,
           maxHorizontalSpeed = 40.587929240107826,
@@ -118,8 +118,8 @@ class SwoopDataDetectorSpec extends AnyWordSpec with Matchers with IOValues {
 
       val expected =
         SwoopData(
-          turnInitiation = SwoopEventPoint(12, 1380.0, t(22), GeoVector(20.299999999999997, 20.299999999999997, 12.5)),
-          rolloutStart = SwoopEventPoint(15, 1350.0, t(25), GeoVector(24.5, 24.5, 17.0)),
+          turnInitiation = EventPoint(12, 1380.0),
+          rolloutStart = EventPoint(15, 1350.0),
           maxVerticalSpeed = 17.0,
           maxTotalSpeed = 38.59404099080582,
           maxHorizontalSpeed = 54.44722215136416,
@@ -138,8 +138,8 @@ class SwoopDataDetectorSpec extends AnyWordSpec with Matchers with IOValues {
 
       val expected =
         SwoopData(
-          turnInitiation = SwoopEventPoint(12, 1380.0, t(22), GeoVector(20.299999999999997, 20.299999999999997, 12.5)),
-          rolloutStart = SwoopEventPoint(15, 1350.0, t(25), GeoVector(24.5, 24.5, 17.0)),
+          turnInitiation = EventPoint(12, 1380.0),
+          rolloutStart = EventPoint(15, 1350.0),
           maxVerticalSpeed = 17.0,
           maxTotalSpeed = 38.59404099080582,
           maxHorizontalSpeed = 54.44722215136416,
@@ -185,8 +185,8 @@ class SwoopDataDetectorSpec extends AnyWordSpec with Matchers with IOValues {
 
       val expected =
         SwoopData(
-          turnInitiation = SwoopEventPoint(12, 1380.0, t(22), GeoVector(24.726564766268673, 15.152458376762516, 12.5)),
-          rolloutStart = SwoopEventPoint(15, 1350.0, t(25), GeoVector(24.748737341529164, 24.74873734152916, 17.0)),
+          turnInitiation = EventPoint(12, 1380.0),
+          rolloutStart = EventPoint(15, 1350.0),
           maxVerticalSpeed = 17.0,
           maxTotalSpeed = 38.91015291668744,
           maxHorizontalSpeed = 55.0,
@@ -205,8 +205,8 @@ class SwoopDataDetectorSpec extends AnyWordSpec with Matchers with IOValues {
 
       val expected =
         SwoopData(
-          turnInitiation = SwoopEventPoint(12, 1380.0, t(22), GeoVector(20.299999999999997, 20.299999999999997, 12.5)),
-          rolloutStart = SwoopEventPoint(15, 1350.0, t(25), GeoVector(24.5, 24.5, 17.0)),
+          turnInitiation = EventPoint(12, 1380.0),
+          rolloutStart = EventPoint(15, 1350.0),
           maxVerticalSpeed = 17.0,
           maxTotalSpeed = 38.59404099080582,
           maxHorizontalSpeed = 54.44722215136416,
@@ -227,9 +227,9 @@ class SwoopDataDetectorSpec extends AnyWordSpec with Matchers with IOValues {
   private def flightEvents(landingIndex: Long, freefallIndex: Option[Long] = None): FlightEvents =
     FlightEvents(
       takeoff = None,
-      freefall = freefallIndex.map { i => FlightEventPoint(i, 3000.0) },
-      canopy = Some(FlightEventPoint(10, 1500.0)),
-      landing = Some(FlightEventPoint(landingIndex, 0.0)),
+      freefall = freefallIndex.map { i => EventPoint(i, 3000.0) },
+      canopy = Some(EventPoint(10, 1500.0)),
+      landing = Some(EventPoint(landingIndex, 0.0)),
     )
 
   private def swoopProfile(
@@ -267,8 +267,7 @@ class SwoopDataDetectorSpec extends AnyWordSpec with Matchers with IOValues {
       minHorizontalSpeed = 2.0,
     )
 
-  private val baseTime =
-    Instant.parse("2024-01-01T12:00:00Z")
+  private val baseTime = Instant.parse("2024-01-01T12:00:00Z")
 
   private def t(seconds: Long): Instant =
     baseTime.plusSeconds(seconds)

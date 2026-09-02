@@ -18,9 +18,6 @@ final case class ConfigFlags(
   createSummary: Boolean,
 )
 
-/**
- * Factory and CLI option definitions for ConfigFlags.
- */
 object ConfigFlags {
 
   val default: ConfigFlags =

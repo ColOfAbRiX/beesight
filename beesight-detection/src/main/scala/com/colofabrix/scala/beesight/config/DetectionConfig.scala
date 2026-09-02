@@ -25,9 +25,6 @@ final case class DetectionConfig(
   swoop: SwoopConfig,
 )
 
-/**
- * Factory and default configuration for DetectionConfig.
- */
 object DetectionConfig {
 
   /**

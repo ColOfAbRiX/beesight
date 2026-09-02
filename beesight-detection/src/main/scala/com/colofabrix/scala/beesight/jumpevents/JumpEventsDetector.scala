@@ -16,9 +16,6 @@ import scala.annotation.tailrec
 
 /**
  * Detects flight event points from flight data streams.
- *
- * The detection engine works purely on [[DataPoint]] and emits the accumulated [[FlightEvents]] for each point. Format
- * adaptation (e.g. from a specific CSV format to [[DataPoint]]) is the responsibility of the caller.
  */
 final class JumpEventsDetector private (config: DetectionConfig) {
 
@@ -46,7 +43,7 @@ final class JumpEventsDetector private (config: DetectionConfig) {
   def streamDetect[F[_], A: PointReader]: fs2.Pipe[F, A, FlightEvents] =
     _.through(mainDetectionPipe)
 
-  //  Stream Pipeline  //
+  //  Internals  //
 
   private def mainDetectionPipe[F[_], A: PointReader]: fs2.Pipe[F, A, FlightEvents] =
     pointStream =>
@@ -188,9 +185,6 @@ final class JumpEventsDetector private (config: DetectionConfig) {
 
 }
 
-/**
- * Factory for JumpEventsDetector.
- */
 object JumpEventsDetector {
 
   def apply(config: DetectionConfig): JumpEventsDetector =

@@ -12,9 +12,6 @@ import org.scalatest.matchers.should.Matchers
 
 class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
 
-  private def extract(dp: DataPoint): (Instant, Double, GeoVector) =
-    (dp.time, dp.altitude, dp.speed)
-
   "PreprocessData" - {
 
     "preprocess pipe" - {
@@ -451,5 +448,8 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
       .compile
       .toList
       .result()
+
+  private def extract(dp: DataPoint): (Instant, Double, GeoVector) =
+    (dp.time, dp.altitude, dp.speed)
 
 }

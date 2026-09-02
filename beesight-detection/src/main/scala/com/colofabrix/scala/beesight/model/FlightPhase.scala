@@ -18,22 +18,3 @@ private[beesight] enum FlightPhase(val sequence: Int) {
   case UnderCanopy   extends FlightPhase(3)
   case Landed        extends FlightPhase(4)
 }
-
-/**
- * Companion providing conversion from EventType to the resulting FlightPhase.
- */
-private[beesight] object FlightPhase {
-
-  extension (self: EventType) {
-
-    def nextFlightPhase: FlightPhase =
-      self match {
-        case EventType.Takeoff  => FlightPhase.Climbing
-        case EventType.Freefall => FlightPhase.Freefall
-        case EventType.Canopy   => FlightPhase.UnderCanopy
-        case EventType.Landing  => FlightPhase.Landed
-      }
-
-  }
-
-}

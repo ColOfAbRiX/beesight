@@ -13,7 +13,7 @@ import scala.io.Source
 class JumpEventsDetectorSpec extends AnyWordSpec with Matchers with IOValues {
 
   private val inputData =
-    Paths.get("src/test/resources/jumpevents/file_detection_spec/input_data.zip")
+    Paths.get("src/test/resources/test_files/csv_files/jump_event_detector_file.zip")
 
   "JumpEventsDetector" should {
 
@@ -96,9 +96,6 @@ class JumpEventsDetectorSpec extends AnyWordSpec with Matchers with IOValues {
 
   }
 
-  /**
-   * Derives the current FlightPhase from FlightEvents
-   */
   private def toPhase(events: FlightEvents): FlightPhase =
     if (events.landing.isDefined) FlightPhase.Landed
     else if (events.canopy.isDefined) FlightPhase.UnderCanopy
@@ -115,7 +112,8 @@ class JumpEventsDetectorSpec extends AnyWordSpec with Matchers with IOValues {
         .getLines()
         .drop(1)
         .size
-    } finally
+    } finally {
       zis.close()
+    }
 
 }

@@ -53,7 +53,7 @@ final private[jumpevents] class EventPointDetector private (config: DetectionCon
   ): Option[(FillingState, Vector[FlightEvents])] =
     val stageConfig    = config.getEventConfigs(eventType)
     val eventTypeFocus = config.getBackwindowSize(eventType)
-    val phase          = FlightPhase.nextFlightPhase(eventType)
+    val phase          = nextFlightPhase(eventType)
 
     val stageHandler =
       eventType match {
@@ -105,7 +105,7 @@ final private[jumpevents] class EventPointDetector private (config: DetectionCon
 
             val nextToProcess =
               afterDetection.map { data =>
-                val eventPoint     = FlightEventPoint(detectedPoint.idx, detectedPoint.altitude)
+                val eventPoint     = EventPoint(detectedPoint.idx, detectedPoint.altitude)
                 val detectedEvents = data.detectedEvents.setEventPoint(state.eventType, eventPoint)
 
                 WindowEntry(
@@ -127,6 +127,14 @@ final private[jumpevents] class EventPointDetector private (config: DetectionCon
       case None =>
         val nextState = state.copy(loopFocus = state.loopFocus + 1)
         loop(nextState)
+    }
+
+  private def nextFlightPhase(eventType: EventType): FlightPhase =
+    eventType match {
+      case EventType.Takeoff  => FlightPhase.Climbing
+      case EventType.Freefall => FlightPhase.Freefall
+      case EventType.Canopy   => FlightPhase.UnderCanopy
+      case EventType.Landing  => FlightPhase.Landed
     }
 
 }

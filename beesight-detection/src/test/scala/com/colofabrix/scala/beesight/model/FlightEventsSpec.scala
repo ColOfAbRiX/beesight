@@ -23,7 +23,7 @@ class FlightEventsSpec extends AnyFreeSpec with Matchers {
     "setEvent" - {
 
       "should set takeoff and leave others unchanged" in {
-        val point  = FlightEventPoint(10, 500.0)
+        val point  = EventPoint(10, 500.0)
         val result = FlightEvents.empty.setEventPoint(EventType.Takeoff, point)
         result.takeoff shouldBe Some(point)
         result.freefall shouldBe None
@@ -32,7 +32,7 @@ class FlightEventsSpec extends AnyFreeSpec with Matchers {
       }
 
       "should set freefall and leave others unchanged" in {
-        val point  = FlightEventPoint(50, 4000.0)
+        val point  = EventPoint(50, 4000.0)
         val result = FlightEvents.empty.setEventPoint(EventType.Freefall, point)
         result.takeoff shouldBe None
         result.freefall shouldBe Some(point)
@@ -41,7 +41,7 @@ class FlightEventsSpec extends AnyFreeSpec with Matchers {
       }
 
       "should set canopy and leave others unchanged" in {
-        val point  = FlightEventPoint(200, 1200.0)
+        val point  = EventPoint(200, 1200.0)
         val result = FlightEvents.empty.setEventPoint(EventType.Canopy, point)
         result.takeoff shouldBe None
         result.freefall shouldBe None
@@ -50,7 +50,7 @@ class FlightEventsSpec extends AnyFreeSpec with Matchers {
       }
 
       "should set landing and leave others unchanged" in {
-        val point  = FlightEventPoint(350, 50.0)
+        val point  = EventPoint(350, 50.0)
         val result = FlightEvents.empty.setEventPoint(EventType.Landing, point)
         result.takeoff shouldBe None
         result.freefall shouldBe None
@@ -59,10 +59,10 @@ class FlightEventsSpec extends AnyFreeSpec with Matchers {
       }
 
       "should accumulate multiple events correctly" in {
-        val takeoffPt  = FlightEventPoint(10, 500.0)
-        val freefallPt = FlightEventPoint(50, 4000.0)
-        val canopyPt   = FlightEventPoint(200, 1200.0)
-        val landingPt  = FlightEventPoint(350, 50.0)
+        val takeoffPt  = EventPoint(10, 500.0)
+        val freefallPt = EventPoint(50, 4000.0)
+        val canopyPt   = EventPoint(200, 1200.0)
+        val landingPt  = EventPoint(350, 50.0)
 
         val result =
           FlightEvents.empty
@@ -78,8 +78,8 @@ class FlightEventsSpec extends AnyFreeSpec with Matchers {
       }
 
       "should overwrite an existing event of the same type" in {
-        val first  = FlightEventPoint(10, 500.0)
-        val second = FlightEventPoint(15, 550.0)
+        val first  = EventPoint(10, 500.0)
+        val second = EventPoint(15, 550.0)
 
         val result =
           FlightEvents.empty

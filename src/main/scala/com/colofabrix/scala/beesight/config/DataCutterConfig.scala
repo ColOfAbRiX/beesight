@@ -19,9 +19,6 @@ final case class DataCutterConfig(
   minRetainedPoints: Percent,
 )
 
-/**
- * Factory, defaults, and CLI option definitions for DataCutterConfig.
- */
 object DataCutterConfig {
 
   val default: DataCutterConfig =

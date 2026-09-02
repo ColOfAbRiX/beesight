@@ -29,9 +29,6 @@ final case class Config(
   parallelism: Option[Parallelism],
 )
 
-/**
- * Factory, defaults, and CLI option definitions for Config.
- */
 object Config {
 
   val default: Config =

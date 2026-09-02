@@ -47,7 +47,7 @@ final private[beesight] class ResultPrinter private (config: Config) {
   given niceDouble: Show[Double] =
     value => f"${value}%.2f"
 
-  given nicePoint: Show[FlightEventPoint] =
+  given nicePoint: Show[EventPoint] =
     point => s"point ${point.index.show} at altitude ${point.altitude.show}"
 
   given niceFlightPoints: Show[FlightEvents] =

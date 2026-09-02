@@ -11,13 +11,10 @@ import java.time.Instant
  */
 private[preprocess] object Despike {
 
-  def despike(
-    config: DetectionConfig,
-    currentWindow: NonEmptyFilled[PointKinematics]
-  ): NonEmptyFilled[PointKinematics] =
-    val oldest       = currentWindow.oldest
-    val newest       = currentWindow.newest
-    val focused      = currentWindow.focusAt(1)
+  def despike(config: DetectionConfig, window: NonEmptyFilled[PointKinematics]): NonEmptyFilled[PointKinematics] =
+    val oldest       = window.oldest
+    val newest       = window.newest
+    val focused      = window.focusAt(1)
     val secondOldest = focused.focus
 
     val expectedPoint = Interpolation.interpolate(oldest.point, newest.point, secondOldest.point.time)
