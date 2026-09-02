@@ -18,5 +18,5 @@ object DataPoint {
 
   def fromReader[A: PointReader](a: A): DataPoint =
     DataPoint(a.time, a.altitude, a.speed)
-    
+
 }

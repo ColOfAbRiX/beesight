@@ -13,7 +13,7 @@ import scala.io.Source
 class JumpEventsDetectorSpec extends AnyWordSpec with Matchers with IOValues {
 
   private val inputData =
-    Paths.get("src/test/resources/file_detection_spec/input_data.zip")
+    Paths.get("src/test/resources/jumpevents/file_detection_spec/input_data.zip")
 
   "JumpEventsDetector" should {
 

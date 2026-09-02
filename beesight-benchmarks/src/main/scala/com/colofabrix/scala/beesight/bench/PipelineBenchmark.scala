@@ -3,7 +3,7 @@ package com.colofabrix.scala.beesight.detection.bench
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import com.colofabrix.scala.beesight.config.DetectionConfig
-import com.colofabrix.scala.beesight.jumpevents.{ JumpEventsDetector, FlysightTestReader }
+import com.colofabrix.scala.beesight.jumpevents.{ FlysightTestReader, JumpEventsDetector }
 import com.colofabrix.scala.beesight.model.*
 import java.nio.file.Path
 import scala.concurrent.duration.*
@@ -52,11 +52,11 @@ object PipelineBenchmark {
   }
 
   private val flysightDir =
-    Path.of("beesight-detection/src/test/resources/bulk_detection_spec/flysight")
+    Path.of("beesight-detection/src/test/resources/jumpevents/bulk_detection_spec/flysight")
 
-  private val WarmupPasses    = 3
-  private val MeasurePasses   = 3
-  private val TolerancePct    = 5.0
+  private val WarmupPasses  = 3
+  private val MeasurePasses = 3
+  private val TolerancePct  = 5.0
 
   def main(args: Array[String]): Unit =
     val saveBaseline    = args.contains("--save-baseline")
@@ -67,9 +67,9 @@ object PipelineBenchmark {
     println(s"Warmup: $WarmupPasses full passes, Measurement: $MeasurePasses passes")
     println()
 
-    val config    = DetectionConfig.default
-    val detector  = JumpEventsDetector(config)
-    val zipFiles  = collectZipFiles()
+    val config   = DetectionConfig.default
+    val detector = JumpEventsDetector(config)
+    val zipFiles = collectZipFiles()
 
     if zipFiles.isEmpty then
       println("No jump files found — nothing to benchmark.")
@@ -103,17 +103,16 @@ object PipelineBenchmark {
     // ── Measurement: multiple passes ──
     println(s"Measuring ($MeasurePasses passes)...")
     // For each pass, collect per-file timings
-    val allPassTimings: Vector[Vector[(String, Long)]] =
-      (1 to MeasurePasses).toVector.map { pass =>
-        print(s"  Measure pass $pass/$MeasurePasses\r")
-        val timings =
-          zipFiles.map { path =>
-            val filename = path.getFileName.toString
-            val ms       = timedRun(detector, path)
-            filename -> ms
-          }
-        timings
-      }
+    val allPassTimings: Vector[Vector[(String, Long)]] = (1 to MeasurePasses).toVector.map { pass =>
+      print(s"  Measure pass $pass/$MeasurePasses\r")
+      val timings =
+        zipFiles.map { path =>
+          val filename = path.getFileName.toString
+          val ms       = timedRun(detector, path)
+          filename -> ms
+        }
+      timings
+    }
     println(s"Measurement complete ($MeasurePasses passes)")
     println()
 
@@ -194,7 +193,7 @@ object PipelineBenchmark {
    */
   private def timedRun(detector: JumpEventsDetector, filePath: Path): Long =
     val start = System.nanoTime()
-    val _ =
+    val _     =
       FlysightTestReader
         .readCsvStream(filePath)
         .through(detector.streamDetect)

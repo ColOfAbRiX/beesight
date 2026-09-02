@@ -31,7 +31,7 @@ final class PreprocessData private (config: DetectionConfig) {
         }
 
       despiked
-        .push { 
+        .push {
           Kinematics.compute(window.newest.point, DataPoint.fromReader(currentRow))
         }
         .swap

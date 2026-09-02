@@ -1,5 +1,7 @@
 package com.colofabrix.scala.beesight.math
 
+import cats.Foldable
+import cats.syntax.all.*
 import com.colofabrix.scala.beesight.collections.NEW
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
 import com.colofabrix.scala.beesight.model.GeoVector
@@ -83,9 +85,11 @@ private[beesight] object Stats {
    * Fits two-segment linear regressions for every candidate split point and returns the index that minimises total
    * squared error. Requires at least 4 elements; returns None otherwise.
    */
-  def findInflectionBy[A](window: NonEmptyFilled[A])(f: A => Double): Option[Int] =
-    val n = window.length
-    if n < 4 then return None
+  def findInflectionBy[F[_]: Foldable, A](window: F[A])(f: A => Double): Option[Int] =
+    val n = window.size.toInt
+    if n < 4 then
+      return None
+
     val data = new Array[Double](n)
 
     var idx = 0

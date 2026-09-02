@@ -31,7 +31,7 @@ class StatsBenchmark {
     val first = GeoVector(rng.nextDouble() * 100, rng.nextDouble() * 100, rng.nextDouble() * 100)
     var w     = NonEmptyWindow[GeoVector](5, first)
 
-    for _ <- 0 until 4 do 
+    for _ <- 0 until 4 do
       w = w.enqueue(GeoVector(rng.nextDouble() * 100, rng.nextDouble() * 100, rng.nextDouble() * 100))
 
     geoWindow = w.asInstanceOf[NonEmptyWindow.NonEmptyFilled[GeoVector]]
@@ -50,9 +50,9 @@ class StatsBenchmark {
     val first = rng.nextDouble() * 100.0
     var w     = NonEmptyWindow[Double](20, first)
 
-    for _ <- 0 until 19 do 
+    for _ <- 0 until 19 do
       w = w.enqueue(rng.nextDouble() * 100.0)
-    
+
     doubleWindow = w.asInstanceOf[NonEmptyWindow.NonEmptyFilled[Double]]
 
   @Benchmark
@@ -78,5 +78,5 @@ class StatsBenchmark {
   @Benchmark
   def findInflectionBy_double(): Option[Int] =
     Stats.findInflectionBy(inflectionWindow)(identity)
-    
+
 }

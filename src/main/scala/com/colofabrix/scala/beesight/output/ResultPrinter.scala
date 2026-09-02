@@ -19,8 +19,9 @@ final private[beesight] class ResultPrinter private (config: Config) {
     data =>
       if config.flags.writeCsv then
         data
-          .fold(Option.empty[FlightEvents]) { case (_, (events, _)) =>
-            Some(extractStages(events))
+          .fold(Option.empty[FlightEvents]) {
+            case (_, (events, _)) =>
+              Some(extractStages(events))
           }
           .evalMap {
             case Some(stages) => IOConfig.stdout(stages.show)

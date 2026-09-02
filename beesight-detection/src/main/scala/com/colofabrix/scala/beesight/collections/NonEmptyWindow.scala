@@ -346,4 +346,17 @@ object NonEmptyWindow {
     else
       new NonEmptyFilling(buffer, 0, 1, 0, cap)
 
+  // Givens //
+
+  given foldableNonEmptyFilled: cats.Foldable[NonEmptyFilled] with {
+    def foldLeft[A, B](fa: NonEmptyFilled[A], b: B)(f: (B, A) => B): B =
+      fa.toVector.foldLeft(b)(f)
+
+    def foldRight[A, B](fa: NonEmptyFilled[A], lb: cats.Eval[B])(f: (A, cats.Eval[B]) => cats.Eval[B]): cats.Eval[B] =
+      fa.toVector.foldRight(lb)(f)
+
+    override def size[A](fa: NonEmptyFilled[A]): Long =
+      fa.length.toLong
+  }
+
 }

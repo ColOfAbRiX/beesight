@@ -688,6 +688,32 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
 
     }
 
+    "Foldable instance" - {
+
+      "foldLeft should accumulate all elements" in {
+        val window = filledWindow(1, 2, 3, 4, 5)
+        val result = summon[cats.Foldable[NonEmptyFilled]].foldLeft(window, 0)(_ + _)
+        result shouldBe 15
+      }
+
+      "foldRight should accumulate all elements" in {
+        val window = filledWindow(1, 2, 3)
+        val result = summon[cats.Foldable[NonEmptyFilled]].foldRight(window, cats.Eval.now(0))((a, acc) => acc.map(_ + a)).value
+        result shouldBe 6
+      }
+
+      "size should return the window length" in {
+        val window = filledWindow("a", "b", "c")
+        summon[cats.Foldable[NonEmptyFilled]].size(window) shouldBe 3L
+      }
+
+      "foldLeft should work with single element" in {
+        val window = filledWindow(42)
+        summon[cats.Foldable[NonEmptyFilled]].foldLeft(window, 0)(_ + _) shouldBe 42
+      }
+
+    }
+
   }
 
   private def filledWindow[A](first: A, rest: A*): NonEmptyFilled[A] =

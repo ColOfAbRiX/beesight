@@ -9,11 +9,11 @@ final private[beesight] case class IndexedPoint(idx: Long, point: DataPoint)
 
 private[beesight] object IndexedPoint {
 
+  def fromZip[A: PointReader](a: A, idx: Long): IndexedPoint =
+    IndexedPoint(idx, DataPoint.fromReader(a))
+
   def stream[F[_], A: PointReader]: fs2.Pipe[F, A, IndexedPoint] =
-    _.zipWithIndex
-      .map {
-        case (point, idx) => IndexedPoint(idx, DataPoint.fromReader(point))
-      }
+    _.zipWithIndex.map(fromZip)
 
   given PointReader[IndexedPoint] with {
     def time(point: IndexedPoint): Instant    = point.point.time

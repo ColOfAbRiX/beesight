@@ -19,7 +19,7 @@ import scala.compiletime.uninitialized
 @Fork(2)
 class GeoVectorBenchmark {
 
-  private var vec: GeoVector = uninitialized
+  private var vec: GeoVector    = uninitialized
   private var threshold: Double = uninitialized
 
   @Setup(Level.Trial)

@@ -15,10 +15,10 @@ import scala.io.Source
 class BulkDetectionSpec extends AnyWordSpec with Matchers with IOValues with JumpEventMatchers {
 
   private val flysightDir =
-    Paths.get("src/test/resources/bulk_detection_spec/flysight")
+    Paths.get("src/test/resources/jumpevents/bulk_detection_spec/flysight")
 
   private val resultsFile =
-    Paths.get("src/test/resources/bulk_detection_spec/points_results.csv")
+    Paths.get("src/test/resources/jumpevents/bulk_detection_spec/points_results.csv")
 
   "JumpEventsDetector" should {
 

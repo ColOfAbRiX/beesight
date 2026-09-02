@@ -84,4 +84,7 @@ object DetectionConfigCli {
   given ConfigReader[LandingConfig] =
     ConfigReader.derived
 
+  given ConfigReader[SwoopConfig] =
+    ConfigReader.derived
+
 }

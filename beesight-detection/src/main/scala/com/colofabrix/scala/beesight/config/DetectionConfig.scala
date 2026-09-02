@@ -14,6 +14,7 @@ import io.github.iltotore.iron.constraint.numeric.*
  * @param freefall Thresholds and window sizes for freefall/exit detection
  * @param canopy Thresholds and window sizes for canopy deployment detection
  * @param landing Thresholds and window sizes for landing detection
+ * @param swoop Thresholds and settings for swoop metrics computation
  */
 final case class DetectionConfig(
   global: GlobalConfig,
@@ -21,6 +22,7 @@ final case class DetectionConfig(
   freefall: FreefallConfig,
   canopy: CanopyConfig,
   landing: LandingConfig,
+  swoop: SwoopConfig,
 )
 
 /**
@@ -72,6 +74,11 @@ object DetectionConfig {
         stabilityThreshold = 0.5,
         validationVerticalSpeed = 0.05,
         horizontalSpeedThreshold = 2.0,
+      ),
+      swoop = SwoopConfig(
+        gateHeight = 15.0,
+        minSwoopVerticalSpeed = 5.0,
+        minHorizontalSpeed = 2.0,
       ),
     )
 
@@ -194,3 +201,16 @@ final case class LandingConfig(
   validationVerticalSpeed: Double,
   horizontalSpeedThreshold: Double,
 ) extends EventConfigs
+
+/**
+ * Configuration for swoop metrics computation.
+ *
+ * @param gateHeight              Height (m) above ground defining the entry gate for future gate-dependent metrics
+ * @param minSwoopVerticalSpeed   Minimum peak vertical speed (m/s) required to validate a swoop; below this, no swoop is reported
+ * @param minHorizontalSpeed      Minimum horizontal speed (m/s) below which heading is considered too noisy for rotation computation
+ */
+final case class SwoopConfig(
+  gateHeight: Double,
+  minSwoopVerticalSpeed: Double,
+  minHorizontalSpeed: Double,
+)
