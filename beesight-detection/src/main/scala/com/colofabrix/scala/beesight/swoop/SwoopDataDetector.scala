@@ -2,25 +2,37 @@ package com.colofabrix.scala.beesight.swoop
 
 import cats.effect.kernel.Concurrent
 import cats.syntax.all.*
-import com.colofabrix.scala.beesight.config.SwoopConfig
+import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.colofabrix.scala.beesight.math.{ Heading, Stats }
 import com.colofabrix.scala.beesight.model.*
 import java.lang.Math.*
 import java.time.Duration
+import com.colofabrix.scala.beesight.preprocess.PreprocessData
 
 /**
  * Computes swoop metrics from the canopy-to-landing dataPoints of a flight.
  */
-final class SwoopDataDetector private (config: SwoopConfig) {
+final class SwoopDataDetector private (config: DetectionConfig) {
+
+  //  Dependencies  //
+
+  private val preprocessor: PreprocessData =
+    PreprocessData(config)
 
   /**
    * Detects swoop metrics from the flight data stream.
    */
   def detect[F[_]: Concurrent, A: PointReader](events: FlightEvents, stream: fs2.Stream[F, A]): F[Option[SwoopData]] =
-    (events.canopy, events.landing)
+    val canopy  = events.canopy
+    val landing = events.landing
+    println(s"[DEBUG] canopy=$canopy, landing=$landing")
+    (canopy, landing)
       .mapN(detect(_, _, stream))
       .sequence
-      .map(_.flatten)
+      .map { result =>
+        println(s"[DEBUG] inner detect result=$result")
+        result.flatten
+      }
 
   private def detect[F[_]: Concurrent, A: PointReader](
     canopy: EventPoint,
@@ -28,6 +40,7 @@ final class SwoopDataDetector private (config: SwoopConfig) {
     stream: fs2.Stream[F, A]
   ): F[Option[SwoopData]] =
     stream
+      .through(preprocessor.preprocess)
       .zipWithIndex
       .drop(canopy.index)
       .take(landing.index - canopy.index + 1)
@@ -39,14 +52,37 @@ final class SwoopDataDetector private (config: SwoopConfig) {
   //  Swoop Detection  //
 
   private def computeSwoopMetrics(dataPoints: Vector[IndexedPoint]): Option[SwoopData] =
+    println(s"[DEBUG] computeSwoopMetrics: segment length=${dataPoints.length}")
+    if dataPoints.nonEmpty then
+      println(s"[DEBUG] first point: idx=${dataPoints.head.idx}, alt=${dataPoints.head.point.altitude}, vz=${dataPoints.head.point.speed.vertical}")
+      println(s"[DEBUG] last point:  idx=${dataPoints.last.idx}, alt=${dataPoints.last.point.altitude}, vz=${dataPoints.last.point.speed.vertical}")
+      // Find the global max vz and where it is
+      val maxVz    = dataPoints.map(_.point.speed.vertical).max
+      val maxVzIdx = dataPoints.indexWhere(_.point.speed.vertical == maxVz)
+      println(s"[DEBUG] max vz=$maxVz at segment index=$maxVzIdx (absolute idx=${dataPoints(maxVzIdx).idx}, alt=${dataPoints(maxVzIdx).point.altitude})")
+    val rollout = findRolloutStart(dataPoints)
+    println(s"[DEBUG] findRolloutStart=$rollout")
+    rollout.foreach { idx =>
+      println(s"[DEBUG] rollout candidate at $idx: vz=${dataPoints(idx).point.speed.vertical}, minSwoopVerticalSpeed=${config.swoop.minSwoopVerticalSpeed}")
+      // Show nearby points for context
+      val start = math.max(0, idx - 5)
+      val end   = math.min(dataPoints.length - 1, idx + 5)
+      (start to end).foreach { i =>
+        println(s"[DEBUG]   [$i] vz=${dataPoints(i).point.speed.vertical}")
+      }
+    }
+    val validRollout = rollout.filter(idx => isValidRolloutStart(dataPoints, idx))
+    println(s"[DEBUG] isValidRolloutStart=$validRollout")
+    val turnInit = validRollout.flatMap(idx => findTurnInitiation(dataPoints, idx))
+    println(s"[DEBUG] findTurnInitiation=$turnInit")
     for {
-      rolloutStartIdx <- findRolloutStart(dataPoints) if isValidRolloutStart(dataPoints, rolloutStartIdx)
-      turnInitIdx     <- findTurnInitiation(dataPoints, rolloutStartIdx)
+      rolloutStartIdx <- validRollout
+      turnInitIdx     <- turnInit
       result           = buildSwoopData(dataPoints, turnInitIdx, rolloutStartIdx)
     } yield result
 
   private def isValidRolloutStart(dataPoints: Vector[IndexedPoint], idx: Int): Boolean =
-    dataPoints(idx).point.speed.vertical >= config.minSwoopVerticalSpeed
+    dataPoints(idx).point.speed.vertical >= config.swoop.minSwoopVerticalSpeed
 
   private def findRolloutStart(dataPoints: Vector[IndexedPoint]): Option[Int] =
     if dataPoints.length < 2 then
@@ -88,7 +124,7 @@ final class SwoopDataDetector private (config: SwoopConfig) {
     val turnInit = dataPoints(turnInitIdx)
     val rollout  = dataPoints(rolloutStartIdx)
 
-    val degreesOfRotation = Heading.cumulativeHeadingChange(turnPhaseSpeeds, config.minHorizontalSpeed)
+    val degreesOfRotation = Heading.cumulativeHeadingChange(turnPhaseSpeeds, config.swoop.minHorizontalSpeed)
 
     SwoopData(
       turnInitiation = EventPoint(turnInit.idx, turnInit.point.altitude),
@@ -104,7 +140,7 @@ final class SwoopDataDetector private (config: SwoopConfig) {
 
 object SwoopDataDetector {
 
-  def apply(config: SwoopConfig): SwoopDataDetector =
+  def apply(config: DetectionConfig): SwoopDataDetector =
     new SwoopDataDetector(config)
 
 }

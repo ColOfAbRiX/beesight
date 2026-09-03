@@ -5,11 +5,11 @@ import cats.syntax.all.*
 import com.colofabrix.scala.beesight.collections.*
 import com.colofabrix.scala.beesight.collections.NEW.*
 import com.colofabrix.scala.beesight.config.DetectionConfig
-import com.colofabrix.scala.beesight.jumpevents.model.{ DetectingState, DetectorState, FillingState, FocusPosition, Step, Transition, WindowEntry }
+import com.colofabrix.scala.beesight.jumpevents.model.*
 import com.colofabrix.scala.beesight.jumpevents.model.DetectorConfigActions.*
 import com.colofabrix.scala.beesight.math.*
 import com.colofabrix.scala.beesight.model.*
-import com.colofabrix.scala.beesight.preprocess.PreprocessData
+import com.colofabrix.scala.beesight.preprocess.*
 import com.colofabrix.scala.beesight.utils.*
 import java.time.Duration as JavaDuration
 import scala.annotation.tailrec
@@ -17,7 +17,7 @@ import scala.annotation.tailrec
 /**
  * Detects flight event points from flight data streams.
  */
-final class JumpEventsDetector private (config: DetectionConfig) {
+final class JumpEventsDetector private (config: DetectionConfig, preprocessor: Preprocessor) {
 
   //  Configuration / Derived Values  //
 
@@ -28,9 +28,6 @@ final class JumpEventsDetector private (config: DetectionConfig) {
     Math.max(smoothWindows.max, backWindows.max) + 1 + validationWindows.max
 
   //  Dependencies  //
-
-  private val preprocessor: PreprocessData =
-    PreprocessData(config)
 
   private val eventPointDetector: EventPointDetector =
     EventPointDetector(config)
@@ -188,6 +185,9 @@ final class JumpEventsDetector private (config: DetectionConfig) {
 object JumpEventsDetector {
 
   def apply(config: DetectionConfig): JumpEventsDetector =
-    new JumpEventsDetector(config)
+    new JumpEventsDetector(config, PreprocessData(config))
+
+  def apply(config: DetectionConfig, preprocessor: Preprocessor): JumpEventsDetector =
+    new JumpEventsDetector(config, preprocessor)
 
 }

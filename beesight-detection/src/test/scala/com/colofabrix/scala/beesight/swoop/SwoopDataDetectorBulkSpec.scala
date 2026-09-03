@@ -72,7 +72,7 @@ class BulkSwoopDetectionSpec extends AnyWordSpec with Matchers with IOValues wit
   private def detectSwoop(filePath: java.nio.file.Path): IO[Option[SwoopData]] =
     for {
       events <- detectEvents(filePath)
-      swoop  <- SwoopDataDetector(DetectionConfig.default.swoop).detect(events, TestFilesHandler.readCsv[DataPoint](filePath))
+      swoop  <- SwoopDataDetector(DetectionConfig.default).detect(events, TestFilesHandler.readCsv[DataPoint](filePath))
     } yield swoop
 
   private def detectEvents(filePath: java.nio.file.Path): IO[FlightEvents] =

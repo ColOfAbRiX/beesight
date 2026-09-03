@@ -12,13 +12,13 @@ import java.time.Instant
 /**
  * Removes GPS data spikes and smooths velocity readings via a small sliding window.
  */
-final class PreprocessData private (config: DetectionConfig) {
+final class PreprocessData private (config: DetectionConfig) extends Preprocessor {
 
   private val windowCapacity: Int =
     Math.max(2, config.global.preprocessWindowSize.value)
 
   /**
-   * Streaming pipe that preprocesses raw flight data points.
+   * Applies preprocessing to the data stream
    */
   def preprocess[F[_], A: PointReader]: fs2.Pipe[F, A, DataPoint] =
     _.statefulMapEmits(initialState, drainWindow) { (currentRow, window) =>

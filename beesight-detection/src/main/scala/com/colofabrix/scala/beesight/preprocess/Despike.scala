@@ -17,17 +17,15 @@ private[preprocess] object Despike {
     val focused      = window.focusAt(1)
     val secondOldest = focused.focus
 
-    val expectedPoint = Interpolation.interpolate(oldest.point, newest.point, secondOldest.point.time)
+    val expectedPoint = Interpolation.interpolate(oldest, newest, secondOldest.point.time)
 
     val actualVelocity   = secondOldest.point.speed.vertical
-    val expectedVelocity = expectedPoint.speed.vertical
+    val expectedVelocity = expectedPoint.point.speed.vertical
     val deviation        = Math.abs(actualVelocity - expectedVelocity)
 
     if deviation <= config.global.accelerationClip then
       focused
     else
-      focused.modifyFocus { _ =>
-        Interpolation.interpolate(oldest, newest, secondOldest.point.time)
-      }
+      focused.modifyFocus(_ => expectedPoint)
 
 }

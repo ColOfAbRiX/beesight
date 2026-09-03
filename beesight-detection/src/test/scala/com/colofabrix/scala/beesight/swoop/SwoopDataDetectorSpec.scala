@@ -1,8 +1,8 @@
 package com.colofabrix.scala.beesight.swoop
 
 import cats.effect.IO
+import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.colofabrix.scala.beesight.IOValues
-import com.colofabrix.scala.beesight.config.SwoopConfig
 import com.colofabrix.scala.beesight.model.*
 import java.lang.Math.*
 import java.time.Duration
@@ -260,19 +260,15 @@ class SwoopDataDetectorSpec extends AnyWordSpec with Matchers with IOValues {
       }
       .toVector
 
-  private val config =
-    SwoopConfig(
-      gateHeight = 15.0,
-      minSwoopVerticalSpeed = 5.0,
-      minHorizontalSpeed = 2.0,
-    )
-
-  private val baseTime = Instant.parse("2024-01-01T12:00:00Z")
+  private val baseTime = 
+    Instant.parse("2024-01-01T12:00:00Z")
 
   private def t(seconds: Long): Instant =
     baseTime.plusSeconds(seconds)
 
   private def detect(data: Vector[DataPoint], events: FlightEvents): Option[SwoopData] =
-    SwoopDataDetector(config).detect(events, fs2.Stream.emits[IO, DataPoint](data)).result()
+    SwoopDataDetector(DetectionConfig.default)
+    .detect(events, fs2.Stream.emits[IO, DataPoint](data))
+    .result()
 
 }
