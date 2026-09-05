@@ -76,6 +76,9 @@ object DetectionConfig {
         gateHeight = 15.0,
         minSwoopVerticalSpeed = 5.0,
         minHorizontalSpeed = 2.0,
+        maxSwoopHeight = 300.0,
+        recoveryFraction = 0.5,
+        minSwoopDescent = 30.0,
       ),
     )
 
@@ -202,12 +205,19 @@ final case class LandingConfig(
 /**
  * Configuration for swoop metrics computation.
  *
- * @param gateHeight              Height (m) above ground defining the entry gate for future gate-dependent metrics
  * @param minSwoopVerticalSpeed   Minimum peak vertical speed (m/s) required to validate a swoop; below this, no swoop is reported
  * @param minHorizontalSpeed      Minimum horizontal speed (m/s) below which heading is considered too noisy for rotation computation
+ * @param maxSwoopHeight          Maximum AGL height (m) at which a dive point can be detected; bounds the candidate
+ *                                peak search (gSwoop's 1000 ft cap), excluding high-altitude manoeuvres
+ * @param recoveryFraction        Fraction of the peak vertical speed above which a sustained re-ascent marks a
+ *                                manoeuvre recovery, disqualifying the candidate as dive point
+ * @param minSwoopDescent         Minimum descent (m) from the dive point to the ground; rejects flare-level speed
+ *                                bumps near touchdown
  */
 final case class SwoopConfig(
-  gateHeight: Double,
   minSwoopVerticalSpeed: Double,
   minHorizontalSpeed: Double,
+  maxSwoopHeight: Double,
+  recoveryFraction: Double,
+  minSwoopDescent: Double,
 )

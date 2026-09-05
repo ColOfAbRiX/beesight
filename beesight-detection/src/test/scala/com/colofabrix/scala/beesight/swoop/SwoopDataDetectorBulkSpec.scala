@@ -62,7 +62,7 @@ class BulkSwoopDetectionSpec extends AnyWordSpec with Matchers with IOValues wit
         info(f"    Failed files:          $failed\n")
         info(s"Failing tests summary:\n${failures.mkString("\n\n")}")
 
-        successRate.should(be >= 0.0)
+        successRate shouldBe 1.0
       }
 
     }

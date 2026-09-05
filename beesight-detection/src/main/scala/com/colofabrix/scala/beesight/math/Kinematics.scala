@@ -21,25 +21,25 @@ private[beesight] object Kinematics {
       acceleration = acceleration,
     )
 
-  /**
-   * Computes smoothed kinematics using median speed from a sliding window.
-   */
-  def computeSmoothed[A: PointReader](previousWindow: NonEmptyFilled[A], currentPoint: A): PointKinematics =
-    val previousPoint = previousWindow.newest
+  // /**
+  //  * Computes smoothed kinematics using median speed from a sliding window.
+  //  */
+  // def computeSmoothed[A: PointReader](previousWindow: NonEmptyFilled[A], currentPoint: A): PointKinematics =
+  //   val previousPoint = previousWindow.newest
 
-    val currentWindow = previousWindow.enqueue(currentPoint)
-    val currentSpeed  = Stats.medianBy(currentWindow)(_.speed)
+  //   val currentWindow = previousWindow.enqueue(currentPoint)
+  //   val currentSpeed  = Stats.medianBy(currentWindow)(_.speed)
 
-    val dt                  = Duration.between(previousPoint.time, currentPoint.time).toMillis / 1000.0
-    val currentAcceleration = (currentPoint.speed - previousPoint.speed) / dt
+  //   val dt                  = Duration.between(previousPoint.time, currentPoint.time).toMillis / 1000.0
+  //   val currentAcceleration = (currentPoint.speed - previousPoint.speed) / dt
 
-    PointKinematics(
-      point = DataPoint(
-        time = currentPoint.time,
-        altitude = currentPoint.altitude,
-        speed = currentSpeed,
-      ),
-      acceleration = currentAcceleration,
-    )
+  //   PointKinematics(
+  //     point = DataPoint(
+  //       time = currentPoint.time,
+  //       altitude = currentPoint.altitude,
+  //       speed = currentSpeed,
+  //     ),
+  //     acceleration = currentAcceleration,
+  //   )
 
 }

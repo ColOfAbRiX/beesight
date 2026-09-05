@@ -9,9 +9,9 @@ import java.time.Instant
 /**
  * Detects and removes velocity spikes by interpolating outlier points.
  */
-private[preprocess] object Despike {
+private[preprocess] object SpeedClipper {
 
-  def despike(config: DetectionConfig, window: NonEmptyFilled[PointKinematics]): NonEmptyFilled[PointKinematics] =
+  def clip(config: DetectionConfig, window: NonEmptyFilled[PointKinematics]): NonEmptyFilled[PointKinematics] =
     val oldest       = window.oldest
     val newest       = window.newest
     val focused      = window.focusAt(1)

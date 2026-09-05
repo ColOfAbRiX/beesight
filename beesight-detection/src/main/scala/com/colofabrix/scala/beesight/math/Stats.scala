@@ -8,11 +8,19 @@ import com.colofabrix.scala.beesight.model.GeoVector
 
 private[beesight] object Stats {
 
+  def rollingMedian[F[_]](windowSize: Int): fs2.Pipe[F, Double, Double] =
+    stream =>
+      stream
+        .sliding(windowSize)
+        .map { chunk =>
+          median(chunk.toArray[Double])
+        }
+
   /**
    * Component-wise median of GeoVectors extracted from a window.
    */
-  def medianBy[A](window: NEW[A])(f: A => GeoVector): GeoVector =
-    val n        = window.length
+  def medianBy[F[_]: Foldable, A](window: F[A])(f: A => GeoVector): GeoVector =
+    val n        = window.size.toInt
     val eastArr  = new Array[Double](n)
     val northArr = new Array[Double](n)
     val vertArr  = new Array[Double](n)
@@ -32,9 +40,24 @@ private[beesight] object Stats {
       vertical = median(vertArr),
     )
 
+  def medianVector[A](values: Vector[A], windowSize: Int)(f: A => Double): Vector[Double] =
+    val w       = Math.max(1, windowSize)
+    val numeric = values.map(f).toArray
+
+    values
+      .indices
+      .toVector
+      .map { i =>
+        val start = Math.max(0, i - w / 2)
+        val end   = Math.min(values.length, start + w)
+        median(numeric.slice(start, end))
+      }
+
   /**
    * Component-wise median of GeoVectors from the `n` newest elements of a window plus one extra GeoVector.
    * Zero-allocation alternative to `takeNewest` + `enqueue` + `medianBy`.
+   *
+   * FIXME: I wasn't aware of this function, I need to check if it's not needed
    */
   def medianGeoVectorWithExtra[A](window: NEW[A], n: Int, extra: GeoVector)(f: A => GeoVector): GeoVector =
     val count    = Math.max(1, Math.min(n, window.length))
@@ -65,8 +88,8 @@ private[beesight] object Stats {
   /**
    * Population standard deviation of values extracted from a window.
    */
-  def stdDevBy[A](window: NEW[A])(f: A => Double): Double =
-    val n     = window.length
+  def stdDevBy[F[_]: Foldable, A](window: F[A])(f: A => Double): Double =
+    val n     = window.size.toInt
     var sum   = 0.0
     var sumSq = 0.0
 

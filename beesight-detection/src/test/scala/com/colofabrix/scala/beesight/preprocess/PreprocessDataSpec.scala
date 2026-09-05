@@ -130,7 +130,7 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
             point(6, altitude = 950.0, verticalSpeed = 10.0),
           )
 
-        // Point 2 spike is despiked via interpolation
+        // Point 2 spike is clipped via interpolation
         val expected =
           List(
             point(1, altitude = 1000.0, verticalSpeed = 10.0),

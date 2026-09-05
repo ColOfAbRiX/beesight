@@ -23,30 +23,29 @@ trait JumpEventMatchers {
     (obtained: FlightEvents) => {
       val fieldResults =
         List(
-          checkField("takeoff", obtained.takeoff.map(_.index), expected.takeoff.map(_.index)),
-          checkField("freefall", obtained.freefall.map(_.index), expected.freefall.map(_.index)),
-          checkField("canopy", obtained.canopy.map(_.index), expected.canopy.map(_.index)),
-          checkField("landing", obtained.landing.map(_.index), expected.landing.map(_.index)),
+          checkField("Takeoff", obtained.takeoff.map(_.index), expected.takeoff.map(_.index)),
+          checkField("Freefall", obtained.freefall.map(_.index), expected.freefall.map(_.index)),
+          checkField("Canopy", obtained.canopy.map(_.index), expected.canopy.map(_.index)),
+          checkField("Landing", obtained.landing.map(_.index), expected.landing.map(_.index)),
         )
 
-      val failures = fieldResults.collect { case (name, Some(error)) => s"      $name: $error" }
-      val passes   = fieldResults.collect { case (name, None) => name }
+      val failures = fieldResults.collect { case (name, Some(error)) => s"  $name: $error" }
 
       MatchResult(
         matches = failures.isEmpty,
-        rawFailureMessage = s"\n    FlightEvents did not match:\n${failures.mkString("\n")}",
-        rawNegatedFailureMessage =
-          s"FlightEvents matched when it should not have. Matched: ${passes.mkString(", ")}",
+        rawFailureMessage = s"\n  Flight events did not match:\n${failures.mkString("\n")}",
+        rawNegatedFailureMessage = "Flight events matched when they should not have.",
       )
     }
 
   private def checkField(name: String, obtained: Option[Long], expected: Option[Long]): (String, Option[String]) =
-    val tolerance = tolerances.getOrElse(name, 0L)
+    val tolerance = tolerances.getOrElse(name.toLowerCase, 0L)
 
     val error =
       (obtained, expected) match {
         case (Some(o), Some(e)) if Math.abs(o - e) > tolerance =>
-          Some(s"expected $e ± $tolerance, got $o (diff: ${o - e})")
+          val diff = o - e
+          Some(f"expected $e ± $tolerance, got $o (diff: $diff%d)")
         case (None, Some(e)) =>
           Some(s"expected $e ± $tolerance, got None")
         case (Some(o), None) =>

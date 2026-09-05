@@ -22,15 +22,15 @@ final class PreprocessData private (config: DetectionConfig) extends Preprocesso
    */
   def preprocess[F[_], A: PointReader]: fs2.Pipe[F, A, DataPoint] =
     _.statefulMapEmits(initialState, drainWindow) { (currentRow, window) =>
-      val despiked =
+      val clipped =
         window match {
           case filled: NonEmptyFilled[PointKinematics] =>
-            Despike.despike(config, filled)
+            SpeedClipper.clip(config, filled)
           case other =>
             other
         }
 
-      despiked
+      clipped
         .push {
           Kinematics.compute(window.newest.point, DataPoint.fromReader(currentRow))
         }

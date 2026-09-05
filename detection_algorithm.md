@@ -228,3 +228,138 @@ be descending, but too slow to be in freefall.
 variance across the window. Unlike the other detectors, landing doesn't use inflection detection — the transition
 moment is simply the focus point where motion stops. Validation confirms that the speed remains stable across the
 entire validation window, ruling out temporary pauses during canopy flight.
+
+## Swoop Detection
+
+A **swoop** (canopy piloting) is a high-performance landing: the pilot dives the canopy towards the ground, levels
+off just above it, and glides across the landing area at high speed. Beesight computes a set of swoop metrics from
+the canopy-to-landing portion of the flight, validated against the reference tool gSwoop (see `gswoop/NOTES.md` for
+the reverse-engineering notes that informed this design).
+
+### The Swoop Profile
+
+A clean swoop has a characteristic vertical-speed (vz) signature:
+
+```
+  vz (m/s)
+    ▲
+ 21 │                    ╭──╮ ◂── dive point (bottom of the dive, max vz)
+    │                   ╱  │
+ 15 │                  ╱   │
+    │                 ╱    │
+  8 │  ────────╮     ╱     ╰──╮        ◂── rollout: vz decays
+  5 │  cruise  ╰───╯          ╰──╮  ╭── flare bump
+  0 │                            ╰──╯  ╰──▸ landing (vz ≈ 0)
+    └───────────────────────────────────────▸ time
+      turn initiation ──────────────▸
+```
+
+The phases, in order:
+
+| Phase | Definition | Example (jump_1.csv) |
+|---|---|---|
+| **Turn initiation** | vz starts rising from cruise — the pilot enters the dive | 192m MSL, vz ≈ 5 |
+| **Dive point** (rollout start) | Maximum vz — the bottom of the dive | 105m MSL, vz 21.16 |
+| **Rollout** | vz decays from the peak as the pilot recovers | 70m AGL |
+| **Finished rollout** | vz falls below ~1.25 m/s — level flight begins | 39m MSL |
+| **Landing** | Motion stops | 37m MSL |
+
+### Why Naive Peak Detection Fails
+
+The canopy-to-landing segment routinely contains **multiple local vz peaks**:
+
+1. **Manoeuvre peaks before the swoop** — the pilot may perform high-speed dives during the canopy ride
+   (e.g. 18.9 m/s at 288m AGL in the reference recording) that can rival or exceed the actual swoop peak.
+2. **Flare bumps after the swoop** — small speed increases near touchdown (e.g. 6.4 m/s at 43m) caused by
+   the flare and ground-effect noise.
+3. **Noise near landing** — raw GPS vz oscillates (±1 m/s) once the pilot is on the ground.
+
+A backward walk from landing that stops at the first local maximum locks onto the flare noise; a global
+argmax locks onto the strongest manoeuvre even when the swoop is weaker. Neither anchor is reliable alone.
+
+### The Detection Algorithm
+
+The swoop detector combines gSwoop's event semantics with an **episode validation** step that gSwoop lacks.
+It operates on the canopy-to-landing segment (indices from the `Canopy` event to the `Landing` event) and
+works on **raw (despiked but unsmoothed) speeds** — gSwoop applies no smoothing, and median smoothing was
+observed to flatten the true peak (21.58 → 21.16 m/s) and shift event indices by up to 5 samples.
+
+```
+  ╭────────────────────╮   reject   ╭──────────────────────╮
+  │ Candidate peaks    │ ─────────▸ │ next candidate       │
+  │ (local vz maxima,  │            ╰──────────────────────╯
+  │  vz ≥ minSwoop,    │                 │ accept
+  │  AGL ≤ maxSwoopAlt)│                 ▼
+  ╰────────────────────╯        ╭──────────────────────╮
+        ▲                       │  Dive point          │
+        │  all rejected         │  (swoop bottom)      │
+        └───────────────────────┴──────────────────────┘
+                                │  │  │
+              ┌─────────────────┘  │  └──────────────────┐
+              ▼                    ▼                     ▼
+     ╭─────────────────╮  ╭─────────────────╮   ╭──────────────────╮
+     │ turn initiation │  │ rollout start   │   │ finished rollout │
+     │ (backward walk) │  │ (100ft walk)    │   │ (vz < 1.25 m/s)  │
+     ╰─────────────────╯  ╰─────────────────╯   ╰──────────────────╯
+```
+
+**Step 1 — Candidate peaks.** Find all local vz maxima in the segment where:
+
+- `vz ≥ minSwoopVerticalSpeed` (5.0 m/s) — fast enough to be a dive, not a cruise wobble;
+- `AGL ≤ maxSwoopHeight` (≈ 300 m / 1000 ft) — gSwoop's altitude cap on the dive-point search,
+  which excludes high-altitude manoeuvres from consideration.
+
+**Step 2 — Episode validation (the manoeuvre filter).** Candidates are examined from last to first.
+A candidate is the **dive point** only if the flight from the peak to landing is a *continuous descent
+episode*, verified by two checks:
+
+1. **Meaningful height** — the peak must sit at least `minSwoopDescent` (30 m) above the ground. This
+   rejects flare-level speed bumps near touchdown, which are too low to be a dive.
+2. **No sustained recovery** — walking forward from the peak, once vz has dropped below
+   `recoveryFraction` (0.5) of the peak speed, it must never rise back above that level for 3 or more
+   consecutive samples. A manoeuvre peak is followed by a recovery: the pilot levels off, cruises for
+   several seconds, and then dives again — the renewed dive rises well above half the manoeuvre peak and
+   disqualifies it. The real swoop, by definition, ends at the ground and never re-dives.
+
+This is the piece gSwoop is missing: gSwoop anchors the dive point on the **global argmax** below the
+altitude cap, so a manoeuvre stronger than the swoop breaks its `top_of_turn` and max-speed windows.
+Episode validation rejects such manoeuvres by construction, regardless of their magnitude.
+
+**Step 3 — Derive the remaining events** (gSwoop semantics, [gswoop/NOTES.md §6](gswoop/NOTES.md)):
+
+- **Turn initiation** — from the dive point, walk backward to the first point below the pull threshold
+  (25 mph ≈ 11.2 m/s; falling back to the minimum-descent point if the threshold is never crossed), then
+  continue backward while the descent is still steepening (vz still increasing in forward time). The
+  result is where the dive *began*. (gSwoop's optional 500 ft altitude-loss and 30°/s turn-rate caps are
+  omitted in this simplified walk; cruise oscillations stop the walk naturally.)
+- **Rollout start** — from the first point below 100 ft AGL above the stop altitude, walk backward
+  while vz is strictly increasing; the last index before the increase stops is the maximum-descent
+  point — the rollout start. Starting the walk 100 ft above the stop (rather than at the landing
+  point) is what bypasses the flare noise: the walk hits the swoop peak first and stops at the cruise
+  dip between any manoeuvre and the swoop.
+- **Finished rollout** — walk forward from rollout start until vz < 1.25 m/s (interpolated).
+- **Max speeds** — scanned on raw data over gSwoop's windows: max vertical and total speed over
+  [turn initiation, landing), max horizontal over [rollout start, landing).
+
+### Altitude Reference: AGL vs MSL
+
+GPS loggers report **MSL** (Mean Sea Level) altitude; gSwoop reports event altitudes as **AGL**
+(Above Ground Level), relative to a detected ground estimate (the average altitude around the
+post-landing slow point, minus 2 m). Beesight computes metrics in MSL internally and converts to AGL
+at the reporting boundary, subtracting the landing altitude as the ground estimate. All comparisons
+against gSwoop-derived expected values must be AGL-to-AGL — comparing MSL against AGL fails by the
+drop-zone elevation (≈ 35 m in the reference data), which exceeds the test tolerance.
+
+### Configuration
+
+| Parameter | Default | Role |
+|---|---|---|
+| `minSwoopVerticalSpeed` | 5.0 m/s | Validation gate on the dive-point candidate |
+| `maxSwoopHeight` | 300 m AGL | Search-window cap for candidate peaks (gSwoop's 1000 ft cap) |
+| `minHorizontalSpeed` | 2.0 m/s | Below this, heading is too noisy for rotation computation |
+| `minSwoopDescent` | 30 m | Episode validation: minimum descent from dive point to ground; rejects flare-level bumps |
+| `recoveryFraction` | 0.5 | Episode validation: fraction of the peak vz above which a sustained (≥ 3 samples) re-ascent marks a manoeuvre recovery |
+
+Note that no `minSwoopHeight`-style *minimum* altitude is required: the phase structure (dive → rollout
+→ flare → landing) falls out of the event derivation, and a hardcoded minimum height would be fragile
+across dropzones with different ground elevations.

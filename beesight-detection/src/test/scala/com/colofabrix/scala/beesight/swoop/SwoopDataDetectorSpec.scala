@@ -20,13 +20,13 @@ class SwoopDataDetectorSpec extends AnyWordSpec with Matchers with IOValues {
 
       val expected =
         SwoopData(
-          turnInitiation = EventPoint(12, 1380.0),
-          rolloutStart = EventPoint(15, 1350.0),
+          turnInitiation = EventPoint(10, 150.0),
+          rolloutStart = EventPoint(15, 100.0),
           maxVerticalSpeed = 17.0,
-          maxTotalSpeed = 38.59404099080582,
+          maxTotalSpeed = 54.483942588619634,
           maxHorizontalSpeed = 54.44722215136416,
           degreesOfRotation = 0.0,
-          timeToExecuteTurn = Duration.ofSeconds(3),
+          timeToExecuteTurn = Duration.ofSeconds(5),
         )
 
       val actual = detect(data, events)
@@ -98,10 +98,10 @@ class SwoopDataDetectorSpec extends AnyWordSpec with Matchers with IOValues {
 
       val expected =
         SwoopData(
-          turnInitiation = EventPoint(12, 1380.0),
-          rolloutStart = EventPoint(18, 1320.0),
+          turnInitiation = EventPoint(12, 130.0),
+          rolloutStart = EventPoint(18, 70.0),
           maxVerticalSpeed = 11.0,
-          maxTotalSpeed = 28.90363298964336,
+          maxTotalSpeed = 40.591008856642134,
           maxHorizontalSpeed = 40.587929240107826,
           degreesOfRotation = 0.0,
           timeToExecuteTurn = Duration.ofSeconds(6),
@@ -118,13 +118,13 @@ class SwoopDataDetectorSpec extends AnyWordSpec with Matchers with IOValues {
 
       val expected =
         SwoopData(
-          turnInitiation = EventPoint(12, 1380.0),
-          rolloutStart = EventPoint(15, 1350.0),
+          turnInitiation = EventPoint(10, 150.0),
+          rolloutStart = EventPoint(15, 100.0),
           maxVerticalSpeed = 17.0,
-          maxTotalSpeed = 38.59404099080582,
+          maxTotalSpeed = 54.483942588619634,
           maxHorizontalSpeed = 54.44722215136416,
           degreesOfRotation = 0.0,
-          timeToExecuteTurn = Duration.ofSeconds(3),
+          timeToExecuteTurn = Duration.ofSeconds(5),
         )
 
       val actual = detect(data, events)
@@ -138,13 +138,13 @@ class SwoopDataDetectorSpec extends AnyWordSpec with Matchers with IOValues {
 
       val expected =
         SwoopData(
-          turnInitiation = EventPoint(12, 1380.0),
-          rolloutStart = EventPoint(15, 1350.0),
+          turnInitiation = EventPoint(10, 150.0),
+          rolloutStart = EventPoint(15, 100.0),
           maxVerticalSpeed = 17.0,
-          maxTotalSpeed = 38.59404099080582,
+          maxTotalSpeed = 54.483942588619634,
           maxHorizontalSpeed = 54.44722215136416,
           degreesOfRotation = 0.0,
-          timeToExecuteTurn = Duration.ofSeconds(3),
+          timeToExecuteTurn = Duration.ofSeconds(5),
         )
 
       val actual = detect(data, events)
@@ -185,13 +185,13 @@ class SwoopDataDetectorSpec extends AnyWordSpec with Matchers with IOValues {
 
       val expected =
         SwoopData(
-          turnInitiation = EventPoint(12, 1380.0),
-          rolloutStart = EventPoint(15, 1350.0),
+          turnInitiation = EventPoint(10, 150.0),
+          rolloutStart = EventPoint(15, 100.0),
           maxVerticalSpeed = 17.0,
-          maxTotalSpeed = 38.91015291668744,
+          maxTotalSpeed = 55.036351623268054,
           maxHorizontalSpeed = 55.0,
-          degreesOfRotation = 13.5,
-          timeToExecuteTurn = Duration.ofSeconds(3),
+          degreesOfRotation = 22.5,
+          timeToExecuteTurn = Duration.ofSeconds(5),
         )
 
       val actual = detect(data, events)
@@ -205,13 +205,13 @@ class SwoopDataDetectorSpec extends AnyWordSpec with Matchers with IOValues {
 
       val expected =
         SwoopData(
-          turnInitiation = EventPoint(12, 1380.0),
-          rolloutStart = EventPoint(15, 1350.0),
+          turnInitiation = EventPoint(10, 150.0),
+          rolloutStart = EventPoint(15, 100.0),
           maxVerticalSpeed = 17.0,
-          maxTotalSpeed = 38.59404099080582,
+          maxTotalSpeed = 54.483942588619634,
           maxHorizontalSpeed = 54.44722215136416,
           degreesOfRotation = 0.0,
-          timeToExecuteTurn = Duration.ofSeconds(3),
+          timeToExecuteTurn = Duration.ofSeconds(5),
         )
 
       val actual = detect(data, events)

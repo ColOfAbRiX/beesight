@@ -38,6 +38,9 @@ dist/beesight.bin
 real_data/
 processed/
 .cline*
+
+# Reverse engineering workspace (gswoop.exe artifacts)
+gswoop/
 /*.log
 /*.csv
 __pycache__
