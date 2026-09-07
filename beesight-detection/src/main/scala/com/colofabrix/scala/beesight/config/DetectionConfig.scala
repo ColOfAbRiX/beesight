@@ -1,7 +1,6 @@
 package com.colofabrix.scala.beesight.config
 
 import io.github.iltotore.iron.*
-import io.github.iltotore.iron.constraint.numeric.*
 
 /**
  * Top-level configuration for the flight stage detection algorithm.
@@ -73,12 +72,14 @@ object DetectionConfig {
         horizontalSpeedThreshold = 2.0,
       ),
       swoop = SwoopConfig(
-        gateHeight = 15.0,
         minSwoopVerticalSpeed = 5.0,
         minHorizontalSpeed = 2.0,
         maxSwoopHeight = 300.0,
         recoveryFraction = 0.5,
         minSwoopDescent = 30.0,
+        pullThreshold = 11.176,
+        rolloutWindow = 30.48,
+        sustainedRecoverySamples = 10,
       ),
     )
 
@@ -86,6 +87,8 @@ object DetectionConfig {
 
 /**
  * Global preprocessing settings.
+ * 
+ * FIXME: These parameters are used only by the preprocessor, create a different case class (keep GlobalConfig too)
  *
  * @param preprocessWindowSize Size of the sliding window used for despiking; larger values smooth more aggressively
  * @param accelerationClip Maximum allowed velocity deviation (m/s) before a point is considered a spike
@@ -205,14 +208,14 @@ final case class LandingConfig(
 /**
  * Configuration for swoop metrics computation.
  *
- * @param minSwoopVerticalSpeed   Minimum peak vertical speed (m/s) required to validate a swoop; below this, no swoop is reported
- * @param minHorizontalSpeed      Minimum horizontal speed (m/s) below which heading is considered too noisy for rotation computation
- * @param maxSwoopHeight          Maximum AGL height (m) at which a dive point can be detected; bounds the candidate
- *                                peak search (gSwoop's 1000 ft cap), excluding high-altitude manoeuvres
- * @param recoveryFraction        Fraction of the peak vertical speed above which a sustained re-ascent marks a
- *                                manoeuvre recovery, disqualifying the candidate as dive point
- * @param minSwoopDescent         Minimum descent (m) from the dive point to the ground; rejects flare-level speed
- *                                bumps near touchdown
+ * @param minSwoopVerticalSpeed Minimum peak vertical speed (m/s) required to validate a swoop; below this, no swoop is reported
+ * @param minHorizontalSpeed Minimum horizontal speed (m/s) below which heading is considered too noisy for rotation computation
+ * @param maxSwoopHeight Maximum AGL height (m) at which a dive point can be detected; bounds the candidate peak search (gSwoop's 1000 ft cap), excluding high-altitude manoeuvres
+ * @param recoveryFraction Fraction of the peak vertical speed above which a sustained re-ascent marks a manoeuvre recovery, disqualifying the candidate as dive point
+ * @param minSwoopDescent Minimum descent (m) from the dive point to the ground; rejects flare-level speed bumps near touchdown
+ * @param pullThreshold Descent rate (m/s) below which the dive is considered over; gSwoop's 25 mph walk-back threshold
+ * @param rolloutWindow Height above the stop altitude (m) where the rollout search starts; gSwoop's 100 ft
+ * @param sustainedRecoverySamples Consecutive samples above the recovery level that mark a manoeuvre recovery, disqualifying the candidate as dive point
  */
 final case class SwoopConfig(
   minSwoopVerticalSpeed: Double,
@@ -220,4 +223,7 @@ final case class SwoopConfig(
   maxSwoopHeight: Double,
   recoveryFraction: Double,
   minSwoopDescent: Double,
+  pullThreshold: Double,
+  rolloutWindow: Double,
+  sustainedRecoverySamples: Int,
 )

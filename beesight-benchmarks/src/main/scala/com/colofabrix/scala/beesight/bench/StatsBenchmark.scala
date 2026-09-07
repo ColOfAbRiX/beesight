@@ -3,8 +3,8 @@ package com.colofabrix.scala.beesight.bench
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow
 import com.colofabrix.scala.beesight.math.Stats
 import com.colofabrix.scala.beesight.model.GeoVector
-import org.openjdk.jmh.annotations.*
 import java.util.concurrent.TimeUnit
+import org.openjdk.jmh.annotations.*
 import scala.compiletime.uninitialized
 
 /**

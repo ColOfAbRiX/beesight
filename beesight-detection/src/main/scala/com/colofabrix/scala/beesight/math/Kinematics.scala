@@ -1,6 +1,5 @@
 package com.colofabrix.scala.beesight.math
 
-import com.colofabrix.scala.beesight.collections.NonEmptyWindow.*
 import com.colofabrix.scala.beesight.model.*
 import java.time.Duration
 

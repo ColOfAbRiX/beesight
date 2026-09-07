@@ -4,7 +4,6 @@ import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
 import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.colofabrix.scala.beesight.math.Interpolation
 import com.colofabrix.scala.beesight.model.PointKinematics
-import java.time.Instant
 
 /**
  * Detects and removes velocity spikes by interpolating outlier points.

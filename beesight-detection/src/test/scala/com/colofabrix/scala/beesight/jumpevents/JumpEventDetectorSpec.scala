@@ -1,10 +1,12 @@
 package com.colofabrix.scala.beesight.jumpevents
 
-import com.colofabrix.scala.beesight.IOValues
-import com.colofabrix.scala.beesight.TestFilesHandler
 import com.colofabrix.scala.beesight.TestFilesHandler.given
 import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.colofabrix.scala.beesight.model.*
+import com.colofabrix.scala.beesight.{
+  IOValues,
+  TestFilesHandler
+}
 import java.nio.file.Paths
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec

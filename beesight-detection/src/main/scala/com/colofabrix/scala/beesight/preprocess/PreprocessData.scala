@@ -7,7 +7,6 @@ import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.colofabrix.scala.beesight.math.*
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.utils.*
-import java.time.Instant
 
 /**
  * Removes GPS data spikes and smooths velocity readings via a small sliding window.

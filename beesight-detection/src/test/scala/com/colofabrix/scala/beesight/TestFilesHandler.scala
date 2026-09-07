@@ -1,7 +1,6 @@
 package com.colofabrix.scala.beesight
 
 import cats.effect.IO
-import cats.effect.unsafe.implicits.global
 import com.colofabrix.scala.beesight.model.*
 import fs2.data.csv.*
 import java.io.FileInputStream

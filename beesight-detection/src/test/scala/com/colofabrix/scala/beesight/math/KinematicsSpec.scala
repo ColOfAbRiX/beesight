@@ -265,9 +265,6 @@ class KinematicsSpec extends AnyFreeSpec with Matchers {
       speed = GeoVector(north = northSpeed, east = eastSpeed, vertical = verticalSpeed),
     )
 
-  private def filledWindowOfDataPoints(points: DataPoint*): NonEmptyFilled[DataPoint] =
-    points.tail
-      .foldLeft(NonEmptyWindow(points.size, points.head))((w, p) => w.enqueue(p))
-      .asInstanceOf[NonEmptyFilled[DataPoint]]
+  
 
 }

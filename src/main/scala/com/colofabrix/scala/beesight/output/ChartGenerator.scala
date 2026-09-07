@@ -1,9 +1,9 @@
 package com.colofabrix.scala.beesight.output
 
 import cats.syntax.all.*
+import com.colofabrix.scala.beesight.*
 import com.colofabrix.scala.beesight.config.Config
 import com.colofabrix.scala.beesight.model.*
-import com.colofabrix.scala.beesight.*
 import java.nio.file.*
 
 /**

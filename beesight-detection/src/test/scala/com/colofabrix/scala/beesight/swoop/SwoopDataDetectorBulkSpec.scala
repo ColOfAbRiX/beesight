@@ -8,10 +8,10 @@ import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.colofabrix.scala.beesight.jumpevents.JumpEventsDetector
 import com.colofabrix.scala.beesight.matchers.SwoopMatchers
 import com.colofabrix.scala.beesight.model.*
+import java.nio.file.Paths
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import scala.concurrent.duration.*
-import java.nio.file.Paths
 
 class BulkSwoopDetectionSpec extends AnyWordSpec with Matchers with IOValues with SwoopMatchers {
 
@@ -34,27 +34,28 @@ class BulkSwoopDetectionSpec extends AnyWordSpec with Matchers with IOValues wit
       val failures =
         expectedValues
           .zipWithIndex
-          .parFlatTraverse { case (expected, idx) =>
-            val filename = expected.filename
-            val filePath = testFilesDir.resolve(filename)
+          .parFlatTraverse {
+            case (expected, idx) =>
+              val filename = expected.filename
+              val filePath = testFilesDir.resolve(filename)
 
-            detectSwoop(filePath)
-              .map { actual =>
-                val matcher     = matchSwoop(expected)
-                val matchResult = matcher(actual)
+              detectSwoop(filePath)
+                .map { actual =>
+                  val matcher     = matchSwoop(expected)
+                  val matchResult = matcher(actual)
 
-                if (!matchResult.matches) {
-                  List(s"  [$idx] $filename${matchResult.failureMessage}")
-                } else {
-                  Nil
+                  if (!matchResult.matches) {
+                    List(s"  [$idx] $filename${matchResult.failureMessage}")
+                  } else {
+                    Nil
+                  }
                 }
-              }
           }
           .result(timeout = 5.minutes)
 
       if (failures.nonEmpty) {
-        val total = expectedValues.size
-        val failed = failures.size
+        val total       = expectedValues.size
+        val failed      = failures.size
         val successRate = 1.0 - (failed.toDouble / total.toDouble)
 
         info(f"Success rate is ${successRate * 100.0}%.1f%%")
@@ -71,8 +72,9 @@ class BulkSwoopDetectionSpec extends AnyWordSpec with Matchers with IOValues wit
 
   private def detectSwoop(filePath: java.nio.file.Path): IO[Option[SwoopData]] =
     for {
-      events <- detectEvents(filePath)
-      swoop  <- SwoopDataDetector(DetectionConfig.default).detect(events, TestFilesHandler.readCsv[DataPoint](filePath))
+      events  <- detectEvents(filePath)
+      detector = SwoopDataDetector(DetectionConfig.default)
+      swoop   <- detector.detect(events, TestFilesHandler.readCsv[DataPoint](filePath))
     } yield swoop
 
   private def detectEvents(filePath: java.nio.file.Path): IO[FlightEvents] =

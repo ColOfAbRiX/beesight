@@ -1,13 +1,12 @@
 package com.colofabrix.scala.beesight.jumpevents
 
 import cats.data.*
-import cats.syntax.all.*
 import com.colofabrix.scala.beesight.collections.NEW.*
 import com.colofabrix.scala.beesight.config.*
 import com.colofabrix.scala.beesight.jumpevents.EventPointDetector.*
-import com.colofabrix.scala.beesight.jumpevents.model.{ DetectingState, DetectorState, FillingState, FocusPosition, Step, Transition, WindowEntry }
-import com.colofabrix.scala.beesight.jumpevents.model.DetectorConfigActions.*
 import com.colofabrix.scala.beesight.jumpevents.handlers.EventHandler
+import com.colofabrix.scala.beesight.jumpevents.model.*
+import com.colofabrix.scala.beesight.jumpevents.model.DetectorConfigActions.*
 import com.colofabrix.scala.beesight.model.*
 import scala.annotation.tailrec
 

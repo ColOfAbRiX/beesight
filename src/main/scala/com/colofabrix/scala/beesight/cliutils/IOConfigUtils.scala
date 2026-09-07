@@ -3,8 +3,8 @@ package com.colofabrix.scala.beesight.cliutils
 import cats.effect.implicits.given
 import cats.implicits.given
 import cats.syntax.all.*
-import com.colofabrix.scala.beesight.config.Parallelism
 import com.colofabrix.scala.beesight.IOConfig
+import com.colofabrix.scala.beesight.config.Parallelism
 
 /**
  * Provides utilities for IOConfig

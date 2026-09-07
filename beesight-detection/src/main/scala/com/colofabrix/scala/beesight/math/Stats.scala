@@ -3,7 +3,6 @@ package com.colofabrix.scala.beesight.math
 import cats.Foldable
 import cats.syntax.all.*
 import com.colofabrix.scala.beesight.collections.NEW
-import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
 import com.colofabrix.scala.beesight.model.GeoVector
 
 private[beesight] object Stats {

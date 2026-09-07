@@ -1,7 +1,6 @@
 package com.colofabrix.scala.beesight.detection.bench
 
 import java.nio.file.{ Files, Path, Paths }
-import java.time.Instant
 import java.time.format.DateTimeFormatter
 
 /**

@@ -5,12 +5,12 @@ import cats.syntax.all.given
 import com.colofabrix.scala.beesight.*
 import com.colofabrix.scala.beesight.TestFilesHandler.given
 import com.colofabrix.scala.beesight.config.DetectionConfig
+import com.colofabrix.scala.beesight.matchers.JumpEventMatchers
 import com.colofabrix.scala.beesight.model.*
 import java.nio.file.Paths
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import scala.concurrent.duration.*
-import com.colofabrix.scala.beesight.matchers.JumpEventMatchers
 
 class JumpEventsDetectorBulkSpec extends AnyWordSpec with Matchers with IOValues with JumpEventMatchers {
 

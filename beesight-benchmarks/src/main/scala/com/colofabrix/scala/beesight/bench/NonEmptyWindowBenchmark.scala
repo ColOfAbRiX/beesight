@@ -1,8 +1,8 @@
 package com.colofabrix.scala.beesight.bench
 
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow
-import org.openjdk.jmh.annotations.*
 import java.util.concurrent.TimeUnit
+import org.openjdk.jmh.annotations.*
 import scala.compiletime.uninitialized
 
 /**

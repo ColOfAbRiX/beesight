@@ -1,12 +1,14 @@
 package com.colofabrix.scala.beesight.swoop
 
 import cats.effect.IO
-import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.colofabrix.scala.beesight.IOValues
+import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.colofabrix.scala.beesight.model.*
 import java.lang.Math.*
-import java.time.Duration
-import java.time.Instant
+import java.time.{
+  Duration,
+  Instant
+}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
