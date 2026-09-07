@@ -20,18 +20,25 @@ final private[beesight] case class CsvFieldSpec[A, T](
   required: Boolean = true,
 )
 
-object CsvFieldSpec {
+final class CsvSpecBuilder[A] {
 
   /**
    * Creates a required field spec. The column name is used for both decoding and detection
    */
-  def required[A, T](name: String, encode: A => String)(using CellDecoder[T]): CsvFieldSpec[A, T] =
+  def required[T](name: String, encode: A => String)(using CellDecoder[T]): CsvFieldSpec[A, T] =
     CsvFieldSpec(name, row => row.as[T](name), encode)
 
   /**
-   * Creates an optional field spec. The column may or may not be present in the CSV file
+   * Creates an optional field spec. The column may or may not be present in the CSV file; a missing column, as well as
+   * an empty cell, decodes to None
    */
-  def optional[A, T](name: String, encode: A => String)(using CellDecoder[T]): CsvFieldSpec[A, Option[T]] =
-    CsvFieldSpec(name, row => row.asOptional[T](name), encode, required = false)
+  def optional[T](name: String, encode: A => String)(using CellDecoder[T]): CsvFieldSpec[A, Option[T]] =
+    CsvFieldSpec(name, row => row.asOptional[T](name, missing = _ => Right(None)), encode, required = false)
 
+}
+
+object CsvSpecBuilder {
+
+  def forFormat[A]: CsvSpecBuilder[A] = new CsvSpecBuilder[A]
+  
 }

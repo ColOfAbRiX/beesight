@@ -8,5 +8,7 @@ package com.colofabrix.scala.beesight.model
  *   - `Dekunu` — Dekunu digital altimeter CSV format
  */
 private[beesight] enum FileFormat {
-  case FlySight, Airlog, Dekunu
+  case FlySight
+  case Airlog
+  case Dekunu
 }

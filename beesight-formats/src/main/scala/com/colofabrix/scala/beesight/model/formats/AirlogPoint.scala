@@ -32,50 +32,54 @@ final private[beesight] case class AirlogPoint(
 
 private[beesight] object AirlogPoint {
 
+  val airlogSpecBuilder = CsvSpecBuilder.forFormat[AirlogPoint]
+
+  import airlogSpecBuilder._
+
   private val timeField =
-    CsvFieldSpec.required[AirlogPoint, Instant]("time", _.time.toString)
+    required[Instant]("time", _.time.toString)
   private val latField =
-    CsvFieldSpec.required[AirlogPoint, Double]("lat", p => formatDouble(p.coordinates.lat, 7))
+    required[Double]("lat", p => formatDouble(p.coordinates.lat, 7))
   private val lonField =
-    CsvFieldSpec.required[AirlogPoint, Double]("lon", p => formatDouble(p.coordinates.lon, 7))
+    required[Double]("lon", p => formatDouble(p.coordinates.lon, 7))
   private val altField =
-    CsvFieldSpec.required[AirlogPoint, Double]("alt", p => formatDouble(p.altitude.barometric, 1))
+    required[Double]("alt", p => formatDouble(p.altitude.barometric, 1))
   private val gpsAltField =
-    CsvFieldSpec.required[AirlogPoint, Double]("gpsAlt", p => formatDouble(p.altitude.gps, 1))
+    required[Double]("gpsAlt", p => formatDouble(p.altitude.gps, 1))
   private val speedField =
-    CsvFieldSpec.required[AirlogPoint, Double]("speed", p => formatDouble(p.motion.speed, 2))
+    required[Double]("speed", p => formatDouble(p.motion.speed, 2))
   private val sinkField =
-    CsvFieldSpec.required[AirlogPoint, Double]("sink", p => formatDouble(p.motion.sink, 2))
+    required[Double]("sink", p => formatDouble(p.motion.sink, 2))
   private val headingField =
-    CsvFieldSpec.required[AirlogPoint, Double]("heading", p => formatDouble(p.motion.heading, 1))
+    required[Double]("heading", p => formatDouble(p.motion.heading, 1))
   private val qwField =
-    CsvFieldSpec.required[AirlogPoint, Double]("Qw", p => formatDouble(p.orientation.w, 4))
+    required[Double]("Qw", p => formatDouble(p.orientation.w, 4))
   private val qxField =
-    CsvFieldSpec.required[AirlogPoint, Double]("Qx", p => formatDouble(p.orientation.x, 4))
+    required[Double]("Qx", p => formatDouble(p.orientation.x, 4))
   private val qyField =
-    CsvFieldSpec.required[AirlogPoint, Double]("Qy", p => formatDouble(p.orientation.y, 4))
+    required[Double]("Qy", p => formatDouble(p.orientation.y, 4))
   private val qzField =
-    CsvFieldSpec.required[AirlogPoint, Double]("Qz", p => formatDouble(p.orientation.z, 4))
+    required[Double]("Qz", p => formatDouble(p.orientation.z, 4))
   private val axField =
-    CsvFieldSpec.required[AirlogPoint, Double]("Ax", p => formatDouble(p.acceleration.x, 3))
+    required[Double]("Ax", p => formatDouble(p.acceleration.x, 3))
   private val ayField =
-    CsvFieldSpec.required[AirlogPoint, Double]("Ay", p => formatDouble(p.acceleration.y, 3))
+    required[Double]("Ay", p => formatDouble(p.acceleration.y, 3))
   private val azField =
-    CsvFieldSpec.required[AirlogPoint, Double]("Az", p => formatDouble(p.acceleration.z, 3))
+    required[Double]("Az", p => formatDouble(p.acceleration.z, 3))
   private val gxField =
-    CsvFieldSpec.required[AirlogPoint, Double]("Gx", p => formatDouble(p.angularVelocity.x, 3))
+    required[Double]("Gx", p => formatDouble(p.angularVelocity.x, 3))
   private val gyField =
-    CsvFieldSpec.required[AirlogPoint, Double]("Gy", p => formatDouble(p.angularVelocity.y, 3))
+    required[Double]("Gy", p => formatDouble(p.angularVelocity.y, 3))
   private val gzField =
-    CsvFieldSpec.required[AirlogPoint, Double]("Gz", p => formatDouble(p.angularVelocity.z, 3))
+    required[Double]("Gz", p => formatDouble(p.angularVelocity.z, 3))
   private val markField =
-    CsvFieldSpec.required[AirlogPoint, Int]("mark", _.metadata.mark.toString)
+    required[Int]("mark", _.metadata.mark.toString)
   private val numSatField =
-    CsvFieldSpec.required[AirlogPoint, Int]("numSat", _.metadata.numSat.toString)
+    required[Int]("numSat", _.metadata.numSat.toString)
   private val msgField =
-    CsvFieldSpec.required[AirlogPoint, Int]("msg", _.metadata.msg.toString)
+    required[Int]("msg", _.metadata.msg.toString)
   private val bSinkField =
-    CsvFieldSpec.required[AirlogPoint, Double]("b_sink", p => formatDouble(p.motion.backupSink, 2))
+    required[Double]("b_sink", p => formatDouble(p.motion.backupSink, 2))
 
   val fieldSpecs: NonEmptyList[CsvFieldSpec[AirlogPoint, ?]] =
     NonEmptyList.of(

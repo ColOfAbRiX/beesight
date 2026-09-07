@@ -1,6 +1,8 @@
 package com.colofabrix.scala.beesight.model.formats
 
+import cats.data.NonEmptyList
 import com.colofabrix.scala.beesight.model.*
+import fs2.data.csv.*
 import java.time.*
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
@@ -71,6 +73,100 @@ class FlysightPointAdapterSpec extends AnyFreeSpec with Matchers {
     }
 
   }
+
+  "FlysightPoint CSV codec" - {
+
+    "should decode a FlySight row" in {
+      val row = csvRow(
+        "time" -> "2024-06-15T12:30:00Z",
+        "lat" -> "45.0000000",
+        "lon" -> "9.0000000",
+        "hMSL" -> "3500.000",
+        "velN" -> "12.50",
+        "velE" -> "-8.30",
+        "velD" -> "55.00",
+        "hAcc" -> "1.000",
+        "vAcc" -> "1.000",
+        "sAcc" -> "1.00",
+        "heading" -> "90.00000",
+        "cAcc" -> "5.00000",
+        "gpsFix" -> "3",
+        "numSV" -> "10",
+      )
+
+      val decoded = FlysightPoint.csvRowDecoder(row).toOption.get
+
+      decoded shouldBe FlysightPoint(
+        time = OffsetDateTime.of(2024, 6, 15, 12, 30, 0, 0, ZoneOffset.UTC),
+        lat = 45.0,
+        lon = 9.0,
+        hMSL = 3500.0,
+        velN = 12.5,
+        velE = -8.3,
+        velD = 55.0,
+        hAcc = 1.0,
+        vAcc = 1.0,
+        sAcc = 1.0,
+        heading = 90.0,
+        cAcc = 5.0,
+        gpsFix = Some(3),
+        numSV = 10,
+        extra = List.empty,
+      )
+    }
+
+    "should decode a row without the optional gpsFix column" in {
+      val row = csvRow(
+        "time" -> "2024-06-15T12:30:00Z",
+        "lat" -> "45.0000000",
+        "lon" -> "9.0000000",
+        "hMSL" -> "3500.000",
+        "velN" -> "12.50",
+        "velE" -> "-8.30",
+        "velD" -> "55.00",
+        "hAcc" -> "1.000",
+        "vAcc" -> "1.000",
+        "sAcc" -> "1.00",
+        "heading" -> "90.00000",
+        "cAcc" -> "5.00000",
+        "numSV" -> "10",
+      )
+
+      val decoded = FlysightPoint.csvRowDecoder(row).toOption.get
+
+      decoded.gpsFix shouldBe None
+    }
+
+    "should encode and decode back to the same point" in {
+      val point = flysightPoint()
+
+      val decoded = FlysightPoint.csvRowDecoder(FlysightPoint.csvRowEncoder(point)).toOption.get
+
+      decoded shouldBe point
+    }
+
+    "should expose the FlySight column names as required columns" in {
+      FlysightPoint.requiredColumns shouldBe Set(
+        "time",
+        "lat",
+        "lon",
+        "hMSL",
+        "velN",
+        "velE",
+        "velD",
+        "hAcc",
+        "vAcc",
+        "sAcc",
+        "heading",
+        "cAcc",
+        "numSV",
+      )
+    }
+
+  }
+
+  private def csvRow(values: (String, String)*): CsvRow[String] =
+    CsvRow.fromNelHeaders(NonEmptyList.fromListUnsafe(values.toList))
 
   private def flysightPoint(
     time: OffsetDateTime = OffsetDateTime.of(2024, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC),

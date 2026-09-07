@@ -2,93 +2,70 @@ package com.colofabrix.scala.beesight.model.formats
 
 import cats.data.NonEmptyList
 import com.colofabrix.scala.beesight.model.*
-import com.colofabrix.scala.beesight.model.derivation.given
 import fs2.data.csv.*
 import java.time.*
 
 /**
  * Dekunu Data Point, see https://github.com/ColOfAbRiX/dekunu-flysight-fix/blob/master/dekunu_to_flysight.py
  *
- * @param time Time in ISO8601 format
- * @param lat Latitude (degrees)
- * @param lon Longitude (degrees)
- * @param hMSL Height above sea level (m)
- * @param velN Velocity north (m/s)
- * @param velE Velocity east (m/s)
- * @param velD Velocity down (m/s)
- * @param hAcc Horizontal accuracy (m)
- * @param vAcc Vertical accuracy (m)
- * @param sAcc Speed accuracy (m/s)
- * @param heading Heading (degrees)
- * @param cAcc Course accuracy (degrees)
- * @param gpsFix GPS fix type (3 = 3D)
- * @param numSV Number of satellites used in fix
+ * The raw values are kept as they appear in the source file; unit conversions (micro-degrees to degrees, knots to m/s,
+ * Unix time to [[Instant]]) are performed by the [[PointReader]] normalizer, mirroring the behaviour of the Python
+ * conversion script.
+ *
+ * @param gpsTime          GPS time as Unix timestamp (seconds)
+ * @param gpsLatitude      Latitude in micro-degrees (decimal degrees * 10^6)
+ * @param gpsLongitude     Longitude in micro-degrees (decimal degrees * 10^6)
+ * @param gpsAltitudeMeters Altitude above sea level (m)
+ * @param gpsSpeedKnot     Ground speed (knots)
+ * @param gpsAngleDegree   Course angle (degrees, 0 = North, 90 = East)
+ * @param instVertSpeed    Instantaneous vertical speed (m/s), optional in the source file
+ * @param gpsNumOfSats     Number of satellites used in the fix, optional in the source file
  */
 final private[beesight] case class DekunuPoint(
-  time: OffsetDateTime,
-  lat: Double,
-  lon: Double,
-  hMSL: Double,
-  velN: Double,
-  velE: Double,
-  velD: Double,
-  hAcc: Double,
-  vAcc: Double,
-  sAcc: Double,
-  heading: Double,
-  cAcc: Double,
-  gpsFix: Option[Int],
-  numSV: Int,
+  gpsTime: Long,
+  gpsLatitude: Double,
+  gpsLongitude: Double,
+  gpsAltitudeMeters: Double,
+  gpsSpeedKnot: Double,
+  gpsAngleDegree: Double,
+  instVertSpeed: Option[Double],
+  gpsNumOfSats: Option[Int],
   extra: List[(String, String)],
 )
 
 private[beesight] object DekunuPoint {
 
-  private val timeField =
-    CsvFieldSpec.required[DekunuPoint, OffsetDateTime]("time", _.time.toString)
-  private val latField =
-    CsvFieldSpec.required[DekunuPoint, Double]("lat", p => formatDouble(p.lat, 7))
-  private val lonField =
-    CsvFieldSpec.required[DekunuPoint, Double]("lon", p => formatDouble(p.lon, 7))
-  private val hMSLField =
-    CsvFieldSpec.required[DekunuPoint, Double]("hMSL", p => formatDouble(p.hMSL, 3))
-  private val velNField =
-    CsvFieldSpec.required[DekunuPoint, Double]("velN", p => formatDouble(p.velN, 2))
-  private val velEField =
-    CsvFieldSpec.required[DekunuPoint, Double]("velE", p => formatDouble(p.velE, 2))
-  private val velDField =
-    CsvFieldSpec.required[DekunuPoint, Double]("velD", p => formatDouble(p.velD, 2))
-  private val hAccField =
-    CsvFieldSpec.required[DekunuPoint, Double]("hAcc", p => formatDouble(p.hAcc, 3))
-  private val vAccField =
-    CsvFieldSpec.required[DekunuPoint, Double]("vAcc", p => formatDouble(p.vAcc, 3))
-  private val sAccField =
-    CsvFieldSpec.required[DekunuPoint, Double]("sAcc", p => formatDouble(p.sAcc, 2))
-  private val headingField =
-    CsvFieldSpec.required[DekunuPoint, Double]("heading", p => formatDouble(p.heading, 5))
-  private val cAccField =
-    CsvFieldSpec.required[DekunuPoint, Double]("cAcc", p => formatDouble(p.cAcc, 5))
-  private val numSVField =
-    CsvFieldSpec.required[DekunuPoint, Int]("numSV", _.numSV.toString)
-  private val gpsFixField =
-    CsvFieldSpec.optional[DekunuPoint, Int]("gpsFix", p => p.gpsFix.map(_.toString).getOrElse(""))
+  val dekunuSpecBuilder = CsvSpecBuilder.forFormat[DekunuPoint]
+
+  import dekunuSpecBuilder._
+
+  private val gpsTimeField =
+    required[Long]("gpsTime", _.gpsTime.toString)
+  private val gpsLatitudeField =
+    required[Double]("gpsLatitude", p => formatDouble(p.gpsLatitude, 0))
+  private val gpsLongitudeField =
+    required[Double]("gpsLongitude", p => formatDouble(p.gpsLongitude, 0))
+  private val gpsAltitudeField =
+    required[Double]("gpsAltitudeMeters", p => formatDouble(p.gpsAltitudeMeters, 3))
+  private val gpsSpeedField =
+    required[Double]("gpsSpeedKnot", p => formatDouble(p.gpsSpeedKnot, 3))
+  private val gpsAngleField =
+    required[Double]("gpsAngleDegree", p => formatDouble(p.gpsAngleDegree, 5))
+  private val instVertSpeedField =
+    optional[Double]("instVertSpeedMetersPerSec", _.instVertSpeed.map(formatDouble(_, 3)).getOrElse(""))
+  private val gpsNumOfSatsField =
+    optional[Int]("gpsNumOfSats", _.gpsNumOfSats.map(_.toString).getOrElse(""))
 
   val fieldSpecs: NonEmptyList[CsvFieldSpec[DekunuPoint, ?]] =
     NonEmptyList.of(
-      timeField,
-      latField,
-      lonField,
-      hMSLField,
-      velNField,
-      velEField,
-      velDField,
-      hAccField,
-      vAccField,
-      sAccField,
-      headingField,
-      cAccField,
-      gpsFixField,
-      numSVField,
+      gpsTimeField,
+      gpsLatitudeField,
+      gpsLongitudeField,
+      gpsAltitudeField,
+      gpsSpeedField,
+      gpsAngleField,
+      instVertSpeedField,
+      gpsNumOfSatsField,
     )
 
   val requiredColumns: Set[String] =
@@ -98,48 +75,48 @@ private[beesight] object DekunuPoint {
       .map(_.name)
       .toSet
 
-  given flysightNormalizer: PointReader[DekunuPoint] with {
+  private val KnotsToMs = 0.51444444
+
+  given dekunuNormalizer: PointReader[DekunuPoint] with {
     def time(point: DekunuPoint): Instant =
-      point.time.toInstant
+      Instant.ofEpochSecond(point.gpsTime)
+
     def altitude(point: DekunuPoint): Double =
-      point.hMSL
+      point.gpsAltitudeMeters
+
     def speed(point: DekunuPoint): GeoVector =
-      GeoVector(north = point.velN, east = point.velE, vertical = point.velD)
+      val speedMs    = point.gpsSpeedKnot * KnotsToMs
+      val headingRad = Math.toRadians(point.gpsAngleDegree)
+      // The vertical speed in the Dekunu file is downward-positive, matching GeoVector's convention (like FlySight's
+      // velD), so it is passed through as-is. Missing values default to 0, like the Python script.
+      GeoVector(
+        north = speedMs * Math.cos(headingRad),
+        east = speedMs * Math.sin(headingRad),
+        vertical = point.instVertSpeed.getOrElse(0.0),
+      )
   }
 
   given csvRowDecoder: CsvRowDecoder[DekunuPoint, String] with {
 
     def apply(row: CsvRow[String]): DecoderResult[DekunuPoint] =
       for
-        time    <- timeField.decode(row)
-        lat     <- latField.decode(row)
-        lon     <- lonField.decode(row)
-        hMSL    <- hMSLField.decode(row)
-        velN    <- velNField.decode(row)
-        velE    <- velEField.decode(row)
-        velD    <- velDField.decode(row)
-        hAcc    <- hAccField.decode(row)
-        vAcc    <- vAccField.decode(row)
-        sAcc    <- sAccField.decode(row)
-        heading <- headingField.decode(row)
-        cAcc    <- cAccField.decode(row)
-        gpsFix  <- gpsFixField.decode(row)
-        numSV   <- numSVField.decode(row)
+        gpsTime      <- gpsTimeField.decode(row)
+        gpsLatitude  <- gpsLatitudeField.decode(row)
+        gpsLongitude <- gpsLongitudeField.decode(row)
+        gpsAltitude  <- gpsAltitudeField.decode(row)
+        gpsSpeed     <- gpsSpeedField.decode(row)
+        gpsAngle     <- gpsAngleField.decode(row)
+        instVertSpeed <- instVertSpeedField.decode(row)
+        gpsNumOfSats <- gpsNumOfSatsField.decode(row)
       yield DekunuPoint(
-        time = time,
-        lat = lat,
-        lon = lon,
-        hMSL = hMSL,
-        velN = velN,
-        velE = velE,
-        velD = velD,
-        hAcc = hAcc,
-        vAcc = vAcc,
-        sAcc = sAcc,
-        heading = heading,
-        cAcc = cAcc,
-        gpsFix = gpsFix,
-        numSV = numSV,
+        gpsTime = gpsTime,
+        gpsLatitude = gpsLatitude,
+        gpsLongitude = gpsLongitude,
+        gpsAltitudeMeters = gpsAltitude,
+        gpsSpeedKnot = gpsSpeed,
+        gpsAngleDegree = gpsAngle,
+        instVertSpeed = instVertSpeed,
+        gpsNumOfSats = gpsNumOfSats,
         extra = List.empty,
       )
 
@@ -148,11 +125,11 @@ private[beesight] object DekunuPoint {
   given csvRowEncoder: CsvRowEncoder[DekunuPoint, String] with {
 
     def apply(row: DekunuPoint): CsvRow[String] =
-      CsvRow.fromNelHeaders(flysightFields(row))
+      CsvRow.fromNelHeaders(dekunuFields(row))
 
   }
 
-  private def flysightFields(row: DekunuPoint): NonEmptyList[(String, String)] =
+  private def dekunuFields(row: DekunuPoint): NonEmptyList[(String, String)] =
     fieldSpecs
       .map(f => (f.name, f.encode(row)))
       .appendList(row.extra)

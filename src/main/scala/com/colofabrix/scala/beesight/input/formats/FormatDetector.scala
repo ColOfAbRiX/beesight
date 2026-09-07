@@ -4,7 +4,7 @@ import cats.syntax.all.*
 import com.colofabrix.scala.beesight.*
 import com.colofabrix.scala.beesight.input.CsvFileReader
 import com.colofabrix.scala.beesight.model.FileFormat
-import com.colofabrix.scala.beesight.model.formats.{ AirlogPoint, FlysightPoint }
+import com.colofabrix.scala.beesight.model.formats.{ AirlogPoint, DekunuPoint, FlysightPoint }
 import java.nio.file.Path
 
 /**
@@ -26,6 +26,8 @@ private[beesight] object FormatDetector {
           FileFormat.FlySight.pure[IOConfig]
         else if AirlogPoint.requiredColumns.subsetOf(columns) then
           FileFormat.Airlog.pure[IOConfig]
+        else if DekunuPoint.requiredColumns.subsetOf(columns) then
+          FileFormat.Dekunu.pure[IOConfig]
         else
           val msg = s"Unknown CSV format in '$filePath'. Header columns: ${columns.mkString(", ")}"
           new IllegalArgumentException(msg).raiseError[IOConfig, FileFormat]
