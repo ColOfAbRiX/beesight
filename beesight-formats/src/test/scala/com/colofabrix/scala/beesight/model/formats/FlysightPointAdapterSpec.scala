@@ -1,13 +1,15 @@
 package com.colofabrix.scala.beesight.model.formats
 
 import cats.data.NonEmptyList
+import com.colofabrix.scala.beesight.{ IOValues, TestFilesHandler }
 import com.colofabrix.scala.beesight.model.*
 import fs2.data.csv.*
+import java.nio.file.Paths
 import java.time.*
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
-class FlysightPointAdapterSpec extends AnyFreeSpec with Matchers {
+class FlysightPointAdapterSpec extends AnyFreeSpec with Matchers with IOValues {
 
   private val normalizer = FlysightPoint.flysightNormalizer
 
@@ -161,6 +163,54 @@ class FlysightPointAdapterSpec extends AnyFreeSpec with Matchers {
         "cAcc",
         "numSV",
       )
+    }
+
+  }
+
+  "FlysightPoint sample file" - {
+
+    val sampleFile = Paths.get("src/test/resources/flysight_sample.zip")
+
+    // The file has a header line plus a units line, both skipped by the decoder
+    val points = TestFilesHandler.readCsv[FlysightPoint](sampleFile).streamResult()
+
+    "should decode all data rows" in {
+      points.size shouldBe TestFilesHandler.countLines(sampleFile) - 1
+    }
+
+    "should decode the first row with the expected values" in {
+      points.head shouldBe FlysightPoint(
+        time = OffsetDateTime.parse("2026-05-08T09:57:08.200Z"),
+        lat = 52.9981951,
+        lon = -0.8137493,
+        hMSL = 2202.351,
+        velN = 41.19,
+        velE = -47.45,
+        velD = -5.99,
+        hAcc = 70.733,
+        vAcc = 117.188,
+        sAcc = 2.53,
+        heading = 310.96308,
+        cAcc = 2.03103,
+        gpsFix = Some(3),
+        numSV = 4,
+        extra = List.empty,
+      )
+    }
+
+    "should normalize the first row" in {
+      val point = points.head
+
+      normalizer.time(point) shouldBe Instant.parse("2026-05-08T09:57:08.200Z")
+      normalizer.altitude(point) shouldBe 2202.351
+      normalizer.speed(point) shouldBe GeoVector(41.19, -47.45, -5.99)
+    }
+
+    "should round-trip every row through the CSV codec" in {
+      points.foreach { point =>
+        val decoded = FlysightPoint.csvRowDecoder(FlysightPoint.csvRowEncoder(point)).toOption.get
+        decoded shouldBe point
+      }
     }
 
   }

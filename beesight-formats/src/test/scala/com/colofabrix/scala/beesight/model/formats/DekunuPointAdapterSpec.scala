@@ -1,13 +1,15 @@
 package com.colofabrix.scala.beesight.model.formats
 
 import cats.data.NonEmptyList
+import com.colofabrix.scala.beesight.{ IOValues, TestFilesHandler }
 import com.colofabrix.scala.beesight.model.*
 import fs2.data.csv.*
+import java.nio.file.Paths
 import java.time.Instant
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
-class DekunuPointAdapterSpec extends AnyFreeSpec with Matchers {
+class DekunuPointAdapterSpec extends AnyFreeSpec with Matchers with IOValues {
 
   private val tolerance = 1e-6
 
@@ -174,6 +176,49 @@ class DekunuPointAdapterSpec extends AnyFreeSpec with Matchers {
         "gpsSpeedKnot",
         "gpsAngleDegree",
       )
+    }
+
+  }
+
+  "DekunuPoint sample file" - {
+
+    val sampleFile = Paths.get("src/test/resources/dekunu_sample.zip")
+
+    val points = TestFilesHandler.readCsv[DekunuPoint](sampleFile).streamResult()
+
+    "should decode all data rows" in {
+      points.size shouldBe TestFilesHandler.countLines(sampleFile)
+    }
+
+    "should decode the first row with the expected values" in {
+      points.head shouldBe DekunuPoint(
+        gpsTime = 1594380214L,
+        gpsLatitude = 52559773.0,
+        gpsLongitude = -390584.0,
+        gpsAltitudeMeters = 58.0,
+        gpsSpeedKnot = 78.45,
+        gpsAngleDegree = 321.75,
+        instVertSpeed = Some(3.6),
+        gpsNumOfSats = Some(12),
+        extra = List.empty,
+      )
+    }
+
+    "should normalize the first row" in {
+      val point = points.head
+
+      normalizer.time(point) shouldBe Instant.ofEpochSecond(1594380214L)
+      normalizer.altitude(point) shouldBe 58.0
+      // 78.45 knots converted to m/s
+      normalizer.speed(point).horizontal shouldBe (78.45 * 0.51444444 +- tolerance)
+      normalizer.speed(point).vertical shouldBe 3.6
+    }
+
+    "should round-trip every row through the CSV codec" in {
+      points.foreach { point =>
+        val decoded = DekunuPoint.csvRowDecoder(DekunuPoint.csvRowEncoder(point)).toOption.get
+        decoded shouldBe point
+      }
     }
 
   }

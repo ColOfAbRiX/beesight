@@ -35,6 +35,13 @@ final class CsvSpecBuilder[A] {
   def optional[T](name: String, encode: A => String)(using CellDecoder[T]): CsvFieldSpec[A, Option[T]] =
     CsvFieldSpec(name, row => row.asOptional[T](name, missing = _ => Right(None)), encode, required = false)
 
+  /**
+   * Creates a lenient field spec. The column participates in format detection, but a missing column, an empty cell, or
+   * a cell that fails to decode yields None instead of failing the whole row
+   */
+  def lenient[T](name: String, encode: A => String)(using CellDecoder[T]): CsvFieldSpec[A, Option[T]] =
+    CsvFieldSpec(name, row => Right(row.asOptional[T](name).toOption.flatten), encode, required = true)
+
 }
 
 object CsvSpecBuilder {
