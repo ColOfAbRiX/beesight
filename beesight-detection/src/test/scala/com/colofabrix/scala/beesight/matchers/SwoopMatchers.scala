@@ -57,7 +57,7 @@ trait SwoopMatchers {
       check("Max vertical speed", "m/s", swoop.maxVerticalSpeed, expected.maxVerticalSpeed, speedTolerance),
       check("Max total speed", "m/s", swoop.maxTotalSpeed, expected.maxTotalSpeed, speedTolerance),
       check("Max horizontal speed", "m/s", swoop.maxHorizontalSpeed, expected.maxHorizontalSpeed, speedTolerance),
-      check("Degrees of rotation", "°", swoop.degreesOfRotation, expected.degreesOfRotation, rotationTolerance),
+      check("Degrees of rotation", "deg", swoop.degreesOfRotation, expected.degreesOfRotation, rotationTolerance),
       check(
         "Time to execute turn",
         "s",
@@ -77,7 +77,7 @@ trait SwoopMatchers {
     expected match {
       case Some(e) if Math.abs(obtained - e) > tolerance =>
         val diff = obtained - e
-        Some(f"  $name%-30s  expected $e%.1f $unit, got $obtained%.1f $unit  (diff: $diff%+.1f, tol: ±$tolerance%.1f)")
+        Some(f"  $name%-30s  expected $e%.1f $unit, got $obtained%.1f $unit  (diff: $diff%+.1f, tol: +/- $tolerance%.1f)")
       case _ =>
         None
     }

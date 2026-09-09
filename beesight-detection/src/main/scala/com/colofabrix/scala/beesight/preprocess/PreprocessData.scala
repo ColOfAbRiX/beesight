@@ -13,6 +13,8 @@ import com.colofabrix.scala.beesight.utils.*
  */
 final class PreprocessData private (config: DetectionConfig) extends Preprocessor {
 
+  // NOTE: Consider removing the preprocessor and include SpeedClipper in each algorithm
+
   private val windowCapacity: Int =
     Math.max(2, config.global.preprocessWindowSize.value)
 

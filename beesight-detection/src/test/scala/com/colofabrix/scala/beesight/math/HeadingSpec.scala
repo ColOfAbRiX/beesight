@@ -10,23 +10,23 @@ class HeadingSpec extends AnyWordSpec with Matchers {
 
     "headingDegrees" should {
 
-      "return 0° for a vector pointing North" in {
+      "return 0 deg for a vector pointing North" in {
         Heading.headingDegrees(GeoVector(north = 10.0, east = 0.0, vertical = 0.0)) shouldBe 0.0
       }
 
-      "return 90° for a vector pointing East" in {
+      "return 90 deg for a vector pointing East" in {
         Heading.headingDegrees(GeoVector(north = 0.0, east = 10.0, vertical = 0.0)) shouldBe 90.0
       }
 
-      "return 180° for a vector pointing South" in {
+      "return 180 deg for a vector pointing South" in {
         Heading.headingDegrees(GeoVector(north = -10.0, east = 0.0, vertical = 0.0)) shouldBe 180.0
       }
 
-      "return 270° for a vector pointing West" in {
+      "return 270 deg for a vector pointing West" in {
         Heading.headingDegrees(GeoVector(north = 0.0, east = -10.0, vertical = 0.0)) shouldBe 270.0
       }
 
-      "return 45° for a vector pointing NE" in {
+      "return 45 deg for a vector pointing NE" in {
         val h = Heading.headingDegrees(GeoVector(north = 10.0, east = 10.0, vertical = 0.0))
         h shouldBe 45.0
       }
@@ -45,7 +45,7 @@ class HeadingSpec extends AnyWordSpec with Matchers {
         Heading.angularDistance(90.0, 90.0) shouldBe 0.0
       }
 
-      "return 90 for 90° apart" in {
+      "return 90 for 90 deg apart" in {
         Heading.angularDistance(0.0, 90.0) shouldBe 90.0
       }
 
@@ -53,7 +53,7 @@ class HeadingSpec extends AnyWordSpec with Matchers {
         Heading.angularDistance(0.0, 180.0) shouldBe 180.0
       }
 
-      "handle wrapping across 0°/360°" in {
+      "handle wrapping across 0 deg/360 deg" in {
         Heading.angularDistance(350.0, 10.0) shouldBe 20.0
       }
 
@@ -61,7 +61,7 @@ class HeadingSpec extends AnyWordSpec with Matchers {
         Heading.angularDistance(10.0, 350.0) shouldBe 20.0
       }
 
-      "return 45 for 45° apart" in {
+      "return 45 for 45 deg apart" in {
         Heading.angularDistance(0.0, 45.0) shouldBe 45.0
       }
 
@@ -83,7 +83,7 @@ class HeadingSpec extends AnyWordSpec with Matchers {
         Heading.cumulativeHeadingChange(points, 0.0) shouldBe 0.0
       }
 
-      "return ~90° for a quarter turn" in {
+      "return ~90 deg for a quarter turn" in {
         val points = (0 to 10)
           .map { i =>
             val angle = i.toDouble / 10.0 * Math.PI / 2
@@ -95,7 +95,7 @@ class HeadingSpec extends AnyWordSpec with Matchers {
         result shouldBe 90.0 +- 1.0
       }
 
-      "return ~180° for a half turn" in {
+      "return ~180 deg for a half turn" in {
         val points = (0 to 10)
           .map { i =>
             val angle = i.toDouble / 10.0 * Math.PI
@@ -107,7 +107,7 @@ class HeadingSpec extends AnyWordSpec with Matchers {
         result shouldBe 180.0 +- 1.0
       }
 
-      "return ~360° for a full turn" in {
+      "return ~360 deg for a full turn" in {
         val points = (0 to 20)
           .map { i =>
             val angle = i.toDouble / 20.0 * 2 * Math.PI
@@ -122,16 +122,16 @@ class HeadingSpec extends AnyWordSpec with Matchers {
       "skip points below minHorizontalSpeed" in {
         val points =
           Vector(
-            GeoVector(10.0, 0.0, 0.0), // heading 0°, horizontal=10
-            GeoVector(0.5, 0.0, 0.0),  // heading 0°, horizontal=0.5 — below threshold, skipped
-            GeoVector(0.0, 10.0, 0.0), // heading 90°, horizontal=10
+            GeoVector(10.0, 0.0, 0.0), // heading 0 deg, horizontal=10
+            GeoVector(0.5, 0.0, 0.0),  // heading 0 deg, horizontal=0.5 - below threshold, skipped
+            GeoVector(0.0, 10.0, 0.0), // heading 90 deg, horizontal=10
           )
 
         val result = Heading.cumulativeHeadingChange(points, 2.0)
         result shouldBe 90.0 +- 1.0
       }
 
-      "handle 540° turn (1.5 full rotations)" in {
+      "handle 540 deg turn (1.5 full rotations)" in {
         val points = (0 to 30)
           .map { i =>
             val angle = i.toDouble / 30.0 * 1.5 * 2 * Math.PI

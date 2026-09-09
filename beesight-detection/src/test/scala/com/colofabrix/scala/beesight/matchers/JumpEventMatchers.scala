@@ -45,9 +45,9 @@ trait JumpEventMatchers {
       (obtained, expected) match {
         case (Some(o), Some(e)) if Math.abs(o - e) > tolerance =>
           val diff = o - e
-          Some(f"expected $e ± $tolerance, got $o (diff: $diff%d)")
+          Some(f"expected $e +/- $tolerance, got $o (diff: $diff%d)")
         case (None, Some(e)) =>
-          Some(s"expected $e ± $tolerance, got None")
+          Some(s"expected $e +/- $tolerance, got None")
         case (Some(o), None) =>
           Some(s"expected None, got $o")
         case _ =>

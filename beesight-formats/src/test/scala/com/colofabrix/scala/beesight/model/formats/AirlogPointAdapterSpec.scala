@@ -39,35 +39,35 @@ class AirlogPointAdapterSpec extends AnyFreeSpec with Matchers with IOValues {
 
     "heading decomposition into north and east" - {
 
-      "heading 0° (north) should produce full north, zero east" in {
+      "heading 0 deg (north) should produce full north, zero east" in {
         val point = airlogPoint(speed = 100.0, heading = 0.0)
         val speed = normalizer.speed(point)
         speed.north shouldBe (100.0 +- tolerance)
         speed.east shouldBe (0.0 +- tolerance)
       }
 
-      "heading 90° (east) should produce zero north, full east" in {
+      "heading 90 deg (east) should produce zero north, full east" in {
         val point = airlogPoint(speed = 100.0, heading = 90.0)
         val speed = normalizer.speed(point)
         speed.north shouldBe (0.0 +- tolerance)
         speed.east shouldBe (100.0 +- tolerance)
       }
 
-      "heading 180° (south) should produce negative north, zero east" in {
+      "heading 180 deg (south) should produce negative north, zero east" in {
         val point = airlogPoint(speed = 100.0, heading = 180.0)
         val speed = normalizer.speed(point)
         speed.north shouldBe (-100.0 +- tolerance)
         speed.east shouldBe (0.0 +- tolerance)
       }
 
-      "heading 270° (west) should produce zero north, negative east" in {
+      "heading 270 deg (west) should produce zero north, negative east" in {
         val point = airlogPoint(speed = 100.0, heading = 270.0)
         val speed = normalizer.speed(point)
         speed.north shouldBe (0.0 +- tolerance)
         speed.east shouldBe (-100.0 +- tolerance)
       }
 
-      "heading 45° (northeast) should split speed equally between north and east" in {
+      "heading 45 deg (northeast) should split speed equally between north and east" in {
         val point    = airlogPoint(speed = 100.0, heading = 45.0)
         val speed    = normalizer.speed(point)
         val expected = 100.0 * Math.cos(Math.toRadians(45.0))

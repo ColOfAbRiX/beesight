@@ -17,7 +17,7 @@ class StatsSpec extends AnyFreeSpec with Matchers {
       }
 
       "should compute standard deviation for known data" in {
-        // values: 2, 4, 4, 4, 5, 5, 7, 9 → mean=5, variance=4, stddev=2
+        // values: 2, 4, 4, 4, 5, 5, 7, 9 -> mean=5, variance=4, stddev=2
         val window = filledWindow(2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0)
         Stats.stdDevBy(window)(identity) shouldBe (2.0 +- 0.01)
       }

@@ -146,7 +146,8 @@ final class JumpEventsDetector private (config: DetectionConfig, preprocessor: P
     previousWindow: NEW[WindowEntry],
     currentPoint: IndexedPoint,
   ): WindowEntry =
-    val smoothingWindowSize = config.freefall.smoothingWindowSize // FIXME: This hardcodes `freefall`
+    // FIXME: This hardcodes `freefall`, choose the window for the right stage
+    val smoothingWindowSize = config.freefall.smoothingWindowSize
     val smoothingCap        = Math.min(smoothingWindowSize.value, previousWindow.length)
     val previousPoint       = previousWindow.newest.point
 

@@ -56,7 +56,7 @@ private[beesight] object Stats {
    * Component-wise median of GeoVectors from the `n` newest elements of a window plus one extra GeoVector.
    * Zero-allocation alternative to `takeNewest` + `enqueue` + `medianBy`.
    *
-   * FIXME: I wasn't aware of this function, I need to check if it's not needed
+   * FIXME: This function is not generic enough to be in Stats and should consider reverting to before c2983ff3
    */
   def medianGeoVectorWithExtra[A](window: NEW[A], n: Int, extra: GeoVector)(f: A => GeoVector): GeoVector =
     val count    = Math.max(1, Math.min(n, window.length))

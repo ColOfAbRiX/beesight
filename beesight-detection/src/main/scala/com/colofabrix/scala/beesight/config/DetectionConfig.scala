@@ -80,6 +80,7 @@ object DetectionConfig {
         pullThreshold = 11.176,
         rolloutWindow = 30.48,
         sustainedRecoverySamples = 10,
+        recoveryHeight = 45.0,
       ),
     )
 
@@ -216,6 +217,7 @@ final case class LandingConfig(
  * @param pullThreshold Descent rate (m/s) below which the dive is considered over; gSwoop's 25 mph walk-back threshold
  * @param rolloutWindow Height above the stop altitude (m) where the rollout search starts; gSwoop's 100 ft
  * @param sustainedRecoverySamples Consecutive samples above the recovery level that mark a manoeuvre recovery, disqualifying the candidate as dive point
+ * @param recoveryHeight Minimum AGL height (m) at which a sustained recovery disqualifies the candidate; recoveries closer to the ground are canopy cycles after a swoop that ended high, not manoeuvres
  */
 final case class SwoopConfig(
   minSwoopVerticalSpeed: Double,
@@ -226,4 +228,5 @@ final case class SwoopConfig(
   pullThreshold: Double,
   rolloutWindow: Double,
   sustainedRecoverySamples: Int,
+  recoveryHeight: Double,
 )

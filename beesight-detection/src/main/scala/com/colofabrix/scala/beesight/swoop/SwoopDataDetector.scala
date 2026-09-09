@@ -111,7 +111,8 @@ final class SwoopDataDetector private (config: SwoopConfig, preprocessor: Prepro
       if i >= dataPoints.length then
         return true
 
-      val vz = dataPoints(i).point.speed.vertical
+      val vz  = dataPoints(i).point.speed.vertical
+      val agl = dataPoints(i).point.altitude - ground
 
       if vz < recoveryLevel then
         return loop(i + 1, droppedBelow = true, aboveCount = 0)
@@ -121,8 +122,9 @@ final class SwoopDataDetector private (config: SwoopConfig, preprocessor: Prepro
 
       val isSustainedRecovery =
         droppedBelow && aboveCount + 1 >= config.sustainedRecoverySamples
+      val isHighEnoughToCount = agl >= config.recoveryHeight
 
-      if isSustainedRecovery then
+      if isSustainedRecovery && isHighEnoughToCount then
         return false
 
       loop(i + 1, droppedBelow, aboveCounteNext)
