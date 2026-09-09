@@ -3,10 +3,7 @@ package com.colofabrix.scala.beesight.jumpevents
 import com.colofabrix.scala.beesight.TestFilesHandler.given
 import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.colofabrix.scala.beesight.model.*
-import com.colofabrix.scala.beesight.{
-  IOValues,
-  TestFilesHandler
-}
+import com.colofabrix.scala.beesight.{ IOValues, TestFilesHandler }
 import java.nio.file.Paths
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -20,7 +17,7 @@ class JumpEventsDetectorSpec extends AnyWordSpec with Matchers with IOValues {
 
     "output the same number of rows as the input" in {
       val processedResults = processInput
-      val inputLineCount = TestFilesHandler.countLines(inputData)
+      val inputLineCount   = TestFilesHandler.countLines(inputData)
 
       processedResults.size shouldBe inputLineCount
     }
@@ -76,7 +73,7 @@ class JumpEventsDetectorSpec extends AnyWordSpec with Matchers with IOValues {
   private def processInput: List[FlightEvents] =
     TestFilesHandler
       .readCsv[DataPoint](inputData)
-      .through(JumpEventsDetector(DetectionConfig.default).streamDetect)
+      .through(JumpEventsDetector(DetectionConfig.default).detectEvents)
       .streamResult()
 
 }

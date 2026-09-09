@@ -13,8 +13,7 @@ import java.time.*
  * @param coordinates Geographic coordinates (latitude and longitude)
  * @param altitude Altitude measurements (barometric and GPS)
  * @param motion Motion data (speed, sink rate, heading)
- * @param orientation Quaternion orientation data, None when any component is missing or unparseable (e.g. the device
- *                    emits '-nan')
+ * @param orientation Quaternion orientation data
  * @param acceleration Acceleration data on three axes
  * @param angularVelocity Angular velocity (gyroscope) data on three axes
  * @param metadata Additional metadata information
@@ -33,7 +32,7 @@ final private[beesight] case class AirlogPoint(
 
 private[beesight] object AirlogPoint {
 
-  val airlogSpecBuilder = CsvSpecBuilder.forFormat[AirlogPoint]
+  val airlogSpecBuilder: CsvSpecBuilder[AirlogPoint] = CsvSpecBuilder.forFormat[AirlogPoint]
 
   import airlogSpecBuilder._
 
@@ -53,16 +52,14 @@ private[beesight] object AirlogPoint {
     required[Double]("sink", p => formatDouble(p.motion.sink, 2))
   private val headingField =
     required[Double]("heading", p => formatDouble(p.motion.heading, 1))
-  // The orientation columns participate in format detection, but a component that is missing, empty, or unparseable
-  // yields a None orientation instead of failing the whole row
   private val qwField =
-    lenient[Double]("Qw", p => p.orientation.map(q => formatDouble(q.w, 4)).getOrElse(""))
+    lenient[Double]("Qw", _.orientation.map(q => formatDouble(q.w, 4)).getOrElse(""))
   private val qxField =
-    lenient[Double]("Qx", p => p.orientation.map(q => formatDouble(q.x, 4)).getOrElse(""))
+    lenient[Double]("Qx", _.orientation.map(q => formatDouble(q.x, 4)).getOrElse(""))
   private val qyField =
-    lenient[Double]("Qy", p => p.orientation.map(q => formatDouble(q.y, 4)).getOrElse(""))
+    lenient[Double]("Qy", _.orientation.map(q => formatDouble(q.y, 4)).getOrElse(""))
   private val qzField =
-    lenient[Double]("Qz", p => p.orientation.map(q => formatDouble(q.z, 4)).getOrElse(""))
+    lenient[Double]("Qz", _.orientation.map(q => formatDouble(q.z, 4)).getOrElse(""))
   private val axField =
     required[Double]("Ax", p => formatDouble(p.acceleration.x, 3))
   private val ayField =
@@ -244,17 +241,17 @@ final private[beesight] case class Quaternion(
 
 object Quaternion {
 
-  /**
-   * Builds an orientation from its four components, yielding None when any component is missing or unparseable, since
-   * a partial quaternion carries no orientation information
-   */
   def fromComponents(
-    w: Option[Double],
-    x: Option[Double],
-    y: Option[Double],
-    z: Option[Double],
+    oW: Option[Double],
+    oX: Option[Double],
+    oY: Option[Double],
+    oZ: Option[Double],
   ): Option[Quaternion] =
-    for w <- w; x <- x; y <- y; z <- z
+    for
+      w <- oW
+      x <- oX
+      y <- oY
+      z <- oZ
     yield Quaternion(w, x, y, z)
 
 }

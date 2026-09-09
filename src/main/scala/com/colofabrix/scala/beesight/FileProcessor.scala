@@ -56,7 +56,7 @@ private[beesight] object FileProcessor {
     CsvRowEncoder[A, String],
   ): fs2.Stream[IOConfig, Unit] = {
     val detector     = JumpEventsDetector(cfg.detectionConfig)
-    val eventsStream = csvStream.through(detector.streamDetect)
+    val eventsStream = csvStream.through(detector.detectEvents)
 
     (eventsStream zip csvStream)
       .through(DataCutter(cfg).cutPipe)

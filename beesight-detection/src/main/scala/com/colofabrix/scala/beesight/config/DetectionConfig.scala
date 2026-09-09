@@ -87,7 +87,7 @@ object DetectionConfig {
 
 /**
  * Global preprocessing settings.
- * 
+ *
  * FIXME: These parameters are used only by the preprocessor, create a different case class (keep GlobalConfig too)
  *
  * @param preprocessWindowSize Size of the sliding window used for despiking; larger values smooth more aggressively

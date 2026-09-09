@@ -44,7 +44,7 @@ final private[beesight] case class FlysightPoint(
 
 private[beesight] object FlysightPoint {
 
-  val flysightSpecBuilder = CsvSpecBuilder.forFormat[FlysightPoint]
+  val flysightSpecBuilder: CsvSpecBuilder[FlysightPoint] = CsvSpecBuilder.forFormat[FlysightPoint]
 
   import flysightSpecBuilder._
 

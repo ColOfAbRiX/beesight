@@ -1,8 +1,8 @@
 package com.colofabrix.scala.beesight.model.formats
 
 import cats.data.NonEmptyList
-import com.colofabrix.scala.beesight.{ IOValues, TestFilesHandler }
 import com.colofabrix.scala.beesight.model.*
+import com.colofabrix.scala.beesight.{ IOValues, TestFilesHandler }
 import fs2.data.csv.*
 import java.nio.file.Paths
 import java.time.*
@@ -151,28 +151,28 @@ class AirlogPointAdapterSpec extends AnyFreeSpec with Matchers with IOValues {
 
     "should decode a row with an unparseable quaternion component to a None orientation" in {
       val row = csvRow(
-        "time" -> "2024-06-15T12:30:00Z",
-        "lat" -> "45.0000000",
-        "lon" -> "9.0000000",
-        "alt" -> "4200.0",
-        "gpsAlt" -> "4210.0",
-        "speed" -> "12.50",
-        "sink" -> "-15.00",
+        "time"    -> "2024-06-15T12:30:00Z",
+        "lat"     -> "45.0000000",
+        "lon"     -> "9.0000000",
+        "alt"     -> "4200.0",
+        "gpsAlt"  -> "4210.0",
+        "speed"   -> "12.50",
+        "sink"    -> "-15.00",
         "heading" -> "90.0",
-        "Qw" -> "1.0000",
-        "Qx" -> "0.0000",
-        "Qy" -> "-nan",
-        "Qz" -> "0.0000",
-        "Ax" -> "0.000",
-        "Ay" -> "0.000",
-        "Az" -> "0.000",
-        "Gx" -> "0.000",
-        "Gy" -> "0.000",
-        "Gz" -> "0.000",
-        "mark" -> "0",
-        "numSat" -> "10",
-        "msg" -> "0",
-        "b_sink" -> "-14.00",
+        "Qw"      -> "1.0000",
+        "Qx"      -> "0.0000",
+        "Qy"      -> "-nan",
+        "Qz"      -> "0.0000",
+        "Ax"      -> "0.000",
+        "Ay"      -> "0.000",
+        "Az"      -> "0.000",
+        "Gx"      -> "0.000",
+        "Gy"      -> "0.000",
+        "Gz"      -> "0.000",
+        "mark"    -> "0",
+        "numSat"  -> "10",
+        "msg"     -> "0",
+        "b_sink"  -> "-14.00",
       )
 
       val decoded = AirlogPoint.csvRowDecoder(row).toOption.get
@@ -184,35 +184,35 @@ class AirlogPointAdapterSpec extends AnyFreeSpec with Matchers with IOValues {
 
     "should decode a row with empty quaternion cells to a None orientation" in {
       val row = csvRow(
-        "time" -> "2024-06-15T12:30:00Z",
-        "lat" -> "45.0000000",
-        "lon" -> "9.0000000",
-        "alt" -> "4200.0",
-        "gpsAlt" -> "4210.0",
-        "speed" -> "12.50",
-        "sink" -> "-15.00",
+        "time"    -> "2024-06-15T12:30:00Z",
+        "lat"     -> "45.0000000",
+        "lon"     -> "9.0000000",
+        "alt"     -> "4200.0",
+        "gpsAlt"  -> "4210.0",
+        "speed"   -> "12.50",
+        "sink"    -> "-15.00",
         "heading" -> "90.0",
-        "Qw" -> "",
-        "Qx" -> "",
-        "Qy" -> "",
-        "Qz" -> "",
-        "Ax" -> "0.000",
-        "Ay" -> "0.000",
-        "Az" -> "0.000",
-        "Gx" -> "0.000",
-        "Gy" -> "0.000",
-        "Gz" -> "0.000",
-        "mark" -> "0",
-        "numSat" -> "10",
-        "msg" -> "0",
-        "b_sink" -> "-14.00",
+        "Qw"      -> "",
+        "Qx"      -> "",
+        "Qy"      -> "",
+        "Qz"      -> "",
+        "Ax"      -> "0.000",
+        "Ay"      -> "0.000",
+        "Az"      -> "0.000",
+        "Gx"      -> "0.000",
+        "Gy"      -> "0.000",
+        "Gz"      -> "0.000",
+        "mark"    -> "0",
+        "numSat"  -> "10",
+        "msg"     -> "0",
+        "b_sink"  -> "-14.00",
       )
 
       AirlogPoint.csvRowDecoder(row).toOption.get.orientation shouldBe None
     }
 
     "should encode a missing orientation as empty cells" in {
-      val point  = airlogPoint(orientation = None)
+      val point   = airlogPoint(orientation = None)
       val encoded = AirlogPoint.csvRowEncoder(point)
 
       encoded("Qw") shouldBe Some("")

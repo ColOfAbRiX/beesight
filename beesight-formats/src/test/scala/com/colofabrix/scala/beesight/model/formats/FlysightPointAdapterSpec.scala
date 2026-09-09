@@ -1,8 +1,8 @@
 package com.colofabrix.scala.beesight.model.formats
 
 import cats.data.NonEmptyList
-import com.colofabrix.scala.beesight.{ IOValues, TestFilesHandler }
 import com.colofabrix.scala.beesight.model.*
+import com.colofabrix.scala.beesight.{ IOValues, TestFilesHandler }
 import fs2.data.csv.*
 import java.nio.file.Paths
 import java.time.*
@@ -80,20 +80,20 @@ class FlysightPointAdapterSpec extends AnyFreeSpec with Matchers with IOValues {
 
     "should decode a FlySight row" in {
       val row = csvRow(
-        "time" -> "2024-06-15T12:30:00Z",
-        "lat" -> "45.0000000",
-        "lon" -> "9.0000000",
-        "hMSL" -> "3500.000",
-        "velN" -> "12.50",
-        "velE" -> "-8.30",
-        "velD" -> "55.00",
-        "hAcc" -> "1.000",
-        "vAcc" -> "1.000",
-        "sAcc" -> "1.00",
+        "time"    -> "2024-06-15T12:30:00Z",
+        "lat"     -> "45.0000000",
+        "lon"     -> "9.0000000",
+        "hMSL"    -> "3500.000",
+        "velN"    -> "12.50",
+        "velE"    -> "-8.30",
+        "velD"    -> "55.00",
+        "hAcc"    -> "1.000",
+        "vAcc"    -> "1.000",
+        "sAcc"    -> "1.00",
         "heading" -> "90.00000",
-        "cAcc" -> "5.00000",
-        "gpsFix" -> "3",
-        "numSV" -> "10",
+        "cAcc"    -> "5.00000",
+        "gpsFix"  -> "3",
+        "numSV"   -> "10",
       )
 
       val decoded = FlysightPoint.csvRowDecoder(row).toOption.get
@@ -119,19 +119,19 @@ class FlysightPointAdapterSpec extends AnyFreeSpec with Matchers with IOValues {
 
     "should decode a row without the optional gpsFix column" in {
       val row = csvRow(
-        "time" -> "2024-06-15T12:30:00Z",
-        "lat" -> "45.0000000",
-        "lon" -> "9.0000000",
-        "hMSL" -> "3500.000",
-        "velN" -> "12.50",
-        "velE" -> "-8.30",
-        "velD" -> "55.00",
-        "hAcc" -> "1.000",
-        "vAcc" -> "1.000",
-        "sAcc" -> "1.00",
+        "time"    -> "2024-06-15T12:30:00Z",
+        "lat"     -> "45.0000000",
+        "lon"     -> "9.0000000",
+        "hMSL"    -> "3500.000",
+        "velN"    -> "12.50",
+        "velE"    -> "-8.30",
+        "velD"    -> "55.00",
+        "hAcc"    -> "1.000",
+        "vAcc"    -> "1.000",
+        "sAcc"    -> "1.00",
         "heading" -> "90.00000",
-        "cAcc" -> "5.00000",
-        "numSV" -> "10",
+        "cAcc"    -> "5.00000",
+        "numSV"   -> "10",
       )
 
       val decoded = FlysightPoint.csvRowDecoder(row).toOption.get

@@ -35,7 +35,7 @@ final private[beesight] case class DekunuPoint(
 
 private[beesight] object DekunuPoint {
 
-  val dekunuSpecBuilder = CsvSpecBuilder.forFormat[DekunuPoint]
+  val dekunuSpecBuilder: CsvSpecBuilder[DekunuPoint] = CsvSpecBuilder.forFormat[DekunuPoint]
 
   import dekunuSpecBuilder._
 
@@ -100,14 +100,14 @@ private[beesight] object DekunuPoint {
 
     def apply(row: CsvRow[String]): DecoderResult[DekunuPoint] =
       for
-        gpsTime      <- gpsTimeField.decode(row)
-        gpsLatitude  <- gpsLatitudeField.decode(row)
-        gpsLongitude <- gpsLongitudeField.decode(row)
-        gpsAltitude  <- gpsAltitudeField.decode(row)
-        gpsSpeed     <- gpsSpeedField.decode(row)
-        gpsAngle     <- gpsAngleField.decode(row)
+        gpsTime       <- gpsTimeField.decode(row)
+        gpsLatitude   <- gpsLatitudeField.decode(row)
+        gpsLongitude  <- gpsLongitudeField.decode(row)
+        gpsAltitude   <- gpsAltitudeField.decode(row)
+        gpsSpeed      <- gpsSpeedField.decode(row)
+        gpsAngle      <- gpsAngleField.decode(row)
         instVertSpeed <- instVertSpeedField.decode(row)
-        gpsNumOfSats <- gpsNumOfSatsField.decode(row)
+        gpsNumOfSats  <- gpsNumOfSatsField.decode(row)
       yield DekunuPoint(
         gpsTime = gpsTime,
         gpsLatitude = gpsLatitude,

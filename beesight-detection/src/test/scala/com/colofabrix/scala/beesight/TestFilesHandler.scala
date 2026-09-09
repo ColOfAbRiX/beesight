@@ -28,8 +28,7 @@ private[beesight] object TestFilesHandler {
         .getLines()
         .drop(1)
         .count(line => line.trim.nonEmpty && !line.trim.startsWith("#"))
-    }
-    finally {
+    } finally {
       source.close()
     }
 
@@ -81,8 +80,7 @@ private[beesight] object TestFilesHandler {
     CellDecoder[String].emap { value =>
       try {
         Right(OffsetDateTime.parse(value, DateTimeFormatter.ISO_OFFSET_DATE_TIME))
-      }
-      catch {
+      } catch {
         case t: Exception => Left(new DecoderError(t.getMessage()))
       }
     }

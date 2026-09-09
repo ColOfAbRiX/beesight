@@ -5,10 +5,7 @@ import com.colofabrix.scala.beesight.IOValues
 import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.colofabrix.scala.beesight.model.*
 import java.lang.Math.*
-import java.time.{
-  Duration,
-  Instant
-}
+import java.time.{ Duration, Instant }
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
@@ -262,7 +259,7 @@ class SwoopDataDetectorSpec extends AnyWordSpec with Matchers with IOValues {
       }
       .toVector
 
-  private val baseTime = 
+  private val baseTime =
     Instant.parse("2024-01-01T12:00:00Z")
 
   private def t(seconds: Long): Instant =
@@ -270,7 +267,7 @@ class SwoopDataDetectorSpec extends AnyWordSpec with Matchers with IOValues {
 
   private def detect(data: Vector[DataPoint], events: FlightEvents): Option[SwoopData] =
     SwoopDataDetector(DetectionConfig.default)
-    .detect(events, fs2.Stream.emits[IO, DataPoint](data))
-    .result()
+      .detect(events, fs2.Stream.emits[IO, DataPoint](data))
+      .result()
 
 }

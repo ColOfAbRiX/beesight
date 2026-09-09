@@ -698,7 +698,8 @@ class NonEmptyWindowSpec extends AnyFreeSpec with Matchers {
 
       "foldRight should accumulate all elements" in {
         val window = filledWindow(1, 2, 3)
-        val result = summon[cats.Foldable[NonEmptyFilled]].foldRight(window, cats.Eval.now(0))((a, acc) => acc.map(_ + a)).value
+        val result =
+          summon[cats.Foldable[NonEmptyFilled]].foldRight(window, cats.Eval.now(0))((a, acc) => acc.map(_ + a)).value
         result shouldBe 6
       }
 

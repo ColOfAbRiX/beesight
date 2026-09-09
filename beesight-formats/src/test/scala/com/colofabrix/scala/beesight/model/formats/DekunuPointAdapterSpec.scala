@@ -1,8 +1,8 @@
 package com.colofabrix.scala.beesight.model.formats
 
 import cats.data.NonEmptyList
-import com.colofabrix.scala.beesight.{ IOValues, TestFilesHandler }
 import com.colofabrix.scala.beesight.model.*
+import com.colofabrix.scala.beesight.{ IOValues, TestFilesHandler }
 import fs2.data.csv.*
 import java.nio.file.Paths
 import java.time.Instant
@@ -118,14 +118,14 @@ class DekunuPointAdapterSpec extends AnyFreeSpec with Matchers with IOValues {
 
     "should decode a row with all columns" in {
       val row = csvRow(
-        "gpsTime" -> "1718454600",
-        "gpsLatitude" -> "45123456",
-        "gpsLongitude" -> "9123456",
-        "gpsAltitudeMeters" -> "3500.000",
-        "gpsSpeedKnot" -> "100.000",
-        "gpsAngleDegree" -> "90.00000",
+        "gpsTime"                   -> "1718454600",
+        "gpsLatitude"               -> "45123456",
+        "gpsLongitude"              -> "9123456",
+        "gpsAltitudeMeters"         -> "3500.000",
+        "gpsSpeedKnot"              -> "100.000",
+        "gpsAngleDegree"            -> "90.00000",
         "instVertSpeedMetersPerSec" -> "-10.500",
-        "gpsNumOfSats" -> "12",
+        "gpsNumOfSats"              -> "12",
       )
 
       val decoded = DekunuPoint.csvRowDecoder(row).toOption.get
@@ -145,12 +145,12 @@ class DekunuPointAdapterSpec extends AnyFreeSpec with Matchers with IOValues {
 
     "should decode a row without optional columns" in {
       val row = csvRow(
-        "gpsTime" -> "1718454600",
-        "gpsLatitude" -> "45123456",
-        "gpsLongitude" -> "9123456",
+        "gpsTime"           -> "1718454600",
+        "gpsLatitude"       -> "45123456",
+        "gpsLongitude"      -> "9123456",
         "gpsAltitudeMeters" -> "3500.000",
-        "gpsSpeedKnot" -> "100.000",
-        "gpsAngleDegree" -> "90.00000",
+        "gpsSpeedKnot"      -> "100.000",
+        "gpsAngleDegree"    -> "90.00000",
       )
 
       val decoded = DekunuPoint.csvRowDecoder(row).toOption.get

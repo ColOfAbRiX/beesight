@@ -41,20 +41,20 @@ private[beesight] object GSwoopResult {
   given CsvRowDecoder[GSwoopResult, String] with
     def apply(row: CsvRow[String]): DecoderResult[GSwoopResult] =
       for
-        filename                    <- row.as[String]("filename")
-        turnInitiationAltitude      <- optDouble(row, "turn_initiation_altitude")
-        rolloutStartAltitude        <- optDouble(row, "rollout_start_altitude")
-        finishedRolloutAltitude     <- optDouble(row, "finished_rollout_altitude")
-        maxVerticalSpeed            <- optDouble(row, "max_vertical_speed")
-        maxTotalSpeed               <- optDouble(row, "max_total_speed")
-        maxHorizontalSpeed          <- optDouble(row, "max_horizontal_speed")
-        degreesOfRotation           <- optDouble(row, "degrees_of_rotation")
-        timeToExecuteTurn           <- optDouble(row, "time_to_execute_turn")
-        timeDuringRollout           <- optDouble(row, "time_during_rollout")
-        timeAloftDuringSwoop        <- optDouble(row, "time_aloft_during_swoop")
-        entryGateSpeed              <- optDouble(row, "entry_gate_speed")
-        distanceToStop              <- optDouble(row, "distance_to_stop")
-        touchdownEstimate           <- optDouble(row, "touchdown_estimate")
+        filename                <- row.as[String]("filename")
+        turnInitiationAltitude  <- optDouble(row, "turn_initiation_altitude")
+        rolloutStartAltitude    <- optDouble(row, "rollout_start_altitude")
+        finishedRolloutAltitude <- optDouble(row, "finished_rollout_altitude")
+        maxVerticalSpeed        <- optDouble(row, "max_vertical_speed")
+        maxTotalSpeed           <- optDouble(row, "max_total_speed")
+        maxHorizontalSpeed      <- optDouble(row, "max_horizontal_speed")
+        degreesOfRotation       <- optDouble(row, "degrees_of_rotation")
+        timeToExecuteTurn       <- optDouble(row, "time_to_execute_turn")
+        timeDuringRollout       <- optDouble(row, "time_during_rollout")
+        timeAloftDuringSwoop    <- optDouble(row, "time_aloft_during_swoop")
+        entryGateSpeed          <- optDouble(row, "entry_gate_speed")
+        distanceToStop          <- optDouble(row, "distance_to_stop")
+        touchdownEstimate       <- optDouble(row, "touchdown_estimate")
       yield GSwoopResult(
         filename = filename,
         turnInitiationAltitude = turnInitiationAltitude,

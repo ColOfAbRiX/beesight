@@ -2,8 +2,7 @@ package com.colofabrix.scala.beesight.swoop
 
 import cats.effect.kernel.Concurrent
 import cats.syntax.all.*
-import com.colofabrix.scala.beesight.config.DetectionConfig
-import com.colofabrix.scala.beesight.config.SwoopConfig
+import com.colofabrix.scala.beesight.config.{ DetectionConfig, SwoopConfig }
 import com.colofabrix.scala.beesight.math.Heading
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.preprocess.*
@@ -12,22 +11,17 @@ import java.time.Duration
 /**
  * Computes swoop metrics from the canopy-to-landing dataPoints of a flight.
  *
- * The detection follows the gSwoop semantics (see `gswoop/NOTES.md` and `detection_algorithm.md`) with an
- * additional episode-validation step that discriminates real swoops from canopy manoeuvres:
+ *   1. Candidate dive points are local vertical-speed maxima, fast enough to be a dive (`minSwoopVerticalSpeed`) and
+ *      low enough to be a swoop (`maxSwoopHeight` AGL).
+ *   2. Episode validation: a candidate is the dive point only if the flight from the peak to landing is a continuous
+ *      descent, the vertical speed decays towards the ground without a sustained recovery above a fraction of the peak
+ *      speed (the recovery signature of a manoeuvre), and the peak carries meaningful height above the ground
+ *      (`minSwoopDescent`).
+ *   3. The remaining events are derived around the dive point with walks: turn initiation by walking backward past the
+ *      pull threshold while the descent is still steepening, rollout start by walking backward from 100 ft above the
+ *      stop altitude while vertical speed strictly increases.
  *
- *   1. Candidate dive points are local vertical-speed maxima, fast enough to be a dive
- *      (`minSwoopVerticalSpeed`) and low enough to be a swoop (`maxSwoopHeight` AGL - gSwoop's 1000 ft cap).
- *   2. Episode validation: a candidate is the dive point only if the flight from the peak to landing is a
- *      continuous descent - the vertical speed decays towards the ground without a sustained recovery above a
- *      fraction of the peak speed (the recovery signature of a manoeuvre), and the peak carries meaningful
- *      height above the ground (`minSwoopDescent`).
- *   3. The remaining events are derived around the dive point with gSwoop's walks: turn initiation by
- *      walking backward past the pull threshold while the descent is still steepening (§6.3), rollout start
- *      by walking backward from 100 ft above the stop altitude while vertical speed strictly increases (§6.5).
- *
- * All reported altitudes are AGL, relative to the landing point's altitude. Detection runs on despiked but
- * unsmoothed data: gSwoop applies no filtering before detection, and smoothing was observed to flatten the
- * true peak and shift event indices.
+ * All reported altitudes are AGL, relative to the landing point's altitude.
  */
 final class SwoopDataDetector private (config: SwoopConfig, preprocessor: Preprocessor) {
 
@@ -67,7 +61,7 @@ final class SwoopDataDetector private (config: SwoopConfig, preprocessor: Prepro
       result       = buildSwoopData(dataPoints, turnInitIdx, rolloutIdx, ground)
     yield result
 
-  /** 
+  /**
    * Candidate peaks and episode validation. Returns the dive point (bottom of the dive).
    */
   private def findDivePoint(dataPoints: Vector[IndexedPoint], ground: Double): Option[Int] =
@@ -122,39 +116,43 @@ final class SwoopDataDetector private (config: SwoopConfig, preprocessor: Prepro
       if vz < recoveryLevel then
         return loop(i + 1, droppedBelow = true, aboveCount = 0)
 
-      val aboveCounteNext = 
+      val aboveCounteNext =
         if droppedBelow then aboveCount + 1 else aboveCount
 
-      val isSustainedRecovery = droppedBelow && aboveCount + 1 >= config.sustainedRecoverySamples
+      val isSustainedRecovery =
+        droppedBelow && aboveCount + 1 >= config.sustainedRecoverySamples
+
       if isSustainedRecovery then
-        false
-      else
-        loop(i + 1, droppedBelow, aboveCounteNext)
+        return false
+
+      loop(i + 1, droppedBelow, aboveCounteNext)
 
     loop(peakIdx + 1, droppedBelow = false, aboveCount = 0)
 
   /**
    * Walk backward from the dive point to the first point below the pull threshold, falling back to the minimum-descent
-   * point if the threshold is never crossed, then continue backward while the descent is still steepening (vertical
-   * speed still increasing in forward time).
+   * point if the threshold is never crossed, then continue backward while the descent is still steepening.
    */
   private def findTurnInitiation(dataPoints: Vector[IndexedPoint], diveIdx: Int): Option[Int] =
-    if diveIdx <= 0 then
-      return None
+    Option.unless(diveIdx <= 0) {
+      val speedAt =
+        (j: Int) => dataPoints(j).point.speed.vertical
 
-    var i = diveIdx
+      @scala.annotation.tailrec
+      def walkBack(i: Int)(pred: Int => Boolean): Int =
+        if i > 0 && pred(i) then walkBack(i - 1)(pred) else i
 
-    while i > 0 && dataPoints(i).point.speed.vertical >= config.pullThreshold do
-      i -= 1
+      val crossed =
+        walkBack(diveIdx)(i => speedAt(i) >= config.pullThreshold)
 
-    val pullNeverCrossed = dataPoints(i).point.speed.vertical >= config.pullThreshold
-    if pullNeverCrossed then
-      i = (0 to diveIdx).minBy(j => dataPoints(j).point.speed.vertical)
+      val afterPull =
+        if speedAt(crossed) >= config.pullThreshold then
+          (0 to diveIdx).minBy(speedAt)
+        else
+          crossed
 
-    while i > 0 && isSteepening(dataPoints, i) do
-      i -= 1
-
-    Some(i)
+      walkBack(afterPull)(i => isSteepening(dataPoints, i))
+    }
 
   /**
    * True when the vertical speed is still increasing at point `i` (the dive is steepening there)
@@ -177,22 +175,26 @@ final class SwoopDataDetector private (config: SwoopConfig, preprocessor: Prepro
    * noise.
    */
   private def findRolloutStart(dataPoints: Vector[IndexedPoint], turnInitIdx: Int, ground: Double): Option[Int] =
-    if turnInitIdx >= dataPoints.length - 1 then
-      return None
+    @scala.annotation.tailrec
+    def walkBack(i: Int, moved: Boolean): (Int, Boolean) =
+      val prevIsFaster = 
+        dataPoints(i - 1).point.speed.vertical > dataPoints(i).point.speed.vertical
+
+      if i > 0 && prevIsFaster then
+        walkBack(i - 1, moved = true)
+      else
+        (i, moved)
 
     val rolloutAltitude = ground + config.rolloutWindow
     val startIdx        = dataPoints.indexWhere(_.point.altitude < rolloutAltitude, turnInitIdx)
 
-    if startIdx <= 0 then
-      return None
-
-    var i     = startIdx
-    var moved = false
-    while i > 0 && dataPoints(i - 1).point.speed.vertical > dataPoints(i).point.speed.vertical do
-      i -= 1
-      moved = true
-
-    Option.when(moved)(i)
+    Option
+      .when(turnInitIdx < dataPoints.length - 1 && startIdx > 0) {
+        walkBack(startIdx, moved = false)
+      }
+      .flatMap { (end, moved) =>
+        Option.when(moved)(end)
+      }
 
   //  Metrics Computation  //
 
@@ -208,9 +210,15 @@ final class SwoopDataDetector private (config: SwoopConfig, preprocessor: Prepro
         .slice(turnInitIdx, rolloutIdx + 1)
         .map(_.point.speed)
 
+    val speeds =
+      dataPoints
+        .view
+        .map(_.point.speed)
+        .to(Vector)
+
     // Max vertical/total speed over [turn initiation, landing); max horizontal over [rollout, landing).
-    val afterTurn    = dataPoints.drop(turnInitIdx).map(_.point.speed)
-    val afterRollout = dataPoints.drop(rolloutIdx).map(_.point.speed)
+    val afterTurn    = speeds.drop(turnInitIdx)
+    val afterRollout = speeds.drop(rolloutIdx)
 
     val turnInit = dataPoints(turnInitIdx)
     val rollout  = dataPoints(rolloutIdx)
@@ -218,13 +226,15 @@ final class SwoopDataDetector private (config: SwoopConfig, preprocessor: Prepro
     val turnInitAgl = turnInit.point.altitude - ground
     val rolloutAgl  = rollout.point.altitude - ground
 
+    val degreesOfRotation = Heading.cumulativeHeadingChange(turnSpeeds, config.minHorizontalSpeed)
+
     SwoopData(
       turnInitiation = EventPoint(turnInit.idx, turnInitAgl),
       rolloutStart = EventPoint(rollout.idx, rolloutAgl),
       maxVerticalSpeed = afterTurn.map(_.vertical).max,
       maxTotalSpeed = afterTurn.map(_.magnitude).max,
       maxHorizontalSpeed = afterRollout.map(_.horizontal).max,
-      degreesOfRotation = Heading.cumulativeHeadingChange(turnSpeeds, config.minHorizontalSpeed),
+      degreesOfRotation = degreesOfRotation,
       timeToExecuteTurn = Duration.between(turnInit.point.time, rollout.point.time),
     )
 

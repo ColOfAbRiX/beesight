@@ -2,7 +2,7 @@ package com.colofabrix.scala.beesight.matchers
 
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.swoop.*
-import org.scalatest.matchers.{ MatchResult, Matcher }
+import org.scalatest.matchers.{ Matcher, MatchResult }
 
 /**
  * Custom ScalaTest matchers comparing [[SwoopData]] against gswoop-derived expected values.
@@ -46,7 +46,13 @@ trait SwoopMatchers {
 
   private def checkFields(swoop: SwoopData, expected: GSwoopResult): List[String] =
     List(
-      check("Turn initiation altitude", "m", swoop.turnInitiation.altitude, expected.turnInitiationAltitude, altitudeTolerance),
+      check(
+        "Turn initiation altitude",
+        "m",
+        swoop.turnInitiation.altitude,
+        expected.turnInitiationAltitude,
+        altitudeTolerance
+      ),
       check("Rollout start altitude", "m", swoop.rolloutStart.altitude, expected.rolloutStartAltitude, altitudeTolerance),
       check("Max vertical speed", "m/s", swoop.maxVerticalSpeed, expected.maxVerticalSpeed, speedTolerance),
       check("Max total speed", "m/s", swoop.maxTotalSpeed, expected.maxTotalSpeed, speedTolerance),
@@ -61,7 +67,13 @@ trait SwoopMatchers {
       ),
     ).flatten
 
-  private def check(name: String, unit: String, obtained: Double, expected: Option[Double], tolerance: Double): Option[String] =
+  private def check(
+    name: String,
+    unit: String,
+    obtained: Double,
+    expected: Option[Double],
+    tolerance: Double
+  ): Option[String] =
     expected match {
       case Some(e) if Math.abs(obtained - e) > tolerance =>
         val diff = obtained - e

@@ -34,12 +34,12 @@ private[beesight] object JumpEventsResult {
   given CsvRowDecoder[JumpEventsResult, String] with
     def apply(row: CsvRow[String]): DecoderResult[JumpEventsResult] =
       for
-        filename  <- row.as[String]("filename")
-        takeoff   <- optLong(row, "takeoff_pt")
-        freefall  <- optLong(row, "freefall_pt")
-        canopy    <- optLong(row, "canopy_pt")
-        landing   <- optLong(row, "landing_pt")
-        tag       <- optString(row, "tag")
+        filename <- row.as[String]("filename")
+        takeoff  <- optLong(row, "takeoff_pt")
+        freefall <- optLong(row, "freefall_pt")
+        canopy   <- optLong(row, "canopy_pt")
+        landing  <- optLong(row, "landing_pt")
+        tag      <- optString(row, "tag")
       yield JumpEventsResult(
         filename = filename,
         takeoff = takeoff.map(EventPoint(_, 0.0)),

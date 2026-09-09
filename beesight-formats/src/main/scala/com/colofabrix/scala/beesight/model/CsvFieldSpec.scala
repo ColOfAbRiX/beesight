@@ -47,5 +47,5 @@ final class CsvSpecBuilder[A] {
 object CsvSpecBuilder {
 
   def forFormat[A]: CsvSpecBuilder[A] = new CsvSpecBuilder[A]
-  
+
 }

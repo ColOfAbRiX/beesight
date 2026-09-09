@@ -1,7 +1,5 @@
 package com.colofabrix.scala.beesight.math
 
-import com.colofabrix.scala.beesight.collections.*
-import com.colofabrix.scala.beesight.collections.NonEmptyWindow.*
 import com.colofabrix.scala.beesight.model.*
 import java.time.Instant
 import org.scalatest.freespec.AnyFreeSpec
@@ -264,7 +262,5 @@ class KinematicsSpec extends AnyFreeSpec with Matchers {
       altitude = altitude,
       speed = GeoVector(north = northSpeed, east = eastSpeed, vertical = verticalSpeed),
     )
-
-  
 
 }

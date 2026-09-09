@@ -206,8 +206,7 @@ object PipelineBenchmark {
         .getLines()
         .drop(1)
         .count(line => line.trim.nonEmpty && !line.trim.startsWith("#"))
-    }
-    finally {
+    } finally {
       source.close()
     }
 
@@ -224,13 +223,12 @@ object PipelineBenchmark {
       .collect { case Right(value) => value }
 
   private def readLinesFromZip(filePath: Path): fs2.Stream[IO, String] =
-    val zis = new ZipInputStream(new FileInputStream(filePath.toFile))
+    val zis   = new ZipInputStream(new FileInputStream(filePath.toFile))
     val lines =
       try {
         zis.getNextEntry
         Source.fromInputStream(zis).getLines().toList
-      }
-      finally {
+      } finally {
         zis.close()
       }
     fs2.Stream.emits(lines)
@@ -279,7 +277,7 @@ object PipelineBenchmark {
     val start = System.nanoTime()
     val _     =
       readFlysightStream(filePath)
-        .through(detector.streamDetect)
+        .through(detector.detectEvents)
         .compile
         .last
         .unsafeRunSync()
