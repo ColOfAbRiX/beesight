@@ -7,7 +7,6 @@ import com.colofabrix.scala.beesight.math.Heading
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.preprocess.*
 import java.time.Duration
-import scala.annotation.unused
 
 /**
  * Computes swoop metrics with gSwoop's detection pipeline (gswoop/NOTES.md §6 and the decompiled `detect_*`
@@ -35,6 +34,7 @@ final class SwoopDataDetector private (config: SwoopConfig) {
   private val MpsToMph     = 2.2369362920544
   private val MetresToFeet = 3.28083989501312
 
+  // FIXME: All internal quantities, including constants, must be expressed in SIU units (meters, seconds, ...). mph values can be added as comments
   private val patternEntryAltitude    = 2500.0 / MetresToFeet // 2500 ft (m AGL above the detected ground)
   private val diveAltitudeCap         = 1000.0 / MetresToFeet // 1000 ft (m AGL above the detected ground)
   private val steepeningEntry         = 15.0 / MpsToMph       // 15 mph (m/s)
@@ -63,27 +63,24 @@ final class SwoopDataDetector private (config: SwoopConfig) {
   //  TEMPORARY trace hook for the gSwoop port validation - remove after the experiments  //
 
   /** Runs the same pipeline as [[detect]] but returns the full detection cascade for inspection. */
-  private[swoop] def detectWithTrace[F[_]: Concurrent, A: PointReader](
-    @unused events: FlightEvents,
-    stream: fs2.Stream[F, A]
-  ): F[SwoopTrace] =
+  private[swoop] def detectWithTrace[F[_]: Concurrent, A: PointReader](events: FlightEvents, stream: fs2.Stream[F, A]): F[SwoopTrace] =
     stream
       .zipWithIndex
       .map(IndexedPoint.fromZip)
       .compile
       .toVector
-      .map(computeSwoopMetricsWithTrace)
+      .map(computeSwoopMetricsWithTrace(_, events.landing))
 
   //  Swoop Detection  //
 
   private def computeSwoopMetrics(dataPoints: Vector[IndexedPoint]): Option[SwoopData] =
-    computeSwoopMetricsWithTrace(dataPoints).result
+    computeSwoopMetricsWithTrace(dataPoints, None).result
 
-  private def computeSwoopMetricsWithTrace(dataPoints: Vector[IndexedPoint]): SwoopTrace =
-    if dataPoints.length < 2 then 
+  private def computeSwoopMetricsWithTrace(dataPoints: Vector[IndexedPoint], landing: Option[EventPoint]): SwoopTrace =
+    if dataPoints.length < 2 then
       SwoopTrace(dataPoints, Double.NaN, None, None, None, None, None, None, None)
     else
-      val ground = detectedGround(dataPoints)
+      val ground = detectedGround(dataPoints, landing)
 
       val patternEntry = findPatternEntry(dataPoints, ground)
       val dive         = patternEntry.flatMap(pe => findDivePoint(dataPoints, pe, ground))
@@ -102,11 +99,25 @@ final class SwoopDataDetector private (config: SwoopConfig) {
       SwoopTrace(dataPoints, ground, patternEntry, dive, topOfTurn, stop, rollout, bottom, result)
 
   /**
-   * gSwoop's landing-ground estimate (decompiled_all.c:8671): walk back to the last slow point (total speed below
+   * Landing-ground estimate. Primary: the mean altitude over the ~5 s of points from the detected landing point
+   * onwards, minus 2 m. Fallback (no landing event): gSwoop's emulation (decompiled_all.c:8671).
+   */
+  private def detectedGround(dataPoints: Vector[IndexedPoint], landing: Option[EventPoint]): Double =
+    landing
+      .filter(l => 0 <= l.index && l.index < dataPoints.length)
+      .map { l =>
+        val startTime = dataPoints(l.index.toInt).point.time
+        val window    = dataPoints.view.drop(l.index.toInt).takeWhile(!_.point.time.isAfter(startTime.plusSeconds(5)))
+        window.map(_.point.altitude).sum / window.size - 2.0
+      }
+      .getOrElse(gswoopGround(dataPoints))
+
+  /**
+   * gSwoop's landing-ground emulation (decompiled_all.c:8671): walk back to the last slow point (total speed below
    * 10 mph, after landing), then average the altitude over the ~3 s forward window starting there, minus 2 m. When
    * no slow point exists, the ground falls back to the last point's altitude minus 2 m.
    */
-  private def detectedGround(dataPoints: Vector[IndexedPoint]): Double =
+  private def gswoopGround(dataPoints: Vector[IndexedPoint]): Double =
     val speedThreshold = 10.0 / MpsToMph // 10 mph (m/s)
 
     (dataPoints.length - 1 to 0 by -1).find(i => dataPoints(i).point.speed.magnitude < speedThreshold) match
