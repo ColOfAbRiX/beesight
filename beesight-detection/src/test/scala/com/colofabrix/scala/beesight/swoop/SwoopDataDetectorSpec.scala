@@ -21,9 +21,9 @@ class SwoopDataDetectorSpec extends AnyWordSpec with Matchers with IOValues {
         SwoopData(
           turnInitiation = EventPoint(10, 150.0),
           rolloutStart = EventPoint(15, 100.0),
-          maxVerticalSpeed = 17.0,
-          maxTotalSpeed = 54.483942588619634,
-          maxHorizontalSpeed = 54.44722215136416,
+          maxVerticalSpeed = SpeedAtAltitude(17.0, 100.0),
+          maxTotalSpeed = SpeedAtAltitude(54.483942588619634, 0.0),
+          maxHorizontalSpeed = SpeedAtAltitude(54.44722215136416, 0.0),
           degreesOfRotation = 0.0,
           timeToExecuteTurn = Duration.ofSeconds(5),
         )
@@ -99,9 +99,9 @@ class SwoopDataDetectorSpec extends AnyWordSpec with Matchers with IOValues {
         SwoopData(
           turnInitiation = EventPoint(12, 130.0),
           rolloutStart = EventPoint(18, 70.0),
-          maxVerticalSpeed = 11.0,
-          maxTotalSpeed = 40.591008856642134,
-          maxHorizontalSpeed = 40.587929240107826,
+          maxVerticalSpeed = SpeedAtAltitude(11.0, 70.0),
+          maxTotalSpeed = SpeedAtAltitude(40.591008856642134, 0.0),
+          maxHorizontalSpeed = SpeedAtAltitude(40.587929240107826, 0.0),
           degreesOfRotation = 0.0,
           timeToExecuteTurn = Duration.ofSeconds(6),
         )
@@ -119,9 +119,9 @@ class SwoopDataDetectorSpec extends AnyWordSpec with Matchers with IOValues {
         SwoopData(
           turnInitiation = EventPoint(10, 150.0),
           rolloutStart = EventPoint(15, 100.0),
-          maxVerticalSpeed = 17.0,
-          maxTotalSpeed = 54.483942588619634,
-          maxHorizontalSpeed = 54.44722215136416,
+          maxVerticalSpeed = SpeedAtAltitude(17.0, 100.0),
+          maxTotalSpeed = SpeedAtAltitude(54.483942588619634, 0.0),
+          maxHorizontalSpeed = SpeedAtAltitude(54.44722215136416, 0.0),
           degreesOfRotation = 0.0,
           timeToExecuteTurn = Duration.ofSeconds(5),
         )
@@ -139,9 +139,9 @@ class SwoopDataDetectorSpec extends AnyWordSpec with Matchers with IOValues {
         SwoopData(
           turnInitiation = EventPoint(10, 150.0),
           rolloutStart = EventPoint(15, 100.0),
-          maxVerticalSpeed = 17.0,
-          maxTotalSpeed = 54.483942588619634,
-          maxHorizontalSpeed = 54.44722215136416,
+          maxVerticalSpeed = SpeedAtAltitude(17.0, 100.0),
+          maxTotalSpeed = SpeedAtAltitude(54.483942588619634, 0.0),
+          maxHorizontalSpeed = SpeedAtAltitude(54.44722215136416, 0.0),
           degreesOfRotation = 0.0,
           timeToExecuteTurn = Duration.ofSeconds(5),
         )
@@ -186,9 +186,9 @@ class SwoopDataDetectorSpec extends AnyWordSpec with Matchers with IOValues {
         SwoopData(
           turnInitiation = EventPoint(10, 150.0),
           rolloutStart = EventPoint(15, 100.0),
-          maxVerticalSpeed = 17.0,
-          maxTotalSpeed = 55.036351623268054,
-          maxHorizontalSpeed = 55.0,
+          maxVerticalSpeed = SpeedAtAltitude(17.0, 100.0),
+          maxTotalSpeed = SpeedAtAltitude(55.036351623268054, 0.0),
+          maxHorizontalSpeed = SpeedAtAltitude(55.0, 0.0),
           degreesOfRotation = 22.5,
           timeToExecuteTurn = Duration.ofSeconds(5),
         )
@@ -206,9 +206,9 @@ class SwoopDataDetectorSpec extends AnyWordSpec with Matchers with IOValues {
         SwoopData(
           turnInitiation = EventPoint(10, 150.0),
           rolloutStart = EventPoint(15, 100.0),
-          maxVerticalSpeed = 17.0,
-          maxTotalSpeed = 54.483942588619634,
-          maxHorizontalSpeed = 54.44722215136416,
+          maxVerticalSpeed = SpeedAtAltitude(17.0, 100.0),
+          maxTotalSpeed = SpeedAtAltitude(54.483942588619634, 0.0),
+          maxHorizontalSpeed = SpeedAtAltitude(54.44722215136416, 0.0),
           degreesOfRotation = 0.0,
           timeToExecuteTurn = Duration.ofSeconds(5),
         )

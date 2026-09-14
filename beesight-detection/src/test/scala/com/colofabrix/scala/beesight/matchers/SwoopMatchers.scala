@@ -17,6 +17,8 @@ trait SwoopMatchers {
   private val rotationTolerance = 30.0 // degrees
   private val timeTolerance     = 1.5  // s
 
+  private val MpsToKmh = 3.6
+
   /**
    * Matches the swoop metrics computed from a recording against the expected gswoop values.
    *
@@ -54,10 +56,31 @@ trait SwoopMatchers {
         altitudeTolerance
       ),
       check("Rollout start altitude", "m", swoop.rolloutStart.altitude, expected.rolloutStartAltitude, altitudeTolerance),
-      check("Max vertical speed", "m/s", swoop.maxVerticalSpeed, expected.maxVerticalSpeed, speedTolerance),
-      check("Max total speed", "m/s", swoop.maxTotalSpeed, expected.maxTotalSpeed, speedTolerance),
-      check("Max horizontal speed", "m/s", swoop.maxHorizontalSpeed, expected.maxHorizontalSpeed, speedTolerance),
-      check("Degrees of rotation", "deg", swoop.degreesOfRotation, expected.degreesOfRotation, rotationTolerance),
+      check(
+        "Max vertical speed",
+        "km/h",
+        swoop.maxVerticalSpeed.speed * MpsToKmh,
+        expected.maxVerticalSpeed.map(_ * MpsToKmh),
+        speedTolerance * MpsToKmh,
+        Some(swoop.maxVerticalSpeed.altitude)
+      ),
+      check(
+        "Max total speed",
+        "km/h",
+        swoop.maxTotalSpeed.speed * MpsToKmh,
+        expected.maxTotalSpeed.map(_ * MpsToKmh),
+        speedTolerance * MpsToKmh,
+        Some(swoop.maxTotalSpeed.altitude)
+      ),
+      check(
+        "Max horizontal speed",
+        "km/h",
+        swoop.maxHorizontalSpeed.speed * MpsToKmh,
+        expected.maxHorizontalSpeed.map(_ * MpsToKmh),
+        speedTolerance * MpsToKmh,
+        Some(swoop.maxHorizontalSpeed.altitude)
+      ),
+      check("Degrees of rotation", "deg", Math.abs(swoop.degreesOfRotation), expected.degreesOfRotation, rotationTolerance),
       check(
         "Time to execute turn",
         "s",
@@ -72,12 +95,14 @@ trait SwoopMatchers {
     unit: String,
     obtained: Double,
     expected: Option[Double],
-    tolerance: Double
+    tolerance: Double,
+    atAltitude: Option[Double] = None
   ): Option[String] =
     expected match {
       case Some(e) if Math.abs(obtained - e) > tolerance =>
         val diff = obtained - e
-        Some(f"  $name%-30s  expected $e%.1f $unit, got $obtained%.1f $unit  (diff: $diff%+.1f, tol: +/- $tolerance%.1f)")
+        val at   = atAltitude.fold("")(a => f" @ $a%.0f m")
+        Some(f"  $name%-30s  expected $e%.1f $unit, got $obtained%.1f $unit$at  (diff: $diff%+.1f, tol: +/- $tolerance%.1f)")
       case _ =>
         None
     }

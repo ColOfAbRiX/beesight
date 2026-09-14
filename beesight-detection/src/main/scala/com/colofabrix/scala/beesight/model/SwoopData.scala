@@ -7,18 +7,18 @@ import java.time.Duration
  *
  * @param turnInitiation     Where the speed-building maneuver began
  * @param rolloutStart       Where vertical speed peaked before final descent
- * @param maxVerticalSpeed   Highest vertical speed (m/s) during the turn phase
- * @param maxTotalSpeed      Highest 3D speed (m/s) during the turn phase
- * @param maxHorizontalSpeed Highest horizontal speed (m/s) during turn + rollout
+ * @param maxVerticalSpeed   Highest vertical speed (m/s) during the turn phase, and the AGL altitude where it occurred
+ * @param maxTotalSpeed      Highest 3D speed (m/s) during the turn phase, and the AGL altitude where it occurred
+ * @param maxHorizontalSpeed Highest horizontal speed (m/s) during turn + rollout, and the AGL altitude where it occurred
  * @param degreesOfRotation  Cumulative heading change (degrees) during speed building
  * @param timeToExecuteTurn  Elapsed time from turn initiation to rollout start
  */
 final private[beesight] case class SwoopData(
   turnInitiation: EventPoint,
   rolloutStart: EventPoint,
-  maxVerticalSpeed: Double,
-  maxTotalSpeed: Double,
-  maxHorizontalSpeed: Double,
+  maxVerticalSpeed: SpeedAtAltitude,
+  maxTotalSpeed: SpeedAtAltitude,
+  maxHorizontalSpeed: SpeedAtAltitude,
   degreesOfRotation: Double,
   timeToExecuteTurn: Duration,
 )

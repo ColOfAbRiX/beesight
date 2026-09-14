@@ -42,6 +42,7 @@ final class JumpEventsDetector private (config: DetectionConfig, preprocessor: P
 
   //  Internals  //
 
+  // TODO: Implement a real time-based detection that doesn't assume every data point has a fixed time difference
   private def mainDetectionPipe[F[_], A: PointReader]: fs2.Pipe[F, A, FlightEvents] =
     pointStream =>
       pointStream
