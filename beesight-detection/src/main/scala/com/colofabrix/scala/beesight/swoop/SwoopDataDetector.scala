@@ -54,8 +54,9 @@ final class SwoopDataDetector private (config: SwoopConfig) {
   /**
    * Detects swoop metrics from the flight data stream.
    *
-   * The flight events are accepted for API compatibility only: gSwoop runs its cascade over the whole recording and
-   * reports nothing when one of its stages fails, so no event-based gating is applied here.
+   * A swoop is reported only when the recording is classified as a jump AND the detection cascade finds swoop data:
+   * the events are a secondary gate - a canopy point, since a swoop is a canopy maneuver and cannot exist without
+   * one.
    */
   def detect[F[_]: Concurrent, A: PointReader](events: FlightEvents, stream: fs2.Stream[F, A]): F[Option[SwoopData]] =
     detectWithTrace(events, stream).map(_.result)
@@ -69,18 +70,18 @@ final class SwoopDataDetector private (config: SwoopConfig) {
       .map(IndexedPoint.fromZip)
       .compile
       .toVector
-      .map(computeSwoopMetricsWithTrace(_, events.landing))
+      .map(computeSwoopMetricsWithTrace(_, events))
 
   //  Swoop Detection  //
 
   private def computeSwoopMetrics(dataPoints: Vector[IndexedPoint]): Option[SwoopData] =
-    computeSwoopMetricsWithTrace(dataPoints, None).result
+    computeSwoopMetricsWithTrace(dataPoints, FlightEvents.empty).result
 
-  private def computeSwoopMetricsWithTrace(dataPoints: Vector[IndexedPoint], landing: Option[EventPoint]): SwoopTrace =
+  private def computeSwoopMetricsWithTrace(dataPoints: Vector[IndexedPoint], events: FlightEvents): SwoopTrace =
     if dataPoints.length < 2 then
       SwoopTrace(dataPoints, Double.NaN, None, None, None, None, None, None, None)
     else
-      val ground = detectedGround(dataPoints, landing)
+      val ground = detectedGround(dataPoints, events.landing)
 
       val patternEntry = findPatternEntry(dataPoints, ground)
       val dive         = patternEntry.flatMap(pe => findDivePoint(dataPoints, pe, ground))
@@ -88,13 +89,19 @@ final class SwoopDataDetector private (config: SwoopConfig) {
       val stop         = dive.flatMap(d => findStop(dataPoints, d))
       val rollout      = topOfTurn.flatMap(t => stop.flatMap(s => findRolloutStart(dataPoints, t, s)))
       val bottom       = rollout.flatMap(r => stop.map(s => findBottomOfTurn(dataPoints, r, s)))
-      val result       = dive.flatMap { d =>
-        topOfTurn.flatMap { t =>
-          rollout.flatMap { r =>
-            stop.map(s => buildSwoopData(dataPoints, d, t, r, bottom.getOrElse(r), s, ground))
+      // Secondary gate: the recording must be classified as a jump with a canopy flight - a swoop is a canopy
+      // maneuver, so a recording without a canopy event cannot contain one.
+      val hasJumpEvents = events.canopy.isDefined
+
+      val result       = dive
+        .flatMap { d =>
+          topOfTurn.flatMap { t =>
+            rollout.flatMap { r =>
+              stop.map(s => buildSwoopData(dataPoints, d, t, r, bottom.getOrElse(r), s, ground))
+            }
           }
         }
-      }
+        .filter(_ => hasJumpEvents)
 
       SwoopTrace(dataPoints, ground, patternEntry, dive, topOfTurn, stop, rollout, bottom, result)
 
@@ -107,7 +114,7 @@ final class SwoopDataDetector private (config: SwoopConfig) {
       .filter(l => 0 <= l.index && l.index < dataPoints.length)
       .map { l =>
         val startTime = dataPoints(l.index.toInt).point.time
-        val window    = dataPoints.view.drop(l.index.toInt).takeWhile(!_.point.time.isAfter(startTime.plusSeconds(5)))
+        val window    = dataPoints.view.drop(l.index.toInt).takeWhile(!_.point.time.isAfter(startTime.plusSeconds(10)))
         window.map(_.point.altitude).sum / window.size - 2.0
       }
       .getOrElse(gswoopGround(dataPoints))
@@ -123,7 +130,7 @@ final class SwoopDataDetector private (config: SwoopConfig) {
     (dataPoints.length - 1 to 0 by -1).find(i => dataPoints(i).point.speed.magnitude < speedThreshold) match
       case Some(slowIdx) =>
         val startTime = dataPoints(slowIdx).point.time
-        val window    = dataPoints.view.drop(slowIdx).takeWhile(!_.point.time.isAfter(startTime.plusSeconds(3)))
+        val window    = dataPoints.view.drop(slowIdx).takeWhile(!_.point.time.isAfter(startTime.plusSeconds(10)))
         window.map(_.point.altitude).sum / window.size - 2.0
       case None =>
         dataPoints.last.point.altitude - 2.0

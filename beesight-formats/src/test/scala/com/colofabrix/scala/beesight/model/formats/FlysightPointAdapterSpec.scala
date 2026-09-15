@@ -117,6 +117,30 @@ class FlysightPointAdapterSpec extends AnyFreeSpec with Matchers with IOValues {
       )
     }
 
+    "should decode a whole-second timestamp without a fractional part" in {
+      // The 2026-era FlySight firmware logs 1 Hz runs as whole seconds and 5 Hz runs with
+      // fractional seconds, mixed within the same file - gSwoop rejects such files with
+      // "invalid time field", beesight must decode both shapes.
+      val row = csvRow(
+        "time"    -> "2026-05-27T15:39:39Z",
+        "lat"     -> "45.0000000",
+        "lon"     -> "9.0000000",
+        "hMSL"    -> "3500.000",
+        "velN"    -> "12.50",
+        "velE"    -> "-8.30",
+        "velD"    -> "55.00",
+        "hAcc"    -> "1.000",
+        "vAcc"    -> "1.000",
+        "sAcc"    -> "1.00",
+        "heading" -> "90.00000",
+        "cAcc"    -> "5.00000",
+        "gpsFix"  -> "3",
+        "numSV"   -> "10",
+      )
+
+      FlysightPoint.csvRowDecoder(row).toOption.get.time.toInstant shouldBe Instant.parse("2026-05-27T15:39:39Z")
+    }
+
     "should decode a row without the optional gpsFix column" in {
       val row = csvRow(
         "time"    -> "2024-06-15T12:30:00Z",

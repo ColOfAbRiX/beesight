@@ -159,6 +159,20 @@ class DekunuPointAdapterSpec extends AnyFreeSpec with Matchers with IOValues {
       decoded.gpsNumOfSats shouldBe None
     }
 
+    "should decode a negative Unix epoch time" in {
+      // Unconventional time value: the epoch-based decoder must also handle pre-1970 timestamps.
+      val row = csvRow(
+        "gpsTime"                   -> "-86400",
+        "gpsLatitude"               -> "45123456",
+        "gpsLongitude"              -> "9123456",
+        "gpsAltitudeMeters"         -> "3500.000",
+        "gpsSpeedKnot"              -> "100.000",
+        "gpsAngleDegree"            -> "90.00000",
+      )
+
+      DekunuPoint.csvRowDecoder(row).toOption.get.gpsTime shouldBe -86400L
+    }
+
     "should encode and decode back to the same point" in {
       val point = dekunuPoint()
 

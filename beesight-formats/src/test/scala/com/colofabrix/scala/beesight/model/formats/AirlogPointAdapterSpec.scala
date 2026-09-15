@@ -211,6 +211,37 @@ class AirlogPointAdapterSpec extends AnyFreeSpec with Matchers with IOValues {
       AirlogPoint.csvRowDecoder(row).toOption.get.orientation shouldBe None
     }
 
+    "should decode a timestamp with nanosecond precision" in {
+      // Unconventional time format: the canonical samples carry whole seconds, while the Instant
+      // decoder must accept any ISO-8601 fractional-second precision.
+      val row = csvRow(
+        "time"    -> "2024-06-15T12:30:00.123456789Z",
+        "lat"     -> "45.0000000",
+        "lon"     -> "9.0000000",
+        "alt"     -> "4200.0",
+        "gpsAlt"  -> "4210.0",
+        "speed"   -> "12.50",
+        "sink"    -> "-15.00",
+        "heading" -> "90.0",
+        "Qw"      -> "1.0000",
+        "Qx"      -> "0.0000",
+        "Qy"      -> "0.0000",
+        "Qz"      -> "0.0000",
+        "Ax"      -> "0.000",
+        "Ay"      -> "0.000",
+        "Az"      -> "0.000",
+        "Gx"      -> "0.000",
+        "Gy"      -> "0.000",
+        "Gz"      -> "0.000",
+        "mark"    -> "0",
+        "numSat"  -> "10",
+        "msg"     -> "0",
+        "b_sink"  -> "-14.00",
+      )
+
+      AirlogPoint.csvRowDecoder(row).toOption.get.time shouldBe Instant.parse("2024-06-15T12:30:00.123456789Z")
+    }
+
     "should encode a missing orientation as empty cells" in {
       val point   = airlogPoint(orientation = None)
       val encoded = AirlogPoint.csvRowEncoder(point)

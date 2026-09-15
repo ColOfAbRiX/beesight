@@ -19,15 +19,11 @@ class SwoopPortTraceSpec extends AnyWordSpec with IOValues {
   private val config       = DetectionConfig.default
 
   private val traceFiles = List(
-    "jump_795.zip",  // offset failure: turnInit +122, rollout +265
-    "jump_794.zip",  // offset failure: rollout +182, degrees +178
-    "jump_797.zip",  // offset failure: turnInit +244, rollout +196
-    "jump_800.zip",  // degrees failure: expected 47.0, got -46.9
-    "jump_1463.zip", // degrees failure: expected 83, got 557.9
-    "jump_1933.zip", // false positive: gSwoop says None
-    "jump_1935.zip", // false positive: gSwoop says None
-    "jump_813.zip",  // control: currently MATCHES
-    "jump_1403.zip", // control: currently MATCHES
+    "jump_807.zip", // unclassified: canopy turn spike near landing (813-twin mystery)
+    "jump_808.zip", // user-confirmed: wingsuit, NO swoop - genuine port false positive
+    "jump_1859.zip", // user-confirmed: 135 deg swoop - gSwoop baseline missed it?
+    "jump_1935.zip", // user-confirmed: 135 deg swoop - gSwoop baseline missed it?
+    "jump_813.zip",  // TRUE positive reference (port matches gSwoop exactly)
   )
 
   "SwoopDataDetector trace" should {
@@ -50,12 +46,23 @@ class SwoopPortTraceSpec extends AnyWordSpec with IOValues {
           for
             events <- IO.defer(detectEvents(path))
             trace  <- SwoopDataDetector(config).detectWithTrace(events, TestFilesHandler.readCsv[DataPoint](path))
-          yield (expectedValues.get(filename), trace)
+          yield (expectedValues.get(filename), trace, events)
 
-        val (expected, trace) = program.result(timeout = 2.minutes)
+        val (expected, trace, events) = program.result(timeout = 2.minutes)
 
         println(s"\n===== $name =====")
         println(f"  points=${trace.points.length}  ground(last point)=${trace.ground}%.1f m")
+
+        def evStage(label: String, ep: Option[EventPoint]): Unit =
+          println(ep match
+            case Some(e) => f"  event $label%-8s idx=${e.index}%5d  alt=${e.altitude}%8.1f m"
+            case None    => f"  event $label%-8s n/a"
+          )
+
+        evStage("takeoff", events.takeoff)
+        evStage("freefall", events.freefall)
+        evStage("canopy", events.canopy)
+        evStage("landing", events.landing)
 
         val agl = (i: Int) => trace.points(i).point.altitude - trace.ground
 
@@ -98,6 +105,86 @@ class SwoopPortTraceSpec extends AnyWordSpec with IOValues {
             println("  expect: NO SWOOP (gSwoop reported nothing)")
           case None =>
             println("  expect: <no row in swoop_results.csv>")
+
+        // TEMPORARY: vz profile for the freefall-signature fallback
+        val vzs        = trace.points.map(_.point.speed.vertical)
+        val thresholds = List(70.0, 60.0, 50.0, 40.0, 30.0)
+        def longestRun(thresholdMps: Double): Double =
+          var best     = 0.0
+          var runStart = -1
+          var i        = 0
+          while i < trace.points.length do
+            val p = trace.points(i).point
+            if p.speed.vertical > thresholdMps then
+              if runStart < 0 then runStart = i
+              best = best.max((p.time.toEpochMilli - trace.points(runStart).point.time.toEpochMilli) / 1000.0)
+            else runStart = -1
+            i += 1
+          best
+        val maxVzIdx = vzs.indexOf(vzs.max)
+
+        // az = backward-difference vertical acceleration (m/s^2); gSwoop's freefall test is -az > 12 mph/s
+        val minAz = (0 until trace.points.length - 1)
+          .map { i =>
+            val dtSec =
+              (trace.points(i + 1).point.time.toEpochMilli - trace.points(i).point.time.toEpochMilli) / 1000.0
+            if dtSec > 0 then (vzs(i + 1) - vzs(i)) / dtSec else 0.0
+          }
+          .min
+        def longestAzRun: Double =
+          var best     = 0.0
+          var runStart = -1
+          var i        = 0
+          while i < trace.points.length - 1 do
+            val dt = (trace.points(i + 1).point.time.toEpochMilli - trace.points(i).point.time.toEpochMilli) / 1000.0
+            val az = if dt > 0 then (vzs(i + 1) - vzs(i)) / dt else 0.0
+            if -az * 2.2369362920544 > 12.0 then
+              if runStart < 0 then runStart = i
+              best = best.max(trace.points(i).point.time.toEpochMilli.toDouble - trace.points(runStart).point.time.toEpochMilli.toDouble) / 1000.0
+            else runStart = -1
+            i += 1
+          best
+        // Altitude-derived descent rate: dz/dt from consecutive altitudes (robust to zeroed velocity fields)
+        val altVz = (0 until trace.points.length - 1).map { i =>
+          val dtSec =
+            (trace.points(i + 1).point.time.toEpochMilli - trace.points(i).point.time.toEpochMilli) / 1000.0
+          if dtSec > 0 then (trace.points(i).point.altitude - trace.points(i + 1).point.altitude) / dtSec else 0.0
+        }.toVector
+        def longestAltRun(thresholdMps: Double): Double =
+          var best     = 0.0
+          var runStart = -1
+          var i        = 0
+          while i < altVz.length do
+            if altVz(i) > thresholdMps then
+              if runStart < 0 then runStart = i
+              best = best.max((trace.points(i + 1).point.time.toEpochMilli - trace.points(runStart + 1).point.time.toEpochMilli) / 1000.0)
+            else runStart = -1
+            i += 1
+          best
+        println(
+          f"  vz profile: firstVz=${vzs.head}%.1f  maxVz=${vzs.max}%.1f m/s @idx=$maxVzIdx%d  " +
+            thresholds.map(mph => f">${mph.toInt}mph=${longestRun(mph / 2.2369362920544)}%.1fs").mkString("  ") +
+            f"  minAz=$minAz%.1f m/s2  >12mph/s-az=${longestAzRun}%.1fs"
+        )
+        println(
+          "  alt-vz profile: " +
+            thresholds.map(mph => f">${mph.toInt}mph=${longestAltRun(mph / 2.2369362920544)}%.1fs").mkString("  ") +
+            f"  maxAltVz=${if altVz.isEmpty then 0.0 else altVz.max}%.1f m/s"
+        )
+
+        // TEMPORARY: sampled profile over [rollout, stop] - shows what the rollout walk locked onto
+        (trace.rollout, trace.stop) match
+          case (Some(r), Some(s)) if r <= s =>
+            println("  [rollout..stop] profile (t rel. rollout s | agl m | vz m/s | horz m/s):")
+            val t0   = trace.points(r).point.time.toEpochMilli
+            var next = 0.0
+            for i <- r to s do
+              val tSec = (trace.points(i).point.time.toEpochMilli - t0) / 1000.0
+              if tSec >= next then
+                val p = trace.points(i).point
+                println(f"    t=${tSec}%5.1f  agl=${agl(i)}%7.1f  vz=${p.speed.vertical}%6.2f  horz=${p.speed.horizontal}%6.2f")
+                next += 1.0
+          case _ => ()
       }
 
       succeed
