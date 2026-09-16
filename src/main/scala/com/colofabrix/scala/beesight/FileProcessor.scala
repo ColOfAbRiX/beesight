@@ -4,7 +4,6 @@ import cats.effect.IO
 import cats.syntax.all.*
 import com.colofabrix.scala.beesight.config.Config
 import com.colofabrix.scala.beesight.input.*
-import com.colofabrix.scala.beesight.input.formats.*
 import com.colofabrix.scala.beesight.jumpevents.*
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.model.formats.*
@@ -21,8 +20,7 @@ private[beesight] object FileProcessor {
    * Detects the format of a CSV file and processes it through the appropriate pipeline
    */
   def processFile(inputFile: Path): IOConfig[Unit] =
-    FormatDetector
-      .detect(inputFile)
+    detectFormat(inputFile)
       .flatMap {
         case FileFormat.FlySight => processFileAs[FlysightPoint](inputFile)
         case FileFormat.Airlog   => processFileAs[AirlogPoint](inputFile)
@@ -66,5 +64,12 @@ private[beesight] object FileProcessor {
         ResultPrinter(cfg).printStagesPipe,
       )
   }
+
+  private def detectFormat(filePath: Path): IOConfig[FileFormat] =
+    for {
+      headerLine <- CsvFileReader.readHeaderLine(filePath)
+      detect      = FormatDetector.detect(headerLine)
+      result     <- detect.toIOConfig(new IllegalArgumentException(s"Unknown CSV format in '$filePath'"))
+    } yield result
 
 }

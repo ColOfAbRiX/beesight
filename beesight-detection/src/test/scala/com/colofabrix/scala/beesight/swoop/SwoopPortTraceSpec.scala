@@ -11,7 +11,7 @@ import java.nio.file.Paths
 import org.scalatest.wordspec.AnyWordSpec
 import scala.concurrent.duration.*
 
-/** TEMPORARY trace spec for the gSwoop port validation - prints the detection cascade per file. Delete after use. */
+/* FIXME: TEMPORARY trace spec for the gSwoop port validation - prints the detection cascade per file. Delete after use. */
 class SwoopPortTraceSpec extends AnyWordSpec with IOValues {
 
   private val testFilesDir = Paths.get("src/test/resources/test_files")
@@ -19,10 +19,8 @@ class SwoopPortTraceSpec extends AnyWordSpec with IOValues {
   private val config       = DetectionConfig.default
 
   private val traceFiles = List(
-    "jump_807.zip", // unclassified: canopy turn spike near landing (813-twin mystery)
-    "jump_808.zip", // user-confirmed: wingsuit, NO swoop - genuine port false positive
-    "jump_1859.zip", // user-confirmed: 135 deg swoop - gSwoop baseline missed it?
-    "jump_1935.zip", // user-confirmed: 135 deg swoop - gSwoop baseline missed it?
+    "jump_1003.zip", // gSwoop reports a swoop; port's canopy gate suppresses it
+    "jump_881.zip",  // gSwoop ground glitched (-19.3 m); hand-set pending
     "jump_813.zip",  // TRUE positive reference (port matches gSwoop exactly)
   )
 
@@ -56,8 +54,7 @@ class SwoopPortTraceSpec extends AnyWordSpec with IOValues {
         def evStage(label: String, ep: Option[EventPoint]): Unit =
           println(ep match
             case Some(e) => f"  event $label%-8s idx=${e.index}%5d  alt=${e.altitude}%8.1f m"
-            case None    => f"  event $label%-8s n/a"
-          )
+            case None    => f"  event $label%-8s n/a")
 
         evStage("takeoff", events.takeoff)
         evStage("freefall", events.freefall)
@@ -68,9 +65,9 @@ class SwoopPortTraceSpec extends AnyWordSpec with IOValues {
 
         def stage(label: String, idx: Option[Int]): Unit =
           println(idx match
-            case Some(i) => f"  $label%-14s idx=$i%5d  agl=${agl(i)}%8.1f m  msl=${trace.points(i).point.altitude}%8.1f m"
-            case None    => f"  $label%-14s idx=  n/a"
-          )
+            case Some(i) =>
+              f"  $label%-14s idx=$i%5d  agl=${agl(i)}%8.1f m  msl=${trace.points(i).point.altitude}%8.1f m"
+            case None => f"  $label%-14s idx=  n/a")
 
         stage("patternEntry", trace.patternEntry)
         stage("dive", trace.dive)
@@ -87,8 +84,8 @@ class SwoopPortTraceSpec extends AnyWordSpec with IOValues {
               case _ => Double.NaN
             println(
               f"  result: turnInit=${s.turnInitiation.altitude}%.1f rollout=${s.rolloutStart.altitude}%.1f " +
-                f"maxVz=${s.maxVerticalSpeed.speed}%.2f maxTot=${s.maxTotalSpeed.speed}%.2f maxHorz=${s.maxHorizontalSpeed.speed}%.2f " +
-                f"deg=${s.degreesOfRotation}%.1f degRaw=$degRaw%.1f tExec=${s.timeToExecuteTurn.toMillis / 1000.0}%.1f s"
+              f"maxVz=${s.maxVerticalSpeed.speed}%.2f maxTot=${s.maxTotalSpeed.speed}%.2f maxHorz=${s.maxHorizontalSpeed.speed}%.2f " +
+              f"deg=${s.degreesOfRotation}%.1f degRaw=$degRaw%.1f tExec=${s.timeToExecuteTurn.toMillis / 1000.0}%.1f s"
             )
           case None =>
             println("  result: None")
@@ -97,9 +94,9 @@ class SwoopPortTraceSpec extends AnyWordSpec with IOValues {
           case Some(e) if !e.isEmpty =>
             println(
               f"  expect: turnInit=${e.turnInitiationAltitude.getOrElse(Double.NaN)}%.1f rollout=${e.rolloutStartAltitude.getOrElse(Double.NaN)}%.1f " +
-                f"maxVz=${e.maxVerticalSpeed.getOrElse(Double.NaN)}%.2f maxTot=${e.maxTotalSpeed.getOrElse(Double.NaN)}%.2f " +
-                f"maxHorz=${e.maxHorizontalSpeed.getOrElse(Double.NaN)}%.2f deg=${e.degreesOfRotation.getOrElse(Double.NaN)}%.1f " +
-                f"tExec=${e.timeToExecuteTurn.getOrElse(Double.NaN)}%.1f s"
+              f"maxVz=${e.maxVerticalSpeed.getOrElse(Double.NaN)}%.2f maxTot=${e.maxTotalSpeed.getOrElse(Double.NaN)}%.2f " +
+              f"maxHorz=${e.maxHorizontalSpeed.getOrElse(Double.NaN)}%.2f deg=${e.degreesOfRotation.getOrElse(Double.NaN)}%.1f " +
+              f"tExec=${e.timeToExecuteTurn.getOrElse(Double.NaN)}%.1f s"
             )
           case Some(_) =>
             println("  expect: NO SWOOP (gSwoop reported nothing)")
@@ -107,8 +104,8 @@ class SwoopPortTraceSpec extends AnyWordSpec with IOValues {
             println("  expect: <no row in swoop_results.csv>")
 
         // TEMPORARY: vz profile for the freefall-signature fallback
-        val vzs        = trace.points.map(_.point.speed.vertical)
-        val thresholds = List(70.0, 60.0, 50.0, 40.0, 30.0)
+        val vzs                                      = trace.points.map(_.point.speed.vertical)
+        val thresholds                               = List(70.0, 60.0, 50.0, 40.0, 30.0)
         def longestRun(thresholdMps: Double): Double =
           var best     = 0.0
           var runStart = -1
@@ -126,8 +123,7 @@ class SwoopPortTraceSpec extends AnyWordSpec with IOValues {
         // az = backward-difference vertical acceleration (m/s^2); gSwoop's freefall test is -az > 12 mph/s
         val minAz = (0 until trace.points.length - 1)
           .map { i =>
-            val dtSec =
-              (trace.points(i + 1).point.time.toEpochMilli - trace.points(i).point.time.toEpochMilli) / 1000.0
+            val dtSec = (trace.points(i + 1).point.time.toEpochMilli - trace.points(i).point.time.toEpochMilli) / 1000.0
             if dtSec > 0 then (vzs(i + 1) - vzs(i)) / dtSec else 0.0
           }
           .min
@@ -140,14 +136,14 @@ class SwoopPortTraceSpec extends AnyWordSpec with IOValues {
             val az = if dt > 0 then (vzs(i + 1) - vzs(i)) / dt else 0.0
             if -az * 2.2369362920544 > 12.0 then
               if runStart < 0 then runStart = i
-              best = best.max(trace.points(i).point.time.toEpochMilli.toDouble - trace.points(runStart).point.time.toEpochMilli.toDouble) / 1000.0
+              best = best.max(trace.points(i).point.time.toEpochMilli.toDouble -
+                trace.points(runStart).point.time.toEpochMilli.toDouble) / 1000.0
             else runStart = -1
             i += 1
           best
         // Altitude-derived descent rate: dz/dt from consecutive altitudes (robust to zeroed velocity fields)
         val altVz = (0 until trace.points.length - 1).map { i =>
-          val dtSec =
-            (trace.points(i + 1).point.time.toEpochMilli - trace.points(i).point.time.toEpochMilli) / 1000.0
+          val dtSec = (trace.points(i + 1).point.time.toEpochMilli - trace.points(i).point.time.toEpochMilli) / 1000.0
           if dtSec > 0 then (trace.points(i).point.altitude - trace.points(i + 1).point.altitude) / dtSec else 0.0
         }.toVector
         def longestAltRun(thresholdMps: Double): Double =
@@ -157,19 +153,20 @@ class SwoopPortTraceSpec extends AnyWordSpec with IOValues {
           while i < altVz.length do
             if altVz(i) > thresholdMps then
               if runStart < 0 then runStart = i
-              best = best.max((trace.points(i + 1).point.time.toEpochMilli - trace.points(runStart + 1).point.time.toEpochMilli) / 1000.0)
+              best = best.max((trace.points(i + 1).point.time.toEpochMilli -
+              trace.points(runStart + 1).point.time.toEpochMilli) / 1000.0)
             else runStart = -1
             i += 1
           best
         println(
           f"  vz profile: firstVz=${vzs.head}%.1f  maxVz=${vzs.max}%.1f m/s @idx=$maxVzIdx%d  " +
-            thresholds.map(mph => f">${mph.toInt}mph=${longestRun(mph / 2.2369362920544)}%.1fs").mkString("  ") +
-            f"  minAz=$minAz%.1f m/s2  >12mph/s-az=${longestAzRun}%.1fs"
+          thresholds.map(mph => f">${mph.toInt}mph=${longestRun(mph / 2.2369362920544)}%.1fs").mkString("  ") +
+          f"  minAz=$minAz%.1f m/s2  >12mph/s-az=${longestAzRun}%.1fs"
         )
         println(
           "  alt-vz profile: " +
-            thresholds.map(mph => f">${mph.toInt}mph=${longestAltRun(mph / 2.2369362920544)}%.1fs").mkString("  ") +
-            f"  maxAltVz=${if altVz.isEmpty then 0.0 else altVz.max}%.1f m/s"
+          thresholds.map(mph => f">${mph.toInt}mph=${longestAltRun(mph / 2.2369362920544)}%.1fs").mkString("  ") +
+          f"  maxAltVz=${if altVz.isEmpty then 0.0 else altVz.max}%.1f m/s"
         )
 
         // TEMPORARY: sampled profile over [rollout, stop] - shows what the rollout walk locked onto

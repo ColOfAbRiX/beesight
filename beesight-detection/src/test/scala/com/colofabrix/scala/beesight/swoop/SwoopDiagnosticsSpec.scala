@@ -12,7 +12,9 @@ import java.nio.file.Paths
 import org.scalatest.wordspec.AnyWordSpec
 import scala.concurrent.duration.*
 
-/** TEMPORARY diagnostic for BulkSwoopDetectionSpec - categorizes all failures. Delete after use. */
+/*
+FIXME: TEMPORARY diagnostic for BulkSwoopDetectionSpec - categorizes all failures. Delete after use.
+*/
 class SwoopDiagnosticsSpec extends AnyWordSpec with IOValues with SwoopMatchers {
 
   private val testFilesDir = Paths.get("src/test/resources/test_files")

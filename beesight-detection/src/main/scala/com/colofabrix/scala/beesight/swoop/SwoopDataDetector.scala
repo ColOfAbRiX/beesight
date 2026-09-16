@@ -4,6 +4,7 @@ import cats.effect.kernel.Concurrent
 import cats.syntax.functor.*
 import com.colofabrix.scala.beesight.config.{ DetectionConfig, SwoopConfig }
 import com.colofabrix.scala.beesight.math.Heading
+import com.colofabrix.scala.beesight.math.Stats
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.preprocess.*
 import java.time.Duration
@@ -25,7 +26,8 @@ import java.time.Duration
  *      horizontal) and the signed per-sample turn-angle sum over (top of turn, bottom of turn].
  *
  * Every stage mirrors gSwoop's error paths: when a stage cannot find its event, no swoop is reported at all. All
- * reported altitudes are AGL relative to the detected ground (the mean altitude over the last 3 s minus 2 m).
+ * reported altitudes are AGL relative to the detected ground (the median altitude over the 10 s window starting at
+ * the landing point).
  */
 final class SwoopDataDetector private (config: SwoopConfig) {
 
@@ -106,8 +108,9 @@ final class SwoopDataDetector private (config: SwoopConfig) {
       SwoopTrace(dataPoints, ground, patternEntry, dive, topOfTurn, stop, rollout, bottom, result)
 
   /**
-   * Landing-ground estimate. Primary: the mean altitude over the ~5 s of points from the detected landing point
-   * onwards, minus 2 m. Fallback (no landing event): gSwoop's emulation (decompiled_all.c:8671).
+   * Landing-ground estimate. Primary: the median altitude over the 10 s of points from the detected landing point
+   * onwards. The median is robust to post-landing altitude transients (sinking ground, undershoot). Fallback (no
+   * landing event): the last slow point's forward window (see `gswoopGround`).
    */
   private def detectedGround(dataPoints: Vector[IndexedPoint], landing: Option[EventPoint]): Double =
     landing
@@ -115,14 +118,14 @@ final class SwoopDataDetector private (config: SwoopConfig) {
       .map { l =>
         val startTime = dataPoints(l.index.toInt).point.time
         val window    = dataPoints.view.drop(l.index.toInt).takeWhile(!_.point.time.isAfter(startTime.plusSeconds(10)))
-        window.map(_.point.altitude).sum / window.size - 2.0
+        Stats.median(window.map(_.point.altitude).toArray)
       }
       .getOrElse(gswoopGround(dataPoints))
 
   /**
-   * gSwoop's landing-ground emulation (decompiled_all.c:8671): walk back to the last slow point (total speed below
-   * 10 mph, after landing), then average the altitude over the ~3 s forward window starting there, minus 2 m. When
-   * no slow point exists, the ground falls back to the last point's altitude minus 2 m.
+   * Landing-ground fallback when no landing event is available: walk back to the last slow point (total speed below
+   * 10 mph, after landing), then take the median altitude over the 10 s forward window starting there. When no slow
+   * point exists, the ground falls back to the last point's altitude.
    */
   private def gswoopGround(dataPoints: Vector[IndexedPoint]): Double =
     val speedThreshold = 10.0 / MpsToMph // 10 mph (m/s)
@@ -131,9 +134,9 @@ final class SwoopDataDetector private (config: SwoopConfig) {
       case Some(slowIdx) =>
         val startTime = dataPoints(slowIdx).point.time
         val window    = dataPoints.view.drop(slowIdx).takeWhile(!_.point.time.isAfter(startTime.plusSeconds(10)))
-        window.map(_.point.altitude).sum / window.size - 2.0
+        Stats.median(window.map(_.point.altitude).toArray)
       case None =>
-        dataPoints.last.point.altitude - 2.0
+        dataPoints.last.point.altitude
 
   /** The first crossing below 2500 ft AGL above the detected ground (NOTES §6.2). */
   private def findPatternEntry(dataPoints: Vector[IndexedPoint], ground: Double): Option[Int] =
@@ -409,6 +412,14 @@ final class SwoopDataDetector private (config: SwoopConfig) {
     var maxHorzIdx  = -1
     var maxHorz     = 0.0
 
+    /*
+    FIXME: Use curly braces in every for loop. E.g.
+    
+    for i <- topOfTurn until stopIdx do {
+      val descent = dataPoints(i).point.speed.vertical
+      val total   = dataPoints(i).point.speed.magnitude
+    }
+    */
     for i <- topOfTurn until stopIdx do
       val descent = dataPoints(i).point.speed.vertical
       val total   = dataPoints(i).point.speed.magnitude

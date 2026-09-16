@@ -102,7 +102,7 @@ private[beesight] object FlysightPoint {
       .map(_.name)
       .toSet
 
-  given flysightNormalizer: PointReader[FlysightPoint] with {
+  given flysightPointReader: PointReader[FlysightPoint] with {
     def time(point: FlysightPoint): Instant =
       point.time.toInstant
     def altitude(point: FlysightPoint): Double =

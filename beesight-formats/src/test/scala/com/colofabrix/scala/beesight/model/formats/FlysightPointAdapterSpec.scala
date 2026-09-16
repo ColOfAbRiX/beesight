@@ -11,7 +11,7 @@ import org.scalatest.matchers.should.Matchers
 
 class FlysightPointAdapterSpec extends AnyFreeSpec with Matchers with IOValues {
 
-  private val normalizer = FlysightPoint.flysightNormalizer
+  private val flysightReader = FlysightPoint.flysightPointReader
 
   "FlysightPoint PointReader" - {
 
@@ -20,27 +20,27 @@ class FlysightPointAdapterSpec extends AnyFreeSpec with Matchers with IOValues {
       "should map time to Instant" in {
         val time  = OffsetDateTime.of(2024, 6, 15, 12, 30, 0, 0, ZoneOffset.UTC)
         val point = flysightPoint(time = time)
-        normalizer.time(point) shouldBe time.toInstant
+        flysightReader.time(point) shouldBe time.toInstant
       }
 
       "should map hMSL to altitude" in {
         val point = flysightPoint(hMSL = 3500.0)
-        normalizer.altitude(point) shouldBe 3500.0
+        flysightReader.altitude(point) shouldBe 3500.0
       }
 
       "should map velN to speed.north" in {
         val point = flysightPoint(velN = 12.5)
-        normalizer.speed(point).north shouldBe 12.5
+        flysightReader.speed(point).north shouldBe 12.5
       }
 
       "should map velE to speed.east" in {
         val point = flysightPoint(velE = -8.3)
-        normalizer.speed(point).east shouldBe -8.3
+        flysightReader.speed(point).east shouldBe -8.3
       }
 
       "should map velD to speed.vertical" in {
         val point = flysightPoint(velD = 55.0)
-        normalizer.speed(point).vertical shouldBe 55.0
+        flysightReader.speed(point).vertical shouldBe 55.0
       }
 
     }
@@ -49,17 +49,17 @@ class FlysightPointAdapterSpec extends AnyFreeSpec with Matchers with IOValues {
 
       "should preserve positive velocities" in {
         val point = flysightPoint(velN = 10.0, velE = 20.0, velD = 30.0)
-        normalizer.speed(point) shouldBe GeoVector(10.0, 20.0, 30.0)
+        flysightReader.speed(point) shouldBe GeoVector(10.0, 20.0, 30.0)
       }
 
       "should preserve negative velocities" in {
         val point = flysightPoint(velN = -10.0, velE = -20.0, velD = -5.0)
-        normalizer.speed(point) shouldBe GeoVector(-10.0, -20.0, -5.0)
+        flysightReader.speed(point) shouldBe GeoVector(-10.0, -20.0, -5.0)
       }
 
       "should preserve zero velocities" in {
         val point = flysightPoint(velN = 0.0, velE = 0.0, velD = 0.0)
-        normalizer.speed(point) shouldBe GeoVector.zero
+        flysightReader.speed(point) shouldBe GeoVector.zero
       }
 
     }
@@ -69,7 +69,7 @@ class FlysightPointAdapterSpec extends AnyFreeSpec with Matchers with IOValues {
       "should correctly convert non-UTC timezone to Instant" in {
         val time  = OffsetDateTime.of(2024, 6, 15, 14, 30, 0, 0, ZoneOffset.ofHours(2))
         val point = flysightPoint(time = time)
-        normalizer.time(point) shouldBe Instant.parse("2024-06-15T12:30:00Z")
+        flysightReader.time(point) shouldBe Instant.parse("2024-06-15T12:30:00Z")
       }
 
     }
@@ -79,86 +79,105 @@ class FlysightPointAdapterSpec extends AnyFreeSpec with Matchers with IOValues {
   "FlysightPoint CSV codec" - {
 
     "should decode a FlySight row" in {
-      val row = csvRow(
-        "time"    -> "2024-06-15T12:30:00Z",
-        "lat"     -> "45.0000000",
-        "lon"     -> "9.0000000",
-        "hMSL"    -> "3500.000",
-        "velN"    -> "12.50",
-        "velE"    -> "-8.30",
-        "velD"    -> "55.00",
-        "hAcc"    -> "1.000",
-        "vAcc"    -> "1.000",
-        "sAcc"    -> "1.00",
-        "heading" -> "90.00000",
-        "cAcc"    -> "5.00000",
-        "gpsFix"  -> "3",
-        "numSV"   -> "10",
-      )
+      val row =
+        csvRow(
+          "time"    -> "2024-06-15T12:30:00Z",
+          "lat"     -> "45.0000000",
+          "lon"     -> "9.0000000",
+          "hMSL"    -> "3500.000",
+          "velN"    -> "12.50",
+          "velE"    -> "-8.30",
+          "velD"    -> "55.00",
+          "hAcc"    -> "1.000",
+          "vAcc"    -> "1.000",
+          "sAcc"    -> "1.00",
+          "heading" -> "90.00000",
+          "cAcc"    -> "5.00000",
+          "gpsFix"  -> "3",
+          "numSV"   -> "10",
+        )
 
-      val decoded = FlysightPoint.csvRowDecoder(row).toOption.get
+      val expected =
+        FlysightPoint(
+          time = OffsetDateTime.of(2024, 6, 15, 12, 30, 0, 0, ZoneOffset.UTC),
+          lat = 45.0,
+          lon = 9.0,
+          hMSL = 3500.0,
+          velN = 12.5,
+          velE = -8.3,
+          velD = 55.0,
+          hAcc = 1.0,
+          vAcc = 1.0,
+          sAcc = 1.0,
+          heading = 90.0,
+          cAcc = 5.0,
+          gpsFix = Some(3),
+          numSV = 10,
+          extra = List.empty,
+        )
 
-      decoded shouldBe FlysightPoint(
-        time = OffsetDateTime.of(2024, 6, 15, 12, 30, 0, 0, ZoneOffset.UTC),
-        lat = 45.0,
-        lon = 9.0,
-        hMSL = 3500.0,
-        velN = 12.5,
-        velE = -8.3,
-        velD = 55.0,
-        hAcc = 1.0,
-        vAcc = 1.0,
-        sAcc = 1.0,
-        heading = 90.0,
-        cAcc = 5.0,
-        gpsFix = Some(3),
-        numSV = 10,
-        extra = List.empty,
-      )
+      val decoded =
+        FlysightPoint
+          .csvRowDecoder(row)
+          .toOption
+          .get
+
+      decoded shouldBe expected
     }
 
     "should decode a whole-second timestamp without a fractional part" in {
-      // The 2026-era FlySight firmware logs 1 Hz runs as whole seconds and 5 Hz runs with
-      // fractional seconds, mixed within the same file - gSwoop rejects such files with
-      // "invalid time field", beesight must decode both shapes.
-      val row = csvRow(
-        "time"    -> "2026-05-27T15:39:39Z",
-        "lat"     -> "45.0000000",
-        "lon"     -> "9.0000000",
-        "hMSL"    -> "3500.000",
-        "velN"    -> "12.50",
-        "velE"    -> "-8.30",
-        "velD"    -> "55.00",
-        "hAcc"    -> "1.000",
-        "vAcc"    -> "1.000",
-        "sAcc"    -> "1.00",
-        "heading" -> "90.00000",
-        "cAcc"    -> "5.00000",
-        "gpsFix"  -> "3",
-        "numSV"   -> "10",
-      )
+      val row =
+        csvRow(
+          "time"    -> "2026-05-27T15:39:39Z",
+          "lat"     -> "45.0000000",
+          "lon"     -> "9.0000000",
+          "hMSL"    -> "3500.000",
+          "velN"    -> "12.50",
+          "velE"    -> "-8.30",
+          "velD"    -> "55.00",
+          "hAcc"    -> "1.000",
+          "vAcc"    -> "1.000",
+          "sAcc"    -> "1.00",
+          "heading" -> "90.00000",
+          "cAcc"    -> "5.00000",
+          "gpsFix"  -> "3",
+          "numSV"   -> "10",
+        )
 
-      FlysightPoint.csvRowDecoder(row).toOption.get.time.toInstant shouldBe Instant.parse("2026-05-27T15:39:39Z")
+      val actual =
+        FlysightPoint
+          .csvRowDecoder(row)
+          .toOption
+          .get
+          .time
+          .toInstant
+
+      actual shouldBe Instant.parse("2026-05-27T15:39:39Z")
     }
 
     "should decode a row without the optional gpsFix column" in {
-      val row = csvRow(
-        "time"    -> "2024-06-15T12:30:00Z",
-        "lat"     -> "45.0000000",
-        "lon"     -> "9.0000000",
-        "hMSL"    -> "3500.000",
-        "velN"    -> "12.50",
-        "velE"    -> "-8.30",
-        "velD"    -> "55.00",
-        "hAcc"    -> "1.000",
-        "vAcc"    -> "1.000",
-        "sAcc"    -> "1.00",
-        "heading" -> "90.00000",
-        "cAcc"    -> "5.00000",
-        "numSV"   -> "10",
-      )
+      val row =
+        csvRow(
+          "time"    -> "2024-06-15T12:30:00Z",
+          "lat"     -> "45.0000000",
+          "lon"     -> "9.0000000",
+          "hMSL"    -> "3500.000",
+          "velN"    -> "12.50",
+          "velE"    -> "-8.30",
+          "velD"    -> "55.00",
+          "hAcc"    -> "1.000",
+          "vAcc"    -> "1.000",
+          "sAcc"    -> "1.00",
+          "heading" -> "90.00000",
+          "cAcc"    -> "5.00000",
+          "numSV"   -> "10",
+        )
 
-      val decoded = FlysightPoint.csvRowDecoder(row).toOption.get
+      val decoded =
+        FlysightPoint
+          .csvRowDecoder(row)
+          .toOption
+          .get
 
       decoded.gpsFix shouldBe None
     }
@@ -166,7 +185,11 @@ class FlysightPointAdapterSpec extends AnyFreeSpec with Matchers with IOValues {
     "should encode and decode back to the same point" in {
       val point = flysightPoint()
 
-      val decoded = FlysightPoint.csvRowDecoder(FlysightPoint.csvRowEncoder(point)).toOption.get
+      val decoded =
+        FlysightPoint
+          .csvRowDecoder(FlysightPoint.csvRowEncoder(point))
+          .toOption
+          .get
 
       decoded shouldBe point
     }
@@ -195,7 +218,6 @@ class FlysightPointAdapterSpec extends AnyFreeSpec with Matchers with IOValues {
 
     val sampleFile = Paths.get("src/test/resources/flysight_sample.zip")
 
-    // The file has a header line plus a units line, both skipped by the decoder
     val points = TestFilesHandler.readCsv[FlysightPoint](sampleFile).streamResult()
 
     "should decode all data rows" in {
@@ -203,36 +225,44 @@ class FlysightPointAdapterSpec extends AnyFreeSpec with Matchers with IOValues {
     }
 
     "should decode the first row with the expected values" in {
-      points.head shouldBe FlysightPoint(
-        time = OffsetDateTime.parse("2026-05-08T09:57:08.200Z"),
-        lat = 52.9981951,
-        lon = -0.8137493,
-        hMSL = 2202.351,
-        velN = 41.19,
-        velE = -47.45,
-        velD = -5.99,
-        hAcc = 70.733,
-        vAcc = 117.188,
-        sAcc = 2.53,
-        heading = 310.96308,
-        cAcc = 2.03103,
-        gpsFix = Some(3),
-        numSV = 4,
-        extra = List.empty,
-      )
+      val expected =
+        FlysightPoint(
+          time = OffsetDateTime.parse("2026-05-08T09:57:08.200Z"),
+          lat = 52.9981951,
+          lon = -0.8137493,
+          hMSL = 2202.351,
+          velN = 41.19,
+          velE = -47.45,
+          velD = -5.99,
+          hAcc = 70.733,
+          vAcc = 117.188,
+          sAcc = 2.53,
+          heading = 310.96308,
+          cAcc = 2.03103,
+          gpsFix = Some(3),
+          numSV = 4,
+          extra = List.empty,
+        )
+
+      points.head shouldBe expected
     }
 
     "should normalize the first row" in {
       val point = points.head
 
-      normalizer.time(point) shouldBe Instant.parse("2026-05-08T09:57:08.200Z")
-      normalizer.altitude(point) shouldBe 2202.351
-      normalizer.speed(point) shouldBe GeoVector(41.19, -47.45, -5.99)
+      flysightReader.time(point) shouldBe Instant.parse("2026-05-08T09:57:08.200Z")
+      flysightReader.altitude(point) shouldBe 2202.351
+      flysightReader.speed(point) shouldBe GeoVector(41.19, -47.45, -5.99)
     }
 
     "should round-trip every row through the CSV codec" in {
       points.foreach { point =>
-        val decoded = FlysightPoint.csvRowDecoder(FlysightPoint.csvRowEncoder(point)).toOption.get
+        val decoded =
+          FlysightPoint
+            .csvRowDecoder(FlysightPoint.csvRowEncoder(point))
+            .toOption
+            .get
+
         decoded shouldBe point
       }
     }

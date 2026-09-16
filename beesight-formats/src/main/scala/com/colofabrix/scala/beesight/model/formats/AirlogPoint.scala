@@ -7,7 +7,7 @@ import fs2.data.csv.*
 import java.time.*
 
 /**
- * Airlog One Data Point
+ * AirlogOne Data Point
  *
  * @param time Time in ISO8601 format (UTC)
  * @param coordinates Geographic coordinates (latitude and longitude)
@@ -114,7 +114,7 @@ private[beesight] object AirlogPoint {
       .map(_.name)
       .toSet
 
-  given airlogNormalizer: PointReader[AirlogPoint] with {
+  given airlogPointReader: PointReader[AirlogPoint] with {
     def time(point: AirlogPoint): Instant =
       point.time
     def altitude(point: AirlogPoint): Double =

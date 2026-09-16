@@ -125,7 +125,7 @@ private[beesight] object Stats {
   /**
    * Computes the median of an array of doubles.
    */
-  private def median(values: Array[Double]): Double =
+  def median(values: Array[Double]): Double =
     val n = values.length
     if n <= 8 then
       insertionSort(values)

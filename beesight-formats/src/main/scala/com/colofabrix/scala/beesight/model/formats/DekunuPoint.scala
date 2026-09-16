@@ -8,10 +8,6 @@ import java.time.*
 /**
  * Dekunu Data Point, see https://github.com/ColOfAbRiX/dekunu-flysight-fix/blob/master/dekunu_to_flysight.py
  *
- * The raw values are kept as they appear in the source file; unit conversions (micro-degrees to degrees, knots to m/s,
- * Unix time to [[Instant]]) are performed by the [[PointReader]] normalizer, mirroring the behaviour of the Python
- * conversion script.
- *
  * @param gpsTime          GPS time as Unix timestamp (seconds)
  * @param gpsLatitude      Latitude in micro-degrees (decimal degrees * 10^6)
  * @param gpsLongitude     Longitude in micro-degrees (decimal degrees * 10^6)
@@ -77,7 +73,7 @@ private[beesight] object DekunuPoint {
 
   private val KnotsToMs = 0.51444444
 
-  given dekunuNormalizer: PointReader[DekunuPoint] with {
+  given dekunuPointReader: PointReader[DekunuPoint] with {
     def time(point: DekunuPoint): Instant =
       Instant.ofEpochSecond(point.gpsTime)
 
@@ -87,8 +83,6 @@ private[beesight] object DekunuPoint {
     def speed(point: DekunuPoint): GeoVector =
       val speedMs    = point.gpsSpeedKnot * KnotsToMs
       val headingRad = Math.toRadians(point.gpsAngleDegree)
-      // The vertical speed in the Dekunu file is downward-positive, matching GeoVector's convention (like FlySight's
-      // velD), so it is passed through as-is. Missing values default to 0, like the Python script.
       GeoVector(
         north = speedMs * Math.cos(headingRad),
         east = speedMs * Math.sin(headingRad),
