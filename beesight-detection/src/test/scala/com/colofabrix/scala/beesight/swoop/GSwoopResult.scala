@@ -17,6 +17,7 @@ final private[beesight] case class GSwoopResult(
   entryGateSpeed: Option[Double],
   distanceToStop: Option[Double],
   touchdownEstimate: Option[Double],
+  expectedAngle: Option[Double],
 ) {
 
   def isEmpty: Boolean =
@@ -55,6 +56,7 @@ private[beesight] object GSwoopResult {
         entryGateSpeed          <- optDouble(row, "entry_gate_speed")
         distanceToStop          <- optDouble(row, "distance_to_stop")
         touchdownEstimate       <- optDouble(row, "touchdown_estimate")
+        expectedAngle           <- optDouble(row, "expected_angle")
       yield GSwoopResult(
         filename = filename,
         turnInitiationAltitude = turnInitiationAltitude,
@@ -70,6 +72,7 @@ private[beesight] object GSwoopResult {
         entryGateSpeed = entryGateSpeed,
         distanceToStop = distanceToStop,
         touchdownEstimate = touchdownEstimate,
+        expectedAngle = expectedAngle,
       )
 
   private def optDouble(row: CsvRow[String], name: String): DecoderResult[Option[Double]] =

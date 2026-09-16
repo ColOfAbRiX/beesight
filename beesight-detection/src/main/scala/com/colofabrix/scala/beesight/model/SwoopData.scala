@@ -5,6 +5,8 @@ import java.time.Duration
 /**
  * Swoop metrics computed from the canopy-to-landing segment.
  *
+ * FIXME: We need to also detect the left/right turn
+ * 
  * @param turnInitiation     Where the speed-building maneuver began
  * @param rolloutStart       Where vertical speed peaked before final descent
  * @param maxVerticalSpeed   Highest vertical speed (m/s) during the turn phase, and the AGL altitude where it occurred
