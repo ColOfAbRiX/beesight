@@ -47,6 +47,7 @@ trait SwoopMatchers {
     }
 
   private def checkFields(swoop: SwoopData, expected: GSwoopResult): List[String] =
+    // FIXME: Introduce check on expected angle of rotation
     List(
       check(
         "Turn initiation altitude",
@@ -55,7 +56,13 @@ trait SwoopMatchers {
         expected.turnInitiationAltitude,
         altitudeTolerance
       ),
-      check("Rollout start altitude", "m", swoop.rolloutStart.altitude, expected.rolloutStartAltitude, altitudeTolerance),
+      check(
+        "Rollout start altitude",
+        "m",
+        swoop.rolloutStart.altitude,
+        expected.rolloutStartAltitude,
+        altitudeTolerance
+      ),
       check(
         "Max vertical speed",
         "km/h",
@@ -80,7 +87,13 @@ trait SwoopMatchers {
         speedTolerance * MpsToKmh,
         Some(swoop.maxHorizontalSpeed.altitude)
       ),
-      check("Degrees of rotation", "deg", Math.abs(swoop.degreesOfRotation), expected.degreesOfRotation, rotationTolerance),
+      check(
+        "Degrees of rotation",
+        "deg",
+        Math.abs(swoop.degreesOfRotation),
+        expected.degreesOfRotation,
+        rotationTolerance
+      ),
       check(
         "Time to execute turn",
         "s",

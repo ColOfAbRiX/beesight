@@ -10,7 +10,7 @@ import com.colofabrix.scala.beesight.utils.*
 
 /**
  * Removes GPS data spikes and smooths velocity readings via a small sliding window.
- * 
+ *
  * TODO: Investigate if we need a separate Preprocessor, given we only clip speed and never reuse Preprocessor
  */
 final class PreprocessData private (config: DetectionConfig) extends Preprocessor {

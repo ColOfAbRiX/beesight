@@ -38,7 +38,7 @@ final private[jumpevents] case class DetectingState(
 
 /**
  * A single data point enriched with kinematics, current phase, and accumulated detection events.
- * 
+ *
  * FIXME: There's confusion in this data because there are repetitions. `kinematics` and `point` overlanp,
  *        `kinematics.acceleration` is computed with non-smoothed data and we should highlight that
  */

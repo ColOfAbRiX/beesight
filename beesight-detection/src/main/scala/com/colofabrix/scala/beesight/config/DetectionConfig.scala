@@ -230,4 +230,3 @@ final case class SwoopConfig(
   sustainedRecoverySamples: Int,
   recoveryHeight: Double,
 )
-
