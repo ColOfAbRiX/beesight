@@ -47,8 +47,14 @@ trait SwoopMatchers {
     }
 
   private def checkFields(swoop: SwoopData, expected: GSwoopResult): List[String] =
-    // FIXME: Introduce check on expected angle of rotation
     List(
+      // check(
+      //   "Expected angle of rotation",
+      //   "deg",
+      //   Math.abs(swoop.degreesOfRotation),
+      //   expected.expectedAngle,
+      //   rotationTolerance
+      // ),
       check(
         "Turn initiation altitude",
         "m",
