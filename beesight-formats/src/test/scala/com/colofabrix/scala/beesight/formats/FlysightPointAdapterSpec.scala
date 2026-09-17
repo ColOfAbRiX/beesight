@@ -1,4 +1,4 @@
-package com.colofabrix.scala.beesight.model.formats
+package com.colofabrix.scala.beesight.formats
 
 import cats.data.NonEmptyList
 import com.colofabrix.scala.beesight.model.*

@@ -1,9 +1,7 @@
-package com.colofabrix.scala.beesight.model
+package com.colofabrix.scala.beesight.formats
 
 import cats.syntax.all.*
 import com.colofabrix.scala.beesight.*
-import com.colofabrix.scala.beesight.model.FileFormat
-import com.colofabrix.scala.beesight.model.formats.*
 
 /**
  * Detects the file format of a CSV file by inspecting its header columns.

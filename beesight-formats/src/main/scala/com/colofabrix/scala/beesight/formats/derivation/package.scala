@@ -1,4 +1,4 @@
-package com.colofabrix.scala.beesight.model
+package com.colofabrix.scala.beesight.formats
 
 import cats.implicits.given
 import fs2.data.csv.*
