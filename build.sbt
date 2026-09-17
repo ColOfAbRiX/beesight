@@ -100,6 +100,8 @@ lazy val beesightBenchmarks =
       name := "beesight-benchmarks",
     )
 
+//  Aliases  //
+
 addCommandAlias(
   "styleApply",
   "; set ThisBuild / scalacOptions += \"-Wunused:all\"; scalafixAll; session clear; scalafmtAll"
@@ -108,8 +110,14 @@ addCommandAlias(
   "styleCheck",
   "; set ThisBuild / scalacOptions += \"-Wunused:all\"; scalafixAll --check; session clear; scalafmtCheckAll"
 )
-addCommandAlias("nativeImage", "GraalVMNativeImage / packageBin")
-addCommandAlias("bench", "beesightBenchmarks/Jmh/run -i 10 -wi 5 -f 2 -t 1")
+addCommandAlias(
+  "nativeImage",
+  "GraalVMNativeImage / packageBin"
+)
+addCommandAlias(
+  "bench",
+  "beesightBenchmarks/Jmh/run -i 10 -wi 5 -f 2 -t 1"
+)
 addCommandAlias(
   "benchPipeline",
   "beesightBenchmarks/runMain com.colofabrix.scala.beesight.detection.bench.PipelineBenchmark"

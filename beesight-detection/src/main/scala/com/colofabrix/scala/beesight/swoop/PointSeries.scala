@@ -1,9 +1,7 @@
 package com.colofabrix.scala.beesight.swoop
 
 import com.colofabrix.scala.beesight.math.Heading
-import com.colofabrix.scala.beesight.math.Stats
 import com.colofabrix.scala.beesight.model.IndexedPoint
-import java.time.Duration
 import java.time.Instant
 
 /**

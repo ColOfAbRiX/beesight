@@ -4,7 +4,6 @@ import cats.effect.kernel.Concurrent
 import cats.syntax.functor.*
 import com.colofabrix.scala.beesight.config.{ DetectionConfig, SwoopConfig }
 import com.colofabrix.scala.beesight.model.*
-import com.colofabrix.scala.beesight.preprocess.*
 import java.time.Duration
 
 /**
@@ -19,10 +18,12 @@ import java.time.Duration
  *   5. Rollout: the maximum-descent point within the rollout window above the stop altitude.
  *   6. Bottom of turn: the first point above the bottom altitude after the rollout, falling back to the descent-rate
  *      crossing, then to the point after the rollout.
- *   7. Metrics: maximum speeds over the detection windows and the signed per-sample turn-angle sum.
+ *   7. Metrics: maximum speeds over the detection windows, the signed per-sample turn-angle sum, and the turn
+ *      direction.
  *
- * When a stage cannot find its event, no swoop is reported at all. All reported altitudes are AGL relative to the
- * detected ground (the median altitude over the window starting at the landing point).
+ * When a stage cannot find its event, no swoop is reported at all.
+ * 
+ * All reported altitudes are AGL relative to the detected ground.
  */
 final class SwoopDataDetector private (config: SwoopConfig) {
 
@@ -72,6 +73,7 @@ final class SwoopDataDetector private (config: SwoopConfig) {
       maxTotalSpeed = SpeedAtAltitude(maxSpeeds.total.speed, agl(maxSpeeds.total.index)),
       maxHorizontalSpeed = SpeedAtAltitude(maxSpeeds.horizontal.speed, agl(maxSpeeds.horizontal.index)),
       degreesOfRotation = degreesOfRotation,
+      turnDirection = TurnDirection.fromRotation(degreesOfRotation),
       timeToExecuteTurn = Duration.between(series.time(topOfTurn), series.time(rolloutIdx)),
     )
 

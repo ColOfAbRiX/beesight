@@ -6,12 +6,15 @@ package com.colofabrix.scala.beesight.swoop
 private[swoop] object SwoopMetrics {
 
   /** A maximum-speed scan result: the speed value and the index of the point achieving it. */
-  final private[swoop] case class MaxSpeed(speed: Double, index: Int)
+  final case class MaxSpeed(
+    speed: Double,
+    index: Int
+  )
 
   /** The maximum speeds over the swoop detection windows. */
-  final private[swoop] case class MaxSpeeds(
-    vertical: MaxSpeed,
+  final case class MaxSpeeds(
     total: MaxSpeed,
+    vertical: MaxSpeed,
     horizontal: MaxSpeed,
   )
 
@@ -21,46 +24,52 @@ private[swoop] object SwoopMetrics {
    * construction.
    */
   def maxSpeeds(series: PointSeries, diveIdx: Int, topOfTurn: Int, rolloutIdx: Int, stopIdx: Int): MaxSpeeds = {
-    val vertical   = argmax(topOfTurn, stopIdx)(series.verticalSpeed)
-    val total      = argmax(topOfTurn, stopIdx)(series.totalSpeed)
-    val horizontal = argmax(rolloutIdx, stopIdx)(series.horizontalSpeed)
+    val maxTotalSpeed =
+      argmax(topOfTurn, stopIdx)(series.totalSpeed)
+        .map { i =>
+          MaxSpeed(series.totalSpeed(i), i)
+        }
+        .getOrElse {
+          MaxSpeed(series.totalSpeed(diveIdx), diveIdx)
+        }
 
-    MaxSpeeds(
-      vertical = vertical.map(i => MaxSpeed(series.verticalSpeed(i), i)).getOrElse(MaxSpeed(
-        series.verticalSpeed(diveIdx),
-        diveIdx
-      )),
-      total = total.map(i => MaxSpeed(series.totalSpeed(i), i)).getOrElse(MaxSpeed(series.totalSpeed(diveIdx), diveIdx)),
-      horizontal = horizontal
-        .map(i => MaxSpeed(series.horizontalSpeed(i), i))
-        .getOrElse(MaxSpeed(series.horizontalSpeed(rolloutIdx), rolloutIdx)),
-    )
+    val maxVerticalSpeed =
+      argmax(topOfTurn, stopIdx)(series.verticalSpeed)
+        .map { i =>
+          MaxSpeed(series.verticalSpeed(i), i)
+        }
+        .getOrElse {
+          MaxSpeed(series.verticalSpeed(diveIdx), diveIdx)
+        }
+
+    val maxHorizontalSpeed =
+      argmax(rolloutIdx, stopIdx)(series.horizontalSpeed)
+        .map { i =>
+          MaxSpeed(series.horizontalSpeed(i), i)
+        }
+        .getOrElse {
+          MaxSpeed(series.horizontalSpeed(rolloutIdx), rolloutIdx)
+        }
+
+    MaxSpeeds(maxTotalSpeed, maxVerticalSpeed, maxHorizontalSpeed)
   }
 
   /**
    * First-max scan over the half-open window [from, until): the earliest point achieving the maximum of `f` among
    * strictly positive values. Values at or below zero never qualify.
    */
-  private def argmax(from: Int, until: Int)(f: Int => Double): Option[Int] = {
-    var bestIdx = -1
-    var best    = 0.0
-
-    for i <- from until until do {
-      val value = f(i)
-      if best < value then {
-        bestIdx = i
-        best = value
-      }
-    }
-
-    Option.when(bestIdx >= 0)(bestIdx)
-  }
+  private def argmax(from: Int, until: Int)(f: Int => Double): Option[Int] = (from until until)
+    .view
+    .map(i => f(i) -> i)
+    .filter(_._1 > 0)
+    .maxByOption(_._1)
+    .map(_._2)
 
   /**
    * The signed sum of the per-sample turn angles over (top of turn, bottom of turn], skipping values of a full turn
    * or more. The angles come from the unwrap pass.
    */
-  def turnDegrees(series: PointSeries, topOfTurn: Int, bottomIdx: Int): Double = {
+  def turnDegrees(series: PointSeries, topOfTurn: Int, bottomIdx: Int): Double =
     val turnAngles = turnAnglesWithUnwrap(series)
 
     var total = 0.0
@@ -70,7 +79,6 @@ private[swoop] object SwoopMetrics {
     }
 
     total
-  }
 
   /**
    * Per-sample turn angles (heading deltas wrapped to [-180, 180]) with segment tracking. Inside a steep fast dive, a
@@ -132,19 +140,28 @@ private[swoop] object SwoopMetrics {
   private def diveAngle(series: PointSeries, i: Int): Double = {
     val h        = series.horizontalSpeed(i)
     val vertical = series.verticalSpeed(i)
+
     if h == 0.0 then
-      if vertical < 0.0 then -90.0 else 90.0
+      if vertical < 0.0 then -90.0 
+      else 90.0
     else
       Math.atan(vertical / h) * 180.0 / Math.PI
   }
 
   /** Wraps a heading delta to [-180, 180]. */
   private def wrapDegrees(raw: Double): Double =
-    if raw > 180.0 then raw - 360.0 else if raw < -180.0 then raw + 360.0 else raw
+    if raw > 180.0 then 
+      raw - 360.0 
+    else if raw < -180.0 then 
+      raw + 360.0 
+    else 
+      raw
 
   /** The turn direction of a per-sample angle: 1 = right run, 0 = left run, 2 = straight. */
   private def turnDirection(d: Double): Int =
-    if d > SwoopConstants.turnStateThreshold then 1 else if d < -SwoopConstants.turnStateThreshold then 0 else 2
+    if d > SwoopConstants.turnStateThreshold then 1 
+    else if d < -SwoopConstants.turnStateThreshold then 0 
+    else 2
 
   /**
    * Replaces the angles of a closed segment with dt-weighted shares of the net heading change from the sample before
