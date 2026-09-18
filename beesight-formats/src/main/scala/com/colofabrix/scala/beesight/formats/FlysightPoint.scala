@@ -1,8 +1,8 @@
 package com.colofabrix.scala.beesight.formats
 
 import cats.data.NonEmptyList
-import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.formats.derivation.given
+import com.colofabrix.scala.beesight.model.*
 import fs2.data.csv.*
 import java.time.*
 

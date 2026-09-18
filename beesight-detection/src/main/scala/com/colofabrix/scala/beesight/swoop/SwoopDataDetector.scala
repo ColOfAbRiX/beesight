@@ -4,6 +4,7 @@ import cats.effect.kernel.Concurrent
 import cats.syntax.functor.*
 import com.colofabrix.scala.beesight.config.{ DetectionConfig, SwoopConfig }
 import com.colofabrix.scala.beesight.model.*
+import com.colofabrix.scala.beesight.swoop.model.PointSeries
 import java.time.Duration
 
 /**
@@ -22,7 +23,7 @@ import java.time.Duration
  *      direction.
  *
  * When a stage cannot find its event, no swoop is reported at all.
- * 
+ *
  * All reported altitudes are AGL relative to the detected ground.
  */
 final class SwoopDataDetector private (config: SwoopConfig) {

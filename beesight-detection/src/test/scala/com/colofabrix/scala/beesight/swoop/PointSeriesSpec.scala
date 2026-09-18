@@ -1,9 +1,10 @@
 package com.colofabrix.scala.beesight.swoop
 
 import com.colofabrix.scala.beesight.model.{ DataPoint, GeoVector, IndexedPoint }
+import com.colofabrix.scala.beesight.swoop.model.PointSeries
+import java.time.Instant
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
-import java.time.Instant
 
 class PointSeriesSpec extends AnyFreeSpec with Matchers {
 
@@ -70,9 +71,9 @@ class PointSeriesSpec extends AnyFreeSpec with Matchers {
 
     "totalSpeed returns the 3D magnitude" in {
       val pts = simpleSeries
-      pts.totalSpeed(0) shouldBe Math.sqrt(100 + 25) +- 1e-9   // sqrt(10^2 + 5^2)
-      pts.totalSpeed(1) shouldBe Math.sqrt(225 + 9) +- 1e-9   // sqrt(15^2 + 3^2)
-      pts.totalSpeed(2) shouldBe Math.sqrt(400 + 1) +- 1e-9   // sqrt(20^2 + 1^2)
+      pts.totalSpeed(0) shouldBe Math.sqrt(100 + 25) +- 1e-9 // sqrt(10^2 + 5^2)
+      pts.totalSpeed(1) shouldBe Math.sqrt(225 + 9) +- 1e-9  // sqrt(15^2 + 3^2)
+      pts.totalSpeed(2) shouldBe Math.sqrt(400 + 1) +- 1e-9  // sqrt(20^2 + 1^2)
     }
 
     "northSpeed returns the north component" in {

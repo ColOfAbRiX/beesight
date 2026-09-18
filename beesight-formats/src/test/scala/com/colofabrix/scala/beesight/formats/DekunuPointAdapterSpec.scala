@@ -267,7 +267,7 @@ class DekunuPointAdapterSpec extends AnyFreeSpec with Matchers with IOValues {
             .csvRowDecoder(DekunuPoint.csvRowEncoder(point))
             .toOption
             .get
-            
+
         decoded shouldBe point
       }
     }

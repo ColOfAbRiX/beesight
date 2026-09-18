@@ -61,16 +61,11 @@ final class JumpEventsDetector private (config: DetectionConfig, preprocessor: P
         }
 
   private def initialStreamState(first: IndexedPoint): (DetectorState, Vector[FlightEvents]) =
-    val firstKinematics =
-      PointKinematics(
-        point = DataPoint.fromReader(first),
-        acceleration = GeoVector.zero,
-      )
-
     val firstData =
       WindowEntry(
         point = first,
-        kinematics = firstKinematics,
+        smoothedSpeed = first.speed,
+        acceleration = GeoVector.zero,
         phase = FlightPhase.BeforeTakeoff,
         detectedEvents = FlightEvents.empty,
       )
@@ -154,7 +149,7 @@ final class JumpEventsDetector private (config: DetectionConfig, preprocessor: P
 
     val dt = JavaDuration.between(previousPoint.time, currentPoint.time).toMillis / 1000.0
 
-    val currentSpeed =
+    val smoothedSpeed =
       if smoothingCap <= 1 then
         currentPoint.speed
       else
@@ -166,24 +161,15 @@ final class JumpEventsDetector private (config: DetectionConfig, preprocessor: P
 
         Stats.medianBy(smoothingWindow)(_.speed)
 
-    val currentAcceleration = (currentPoint.speed - previousPoint.speed) / dt
-
-    val kinematics =
-      PointKinematics(
-        point = DataPoint(
-          time = currentPoint.time,
-          altitude = currentPoint.altitude,
-          speed = currentSpeed
-        ),
-        acceleration = currentAcceleration,
-      )
+    val acceleration = (currentPoint.speed - previousPoint.speed) / dt
 
     val previousPhaseEvents    = previousWindow.oldest.phase
     val previousDetectedEvents = previousWindow.oldest.detectedEvents
 
     WindowEntry(
       point = currentPoint,
-      kinematics = kinematics,
+      smoothedSpeed = smoothedSpeed,
+      acceleration = acceleration,
       phase = previousPhaseEvents,
       detectedEvents = previousDetectedEvents,
     )

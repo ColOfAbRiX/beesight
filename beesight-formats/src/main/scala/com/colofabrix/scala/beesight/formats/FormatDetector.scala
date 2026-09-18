@@ -1,6 +1,5 @@
 package com.colofabrix.scala.beesight.formats
 
-import cats.syntax.all.*
 import com.colofabrix.scala.beesight.*
 
 /**

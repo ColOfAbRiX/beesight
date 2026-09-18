@@ -1,6 +1,7 @@
 package com.colofabrix.scala.beesight.swoop
 
 import com.colofabrix.scala.beesight.math.Heading
+import com.colofabrix.scala.beesight.swoop.model.PointSeries
 import java.time.Duration
 import scala.annotation.tailrec
 

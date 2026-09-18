@@ -1,5 +1,7 @@
 package com.colofabrix.scala.beesight.swoop
 
+import com.colofabrix.scala.beesight.swoop.model.PointSeries
+
 /**
  * Computation of the swoop metrics: the maximum speeds over the detection windows and the total turn angle.
  */
@@ -142,7 +144,7 @@ private[swoop] object SwoopMetrics {
     val vertical = series.verticalSpeed(i)
 
     if h == 0.0 then
-      if vertical < 0.0 then -90.0 
+      if vertical < 0.0 then -90.0
       else 90.0
     else
       Math.atan(vertical / h) * 180.0 / Math.PI
@@ -150,17 +152,17 @@ private[swoop] object SwoopMetrics {
 
   /** Wraps a heading delta to [-180, 180]. */
   private def wrapDegrees(raw: Double): Double =
-    if raw > 180.0 then 
-      raw - 360.0 
-    else if raw < -180.0 then 
-      raw + 360.0 
-    else 
+    if raw > 180.0 then
+      raw - 360.0
+    else if raw < -180.0 then
+      raw + 360.0
+    else
       raw
 
   /** The turn direction of a per-sample angle: 1 = right run, 0 = left run, 2 = straight. */
   private def turnDirection(d: Double): Int =
-    if d > SwoopConstants.turnStateThreshold then 1 
-    else if d < -SwoopConstants.turnStateThreshold then 0 
+    if d > SwoopConstants.turnStateThreshold then 1
+    else if d < -SwoopConstants.turnStateThreshold then 0
     else 2
 
   /**

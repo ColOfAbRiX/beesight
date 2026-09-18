@@ -1,8 +1,9 @@
 package com.colofabrix.scala.beesight.swoop
 
-import com.colofabrix.scala.beesight.model.EventPoint
-import java.time.Duration
 import com.colofabrix.scala.beesight.math.Stats
+import com.colofabrix.scala.beesight.model.EventPoint
+import com.colofabrix.scala.beesight.swoop.model.PointSeries
+import java.time.Duration
 
 /**
  * Ground altitude estimation for swoop reporting: all reported altitudes are above ground level (AGL).

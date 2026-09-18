@@ -1,9 +1,10 @@
 package com.colofabrix.scala.beesight.swoop
 
 import com.colofabrix.scala.beesight.model.{ DataPoint, GeoVector, IndexedPoint }
+import com.colofabrix.scala.beesight.swoop.model.PointSeries
+import java.time.Instant
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
-import java.time.Instant
 
 class SwoopCascadeSpec extends AnyFreeSpec with Matchers {
 
@@ -60,7 +61,7 @@ class SwoopCascadeSpec extends AnyFreeSpec with Matchers {
     "accounts for ground offset" in {
       //  ground=100: AGL = alt-100. Need crossing below 762 → alt < 862.
       val series = PointSeries(Vector(
-        point(0.0, 10.0, 5.0, 900.0, 0L),  // AGL=800
+        point(0.0, 10.0, 5.0, 900.0, 0L),    // AGL=800
         point(0.0, 10.0, 5.0, 850.0, 1000L), // AGL=750 < 762 → crossing at index 1
       ))
 
@@ -87,7 +88,7 @@ class SwoopCascadeSpec extends AnyFreeSpec with Matchers {
 
     "returns None when all points are above the altitude cap" in {
       val series = PointSeries(Vector(
-        point(0.0, 10.0, 5.0, 500.0, 0L),  // AGL=500 > 304.8
+        point(0.0, 10.0, 5.0, 500.0, 0L),     // AGL=500 > 304.8
         point(0.0, 10.0, 30.0, 400.0, 1000L), // AGL=400 > 304.8
       ))
 
@@ -106,7 +107,7 @@ class SwoopCascadeSpec extends AnyFreeSpec with Matchers {
     "only considers points after patternEntry" in {
       //  patternEntry=2: only indices 2,3 are considered.
       val series = PointSeries(Vector(
-        point(0.0, 10.0, 50.0, 200.0, 0L),  // index 0: max descent, but before patternEntry
+        point(0.0, 10.0, 50.0, 200.0, 0L),    // index 0: max descent, but before patternEntry
         point(0.0, 10.0, 50.0, 180.0, 1000L), // index 1: before patternEntry
         point(0.0, 10.0, 10.0, 250.0, 2000L), // index 2: patternEntry
         point(0.0, 10.0, 20.0, 200.0, 3000L), // index 3: max descent after patternEntry
@@ -125,7 +126,7 @@ class SwoopCascadeSpec extends AnyFreeSpec with Matchers {
       //  heading fix: first point where verticalSpeed < 4.4704 AND horizontalSpeed < 8.9408
       //  Then stop: first point where horizontalSpeed < 0.89408 OR deviating > 45° from swoop heading.
       val series = PointSeries(Vector(
-        point(0.0, 20.0, 30.0, 200.0, 0L),   // fast
+        point(0.0, 20.0, 30.0, 200.0, 0L),    // fast
         point(0.0, 20.0, 30.0, 150.0, 1000L), // fast
         point(0.0, 5.0, 2.0, 100.0, 2000L),   // heading fix: v=2 < 4.47, h=5 < 8.94 → swoopHeading=0°
         point(0.0, 5.0, 2.0, 90.0, 3000L),    // still slow, h=5 > 0.89
@@ -147,7 +148,7 @@ class SwoopCascadeSpec extends AnyFreeSpec with Matchers {
     "detects stop when heading deviates from swoop heading" in {
       val series = PointSeries(Vector(
         point(0.0, 20.0, 30.0, 200.0, 0L),
-        point(0.0, 5.0, 2.0, 100.0, 2000L),  // heading fix: swoopHeading=0°
+        point(0.0, 5.0, 2.0, 100.0, 2000L), // heading fix: swoopHeading=0°
         point(0.0, 5.0, 2.0, 90.0, 3000L),
         point(100.0, 5.0, 2.0, 80.0, 4000L), // heading deviates 100° > 45° → stop
       ))
@@ -165,13 +166,13 @@ class SwoopCascadeSpec extends AnyFreeSpec with Matchers {
       //  rolloutWindow=30.48. Walk forward from topOfTurn while alt-stop.alt >= 30.48.
       //  Then walk backward while descent strictly increases.
       val series = PointSeries(Vector(
-        point(0.0, 10.0, 5.0, 300.0, 0L),   // topOfTurn=0
+        point(0.0, 10.0, 5.0, 300.0, 0L), // topOfTurn=0
         point(0.0, 10.0, 15.0, 250.0, 1000L),
         point(0.0, 10.0, 25.0, 200.0, 2000L),
         point(0.0, 10.0, 20.0, 150.0, 3000L),
         point(0.0, 10.0, 10.0, 100.0, 4000L),
         point(0.0, 10.0, 5.0, 50.0, 5000L),
-        point(0.0, 10.0, 2.0, 30.0, 6000L),  // stop
+        point(0.0, 10.0, 2.0, 30.0, 6000L), // stop
       ))
 
       SwoopCascade.findRolloutStart(series, topOfTurn = 0, stopIdx = 6, rolloutWindow = 30.48) shouldBe Some(2)
@@ -202,7 +203,7 @@ class SwoopCascadeSpec extends AnyFreeSpec with Matchers {
       //  bottomVzCross=1.25. bottomAltitudeOffset=1.0.
       //  Bottom altitude = lowest altitude; targetAltitude = bottom + 1.0.
       val series = PointSeries(Vector(
-        point(0.0, 10.0, 2.0, 100.0, 0L),   // rollout
+        point(0.0, 10.0, 2.0, 100.0, 0L), // rollout
         point(0.0, 10.0, 2.0, 95.0, 1000L),
         point(0.0, 10.0, 2.0, 90.0, 2000L),
         point(0.0, 10.0, 2.0, 85.0, 3000L),

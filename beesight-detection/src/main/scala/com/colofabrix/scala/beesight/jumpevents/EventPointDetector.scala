@@ -109,7 +109,8 @@ final private[jumpevents] class EventPointDetector private (config: DetectionCon
 
                 WindowEntry(
                   point = data.point,
-                  kinematics = data.kinematics,
+                  smoothedSpeed = data.smoothedSpeed,
+                  acceleration = data.acceleration,
                   phase = state.phase,
                   detectedEvents = detectedEvents,
                 )

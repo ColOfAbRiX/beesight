@@ -1,4 +1,4 @@
-package com.colofabrix.scala.beesight.swoop
+package com.colofabrix.scala.beesight.swoop.model
 
 import com.colofabrix.scala.beesight.math.Heading
 import com.colofabrix.scala.beesight.model.IndexedPoint

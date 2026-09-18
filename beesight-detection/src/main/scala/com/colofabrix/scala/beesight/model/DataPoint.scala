@@ -2,6 +2,10 @@ package com.colofabrix.scala.beesight.model
 
 import java.time.Instant
 
+/* FIXME: Move the types that in the package into the most specific package that uses them. For example DataPoint is
+ * public and should stay in this package. But another case class might be used exclusively by jumpevents, so it should
+ * go in com.colofabrix.scala.beesight.jumpevents.model and so on */
+
 final case class DataPoint(
   time: Instant,
   altitude: Double,

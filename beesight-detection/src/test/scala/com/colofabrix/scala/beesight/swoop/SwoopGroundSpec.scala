@@ -1,9 +1,10 @@
 package com.colofabrix.scala.beesight.swoop
 
 import com.colofabrix.scala.beesight.model.{ DataPoint, EventPoint, GeoVector, IndexedPoint }
+import com.colofabrix.scala.beesight.swoop.model.PointSeries
+import java.time.Instant
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
-import java.time.Instant
 
 class SwoopGroundSpec extends AnyFreeSpec with Matchers {
 
@@ -52,7 +53,7 @@ class SwoopGroundSpec extends AnyFreeSpec with Matchers {
   "SwoopGround.detect" - {
 
     "uses the median altitude from the landing point window when landing is provided" in {
-      val series = groundSeries
+      val series  = groundSeries
       val landing = EventPoint(index = 10L, altitude = 100.0)
 
       val ground = SwoopGround.detect(series, Some(landing))

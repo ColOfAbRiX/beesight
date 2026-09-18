@@ -1,9 +1,10 @@
 package com.colofabrix.scala.beesight.swoop
 
 import com.colofabrix.scala.beesight.model.{ DataPoint, GeoVector, IndexedPoint }
+import com.colofabrix.scala.beesight.swoop.model.PointSeries
+import java.time.Instant
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
-import java.time.Instant
 
 /**
  * Unit tests for [[SwoopMetrics]].
@@ -96,7 +97,7 @@ class SwoopMetricsSpec extends AnyFreeSpec with Matchers {
 
       val result = SwoopMetrics.maxSpeeds(series, diveIdx = 1, topOfTurn = 2, rolloutIdx = 4, stopIdx = 8)
 
-      result.vertical.index shouldBe 2 // first of the tied 1 m/s values
+      result.vertical.index shouldBe 2                   // first of the tied 1 m/s values
       result.total.speed shouldBe Math.sqrt(5.0) +- 1e-9 // sqrt(2^2 + 1^2), first of the tied maxima
       result.total.index shouldBe 4
       result.horizontal.index shouldBe 4
@@ -106,7 +107,8 @@ class SwoopMetricsSpec extends AnyFreeSpec with Matchers {
       val startTie = speedSeries(Vector(1, 1, 5, 1, 1, 5, 1, 1, 1, 1), Vector.fill(10)(1.0))
       val midTie   = speedSeries(Vector(1, 1, 1, 5, 1, 1, 5, 1, 1, 1), Vector.fill(10)(1.0))
 
-      SwoopMetrics.maxSpeeds(startTie, diveIdx = 1, topOfTurn = 2, rolloutIdx = 4, stopIdx = 8).vertical.index shouldBe 2
+      SwoopMetrics.maxSpeeds(startTie, diveIdx = 1, topOfTurn = 2, rolloutIdx = 4, stopIdx = 8).vertical.index shouldBe
+      2
       SwoopMetrics.maxSpeeds(midTie, diveIdx = 1, topOfTurn = 2, rolloutIdx = 4, stopIdx = 8).vertical.index shouldBe 3
     }
 
@@ -131,7 +133,7 @@ class SwoopMetricsSpec extends AnyFreeSpec with Matchers {
         horizontal = Vector(1, 1, 1, 1, 1, 9, 1, 1, 1, 1)
       )
 
-      val emptyAtStop  = SwoopMetrics.maxSpeeds(series, diveIdx = 1, topOfTurn = 5, rolloutIdx = 5, stopIdx = 5)
+      val emptyAtStop   = SwoopMetrics.maxSpeeds(series, diveIdx = 1, topOfTurn = 5, rolloutIdx = 5, stopIdx = 5)
       val emptyReversed = SwoopMetrics.maxSpeeds(series, diveIdx = 1, topOfTurn = 6, rolloutIdx = 5, stopIdx = 5)
 
       def check(result: SwoopMetrics.MaxSpeeds): Unit = {
@@ -206,7 +208,7 @@ class SwoopMetricsSpec extends AnyFreeSpec with Matchers {
       //  330 - 30 = +300 deg, spread as 4 x 75 deg.
       val series = turnSeries(Vector(0, 10, 20, 30, 15, 0, 345, 330, 335), vertical = 30.0)
 
-      SwoopMetrics.turnDegrees(series, topOfTurn = 0, bottomIdx = 3) shouldBe 30.0 +- 1e-6 // right run, untouched
+      SwoopMetrics.turnDegrees(series, topOfTurn = 0, bottomIdx = 3) shouldBe 30.0 +- 1e-6  // right run, untouched
       SwoopMetrics.turnDegrees(series, topOfTurn = 0, bottomIdx = 8) shouldBe 335.0 +- 1e-6 // 30 + 300 + 5
     }
 

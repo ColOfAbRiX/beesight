@@ -37,14 +37,13 @@ final private[jumpevents] case class DetectingState(
 ) extends DetectorState
 
 /**
- * A single data point enriched with kinematics, current phase, and accumulated detection events.
- *
- * FIXME: There's confusion in this data because there are repetitions. `kinematics` and `point` overlanp,
- *        `kinematics.acceleration` is computed with non-smoothed data and we should highlight that
+ * A single data point enriched with the kinematics used by the stage handlers, the current phase, and the
+ * accumulated detection events.
  */
 final private[jumpevents] case class WindowEntry(
   point: IndexedPoint,
-  kinematics: PointKinematics,
+  smoothedSpeed: GeoVector,
+  acceleration: GeoVector,
   phase: FlightPhase,
   detectedEvents: FlightEvents,
 )

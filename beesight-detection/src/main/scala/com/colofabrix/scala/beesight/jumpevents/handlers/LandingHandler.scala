@@ -5,6 +5,7 @@ import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
 import com.colofabrix.scala.beesight.config.LandingConfig
 import com.colofabrix.scala.beesight.jumpevents.model.WindowEntry
 import com.colofabrix.scala.beesight.math.Stats
+import com.colofabrix.scala.beesight.model.*
 
 /**
  * Detects landing by identifying sustained near-zero velocity and low speed variance.
@@ -12,14 +13,14 @@ import com.colofabrix.scala.beesight.math.Stats
 final private[handlers] class LandingHandler private (config: LandingConfig) extends EventHandler {
 
   protected def detectTrigger(window: NonEmptyFilled[WindowEntry]): Boolean =
-    val kinematics = window.focus.kinematics
+    val entry = window.focus
 
     val isVerticalSpeedStable =
-      Stats.stdDevBy(window)(_.kinematics.point.speed.vertical) < config.stabilityThreshold
+      Stats.stdDevBy(window)(_.smoothedSpeed.vertical) < config.stabilityThreshold
 
     val speedTrigger =
-      Math.abs(kinematics.point.speed.vertical) < config.verticalSpeedThreshold &&
-      Math.abs(kinematics.point.speed.horizontal) < config.horizontalSpeedThreshold
+      Math.abs(entry.smoothedSpeed.vertical) < config.verticalSpeedThreshold &&
+      Math.abs(entry.smoothedSpeed.horizontal) < config.horizontalSpeedThreshold
 
     val canopyAltitude =
       window
@@ -28,7 +29,7 @@ final private[handlers] class LandingHandler private (config: LandingConfig) ext
         .canopy
         .fold(Double.MaxValue)(_.altitude)
 
-    val isBelowCanopy = kinematics.point.altitude < canopyAltitude
+    val isBelowCanopy = entry.point.altitude < canopyAltitude
 
     isVerticalSpeedStable && speedTrigger && isBelowCanopy
 
@@ -36,7 +37,7 @@ final private[handlers] class LandingHandler private (config: LandingConfig) ext
     window
       .right
       .map { stabilityWindow =>
-        Stats.stdDevBy(stabilityWindow)(_.kinematics.point.speed.vertical) < config.stabilityThreshold
+        Stats.stdDevBy(stabilityWindow)(_.smoothedSpeed.vertical) < config.stabilityThreshold
       }
       .getOrElse(false)
 

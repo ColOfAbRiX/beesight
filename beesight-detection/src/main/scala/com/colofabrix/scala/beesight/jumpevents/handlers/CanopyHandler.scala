@@ -5,6 +5,7 @@ import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
 import com.colofabrix.scala.beesight.config.{ CanopyConfig, FreefallConfig }
 import com.colofabrix.scala.beesight.jumpevents.model.WindowEntry
 import com.colofabrix.scala.beesight.math.Stats
+import com.colofabrix.scala.beesight.model.*
 import java.time.Duration
 
 /**
@@ -14,14 +15,14 @@ final private[handlers] class CanopyHandler private (config: CanopyConfig, freef
   extends EventHandler {
 
   protected def detectTrigger(window: NonEmptyFilled[WindowEntry]): Boolean =
-    val kinematics = window.focus.kinematics
+    val entry = window.focus
 
     val speedTrigger =
-      kinematics.point.speed.vertical > 0.0 &&
-      kinematics.point.speed.vertical < config.verticalSpeedThreshold
+      entry.smoothedSpeed.vertical > 0.0 &&
+      entry.smoothedSpeed.vertical < config.verticalSpeedThreshold
 
     val accelerationTrigger =
-      kinematics.acceleration.vertical < 0.0
+      entry.acceleration.vertical < 0.0
 
     val freefallAltitude =
       window
@@ -30,15 +31,15 @@ final private[handlers] class CanopyHandler private (config: CanopyConfig, freef
         .freefall
         .fold(Double.MaxValue)(_.altitude)
 
-    val isBelowFreefall = kinematics.point.altitude < freefallAltitude
+    val isBelowFreefall = entry.point.altitude < freefallAltitude
 
-    val isAboveMinAltitude = kinematics.point.altitude > config.minCanopyAltitude
+    val isAboveMinAltitude = entry.point.altitude > config.minCanopyAltitude
 
     speedTrigger && accelerationTrigger && isBelowFreefall && isAboveMinAltitude
 
   protected def validateTrigger(window: NonEmptyFilled[WindowEntry]): Boolean =
-    val focus  = window.focus.kinematics
-    val newest = window.newest.kinematics
+    val focus  = window.focus
+    val newest = window.newest
     val dt     = Duration.between(focus.point.time, newest.point.time).toMillis / 1000.0
 
     val canopyDistance = config.validationVerticalSpeed * dt
@@ -53,7 +54,7 @@ final private[handlers] class CanopyHandler private (config: CanopyConfig, freef
     val discoveredInflection =
       for {
         backWindow <- window.left
-        inflection <- Stats.findInflectionBy(backWindow)(_.kinematics.point.speed.vertical)
+        inflection <- Stats.findInflectionBy(backWindow)(_.smoothedSpeed.vertical)
       } yield inflection
 
     discoveredInflection orElse window.focusIndex.some
