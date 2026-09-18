@@ -10,13 +10,13 @@ import java.lang.Math.*
  * @param east Eastward component (m/s)
  * @param vertical Vertical component (m/s; positive = downward for Flysight convention)
  */
-final private[beesight] case class GeoVector(
+final case class GeoVector(
   north: Double,
   east: Double,
   vertical: Double,
 )
 
-private[beesight] object GeoVector {
+object GeoVector {
 
   /**
    * The zero vector (0, 0, 0).

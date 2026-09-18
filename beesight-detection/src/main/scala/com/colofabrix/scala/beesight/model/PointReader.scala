@@ -2,7 +2,7 @@ package com.colofabrix.scala.beesight.model
 
 import java.time.Instant
 
-private[beesight] trait PointReader[A] {
+trait PointReader[A] {
   def time(point: A): Instant
   def altitude(point: A): Double
   def speed(point: A): GeoVector

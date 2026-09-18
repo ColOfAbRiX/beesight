@@ -1,4 +1,4 @@
-package com.colofabrix.scala.beesight.model
+package com.colofabrix.scala.beesight.metrics
 
 import com.colofabrix.scala.beesight.model.GeoVector
 import java.time.Instant

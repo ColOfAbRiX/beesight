@@ -1,5 +1,6 @@
 package com.colofabrix.scala.beesight.model
 
+import com.colofabrix.scala.beesight.model.EventPoint
 import java.time.Duration
 
 /**
@@ -15,7 +16,7 @@ import java.time.Duration
  * @param turnDirection      Whether the speed-building turn goes left or right
  * @param timeToExecuteTurn  Elapsed time from turn initiation to rollout start
  */
-final private[beesight] case class SwoopData(
+final case class SwoopData(
   turnInitiation: EventPoint,
   rolloutStart: EventPoint,
   maxVerticalSpeed: SpeedAtAltitude,

@@ -22,9 +22,10 @@ final class JumpEventsDetector private (config: DetectionConfig, preprocessor: P
   //  Configuration / Derived Values  //
 
   private val slidingWindowSize: Int =
-    val smoothWindows     = config.eventConfigsAsList.map(_.smoothingWindowSize.value)
-    val backWindows       = config.eventConfigsAsList.map(_.backtrackWindowSize.value)
-    val validationWindows = config.eventConfigsAsList.map(_.validationWindowSize.value)
+    val configList        = config.eventConfigsAsList
+    val smoothWindows     = configList.map(_.smoothingWindowSize.value)
+    val backWindows       = configList.map(_.backtrackWindowSize.value)
+    val validationWindows = configList.map(_.validationWindowSize.value)
     Math.max(smoothWindows.max, backWindows.max) + 1 + validationWindows.max
 
   //  Dependencies  //
@@ -42,7 +43,6 @@ final class JumpEventsDetector private (config: DetectionConfig, preprocessor: P
 
   //  Internals  //
 
-  // TODO: Implement a real time-based detection that doesn't assume every data point has a fixed time difference
   private def mainDetectionPipe[F[_], A: PointReader]: fs2.Pipe[F, A, FlightEvents] =
     pointStream =>
       pointStream
