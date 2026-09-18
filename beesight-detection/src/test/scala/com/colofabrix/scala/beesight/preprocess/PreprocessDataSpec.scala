@@ -415,11 +415,11 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
   }
 
   private def buildConfig(
-    preprocessWindowSize: Int = DetectionConfig.default.global.preprocessWindowSize.value,
-    accelerationClip: Double = DetectionConfig.default.global.accelerationClip,
+    preprocessWindowSize: Int = DetectionConfig.default.preprocess.preprocessWindowSize.value,
+    accelerationClip: Double = DetectionConfig.default.preprocess.accelerationClip,
   ): DetectionConfig =
     DetectionConfig.default.copy(
-      global = DetectionConfig.default.global.copy(
+      preprocess = DetectionConfig.default.preprocess.copy(
         preprocessWindowSize = WindowSize(preprocessWindowSize.refineUnsafe),
         accelerationClip = accelerationClip,
       ),

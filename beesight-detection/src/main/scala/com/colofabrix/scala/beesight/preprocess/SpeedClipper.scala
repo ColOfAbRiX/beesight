@@ -22,7 +22,7 @@ private[preprocess] object SpeedClipper {
     val expectedVelocity = expectedPoint.point.speed.vertical
     val deviation        = Math.abs(actualVelocity - expectedVelocity)
 
-    if deviation <= config.global.accelerationClip then
+    if deviation <= config.preprocess.accelerationClip then
       focused
     else
       focused.modifyFocus(_ => expectedPoint)

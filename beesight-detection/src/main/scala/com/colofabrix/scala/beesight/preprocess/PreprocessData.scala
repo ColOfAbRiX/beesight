@@ -12,13 +12,16 @@ import com.colofabrix.scala.beesight.utils.*
  * Removes GPS data spikes and smooths velocity readings via a small sliding window.
  *
  * TODO: Investigate if we need a separate Preprocessor, given we only clip speed and never reuse Preprocessor
+ *       This means speed clipper moves in the `jumpevents` package, the section preprocess, takeoff, freefall, canopy,
+ *       landing in DetectionConfig will go inside a new JumpEventsConfig, GlobalConfig disappears. In general, any code
+ *       related to Preprocessor disappears and any code related to SpeedClipper moves to jumpevents.
  */
 final class PreprocessData private (config: DetectionConfig) extends Preprocessor {
 
   // NOTE: Consider removing the preprocessor and include SpeedClipper in each algorithm
 
   private val windowCapacity: Int =
-    Math.max(2, config.global.preprocessWindowSize.value)
+    Math.max(2, config.preprocess.preprocessWindowSize.value)
 
   /**
    * Applies preprocessing to the data stream

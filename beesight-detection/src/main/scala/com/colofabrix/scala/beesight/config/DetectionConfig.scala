@@ -2,6 +2,8 @@ package com.colofabrix.scala.beesight.config
 
 import io.github.iltotore.iron.*
 
+// FIXME: Validate that all the parameters here are used and, if not, remove the unused ones
+
 /**
  * Top-level configuration for the flight stage detection algorithm.
  *
@@ -17,6 +19,7 @@ import io.github.iltotore.iron.*
  */
 final case class DetectionConfig(
   global: GlobalConfig,
+  preprocess: PreprocessConfig,
   takeoff: TakeoffConfig,
   freefall: FreefallConfig,
   canopy: CanopyConfig,
@@ -31,7 +34,8 @@ object DetectionConfig {
    */
   val default: DetectionConfig =
     DetectionConfig(
-      global = GlobalConfig(
+      global = GlobalConfig(),
+      preprocess = PreprocessConfig(
         preprocessWindowSize = WindowSize(20),
         accelerationClip = 20.0,
       ),
@@ -87,14 +91,17 @@ object DetectionConfig {
 }
 
 /**
- * Global preprocessing settings.
- *
- * FIXME: These parameters are used only by the preprocessor, create a different case class (keep GlobalConfig too)
+ * Global settings shared across detection stages. Currently empty; a placeholder for future cross-stage settings.
+ */
+final case class GlobalConfig()
+
+/**
+ * Configuration for the preprocessing stage.
  *
  * @param preprocessWindowSize Size of the sliding window used for despiking; larger values smooth more aggressively
  * @param accelerationClip Maximum allowed velocity deviation (m/s) before a point is considered a spike
  */
-final case class GlobalConfig(
+final case class PreprocessConfig(
   preprocessWindowSize: WindowSize,
   accelerationClip: Double,
 )

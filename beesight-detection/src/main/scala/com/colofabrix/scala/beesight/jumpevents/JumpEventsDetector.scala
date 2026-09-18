@@ -115,7 +115,7 @@ final class JumpEventsDetector private (config: DetectionConfig, preprocessor: P
 
   private def handleFilling(currentPoint: IndexedPoint): Transition[FillingState, Unit] =
     IndexedState.modify { previousState =>
-      val currentData = buildCurrentWindowEntry(previousState.window, currentPoint)
+      val currentData = buildCurrentWindowEntry(previousState.window, currentPoint, previousState.phase)
       val window      = previousState.window.enqueue(currentData)
 
       window match {
@@ -137,7 +137,7 @@ final class JumpEventsDetector private (config: DetectionConfig, preprocessor: P
 
   private def pushCurrentWindowEntry(currentPoint: IndexedPoint): Step[DetectingState, WindowEntry] =
     IndexedState { previousState =>
-      val currentData                 = buildCurrentWindowEntry(previousState.window, currentPoint)
+      val currentData                 = buildCurrentWindowEntry(previousState.window, currentPoint, previousState.phase)
       val (oldestData, currentWindow) = previousState.window.pushReturning(currentData)
       val currentState                = previousState.copy(window = currentWindow)
       currentState -> oldestData
@@ -146,9 +146,9 @@ final class JumpEventsDetector private (config: DetectionConfig, preprocessor: P
   private def buildCurrentWindowEntry(
     previousWindow: NEW[WindowEntry],
     currentPoint: IndexedPoint,
+    phase: FlightPhase,
   ): WindowEntry =
-    // FIXME: This hardcodes `freefall`, choose the window for the right stage
-    val smoothingWindowSize = config.freefall.smoothingWindowSize
+    val smoothingWindowSize = config.smoothingWindowFor(phase)
     val smoothingCap        = Math.min(smoothingWindowSize.value, previousWindow.length)
     val previousPoint       = previousWindow.newest.point
 
@@ -158,7 +158,13 @@ final class JumpEventsDetector private (config: DetectionConfig, preprocessor: P
       if smoothingCap <= 1 then
         currentPoint.speed
       else
-        Stats.medianGeoVectorWithExtra(previousWindow, smoothingCap - 1, currentPoint.speed)(_.point.speed)
+        val smoothingWindow =
+          previousWindow
+            .takeNewest(smoothingCap)
+            .map(_.point)
+            .enqueue(currentPoint)
+
+        Stats.medianBy(smoothingWindow)(_.speed)
 
     val currentAcceleration = (currentPoint.speed - previousPoint.speed) / dt
 

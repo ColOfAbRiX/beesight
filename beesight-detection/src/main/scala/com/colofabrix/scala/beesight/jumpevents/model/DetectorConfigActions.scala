@@ -1,7 +1,7 @@
 package com.colofabrix.scala.beesight.jumpevents.model
 
 import com.colofabrix.scala.beesight.config.*
-import com.colofabrix.scala.beesight.model.EventType
+import com.colofabrix.scala.beesight.model.{ EventType, FlightPhase }
 
 /**
  * Extension methods for looking up event-specific configurations from DetectionConfig.
@@ -21,6 +21,15 @@ private[jumpevents] object DetectorConfigActions {
     def getBackwindowSize(eventType: EventType): Int =
       val eventTypeConfig = getEventConfigs(eventType)
       Math.max(eventTypeConfig.backtrackWindowSize.value, eventTypeConfig.smoothingWindowSize.value)
+
+    def smoothingWindowFor(phase: FlightPhase): WindowSize =
+      phase match {
+        case FlightPhase.BeforeTakeoff => self.takeoff.smoothingWindowSize
+        case FlightPhase.Climbing      => self.freefall.smoothingWindowSize
+        case FlightPhase.Freefall      => self.canopy.smoothingWindowSize
+        case FlightPhase.UnderCanopy   => self.landing.smoothingWindowSize
+        case FlightPhase.Landed        => self.landing.smoothingWindowSize
+      }
 
     def eventConfigsAsList: Vector[EventConfigs] =
       Vector(self.takeoff, self.freefall, self.canopy, self.landing)

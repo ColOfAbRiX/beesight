@@ -72,6 +72,9 @@ object DetectionConfigCli {
   given ConfigReader[GlobalConfig] =
     ConfigReader.derived
 
+  given ConfigReader[PreprocessConfig] =
+    ConfigReader.derived
+
   given ConfigReader[TakeoffConfig] =
     ConfigReader.derived
 
