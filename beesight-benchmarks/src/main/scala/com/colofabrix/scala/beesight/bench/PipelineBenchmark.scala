@@ -8,6 +8,7 @@ import com.colofabrix.scala.beesight.model.*
 import fs2.data.csv.*
 import java.io.FileInputStream
 import java.nio.file.Path
+import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 import java.util.zip.ZipInputStream
@@ -73,7 +74,7 @@ object PipelineBenchmark {
     println()
 
     val config   = DetectionConfig.default
-    val detector = JumpEventsDetector(config)
+    val detector = JumpEventsDetector(config.jumpevents)
     val zipFiles = collectZipFiles()
 
     if zipFiles.isEmpty then
@@ -210,7 +211,7 @@ object PipelineBenchmark {
       source.close()
     }
 
-  private def readFlysightStream(filePath: Path): fs2.Stream[IO, DataPoint] =
+  private def readFlysightStream(filePath: Path): fs2.Stream[IO, BenchPoint] =
     val rawLines =
       if filePath.toString.toLowerCase.endsWith(".zip") then readLinesFromZip(filePath)
       else readLinesFromFile(filePath)
@@ -219,7 +220,7 @@ object PipelineBenchmark {
       .filter(line => line.trim.nonEmpty && !line.trim.startsWith("#"))
       .through(trimHeaderFields)
       .intersperse("\n")
-      .through(lenient.attemptDecodeUsingHeaders[DataPoint]())
+      .through(lenient.attemptDecodeUsingHeaders[BenchPoint]())
       .collect { case Right(value) => value }
 
   private def readLinesFromZip(filePath: Path): fs2.Stream[IO, String] =
@@ -255,19 +256,36 @@ object PipelineBenchmark {
       catch case t: Exception => Left(new DecoderError(t.getMessage()))
     }
 
-  private given CsvRowDecoder[DataPoint, String] with
-    def apply(row: CsvRow[String]): DecoderResult[DataPoint] =
+  private given CsvRowDecoder[BenchPoint, String] with
+    def apply(row: CsvRow[String]): DecoderResult[BenchPoint] =
       for
         time <- row.as[OffsetDateTime]("time")
         hMSL <- row.as[Double]("hMSL")
         velN <- row.as[Double]("velN")
         velE <- row.as[Double]("velE")
         velD <- row.as[Double]("velD")
-      yield DataPoint(
+      yield BenchPoint(
         time = time.toInstant,
         altitude = hMSL,
         speed = GeoVector(north = velN, east = velE, vertical = velD),
       )
+
+  /** A raw flight data point decoded from the Flysight CSV files, usable as detector input via [[PointReader]]. */
+  private case class BenchPoint(
+    time: Instant,
+    altitude: Double,
+    speed: GeoVector,
+  )
+
+  private object BenchPoint {
+
+    given PointReader[BenchPoint] with {
+      def time(point: BenchPoint): Instant    = point.time
+      def altitude(point: BenchPoint): Double = point.altitude
+      def speed(point: BenchPoint): GeoVector = point.speed
+    }
+
+  }
 
   /**
    * Timed run of a single file through the pipeline.

@@ -4,12 +4,11 @@ import cats.data.*
 import cats.syntax.all.*
 import com.colofabrix.scala.beesight.collections.*
 import com.colofabrix.scala.beesight.collections.NEW.*
-import com.colofabrix.scala.beesight.config.DetectionConfig
+import com.colofabrix.scala.beesight.config.JumpEventsConfig
 import com.colofabrix.scala.beesight.jumpevents.model.*
-import com.colofabrix.scala.beesight.jumpevents.model.DetectorConfigActions.*
+import com.colofabrix.scala.beesight.jumpevents.model.JumpEventsConfigActions.*
 import com.colofabrix.scala.beesight.math.*
 import com.colofabrix.scala.beesight.model.*
-import com.colofabrix.scala.beesight.preprocess.*
 import com.colofabrix.scala.beesight.utils.*
 import java.time.Duration as JavaDuration
 import scala.annotation.tailrec
@@ -17,7 +16,7 @@ import scala.annotation.tailrec
 /**
  * Detects flight event points from flight data streams.
  */
-final class JumpEventsDetector private (config: DetectionConfig, preprocessor: Preprocessor) {
+final class JumpEventsDetector private (config: JumpEventsConfig) {
 
   //  Configuration / Derived Values  //
 
@@ -30,8 +29,11 @@ final class JumpEventsDetector private (config: DetectionConfig, preprocessor: P
 
   //  Dependencies  //
 
-  private val eventPointDetector: EventPointDetector =
-    EventPointDetector(config)
+  private val eventPointDetector: StagesHandler =
+    StagesHandler(config)
+
+  private val speedClipper: SpeedClipper =
+    SpeedClipper(config)
 
   //  Public API  //
 
@@ -46,8 +48,8 @@ final class JumpEventsDetector private (config: DetectionConfig, preprocessor: P
   private def mainDetectionPipe[F[_], A: PointReader]: fs2.Pipe[F, A, FlightEvents] =
     pointStream =>
       pointStream
-        .through(preprocessor.preprocess)
         .through(IndexedPoint.stream)
+        .through(speedClipper.clip)
         .statefulMapEmits(initialStreamState, drainState) {
           case (currentPoint, state: FillingState) =>
             handleFilling(currentPoint)
@@ -178,10 +180,7 @@ final class JumpEventsDetector private (config: DetectionConfig, preprocessor: P
 
 object JumpEventsDetector {
 
-  def apply(config: DetectionConfig): JumpEventsDetector =
-    new JumpEventsDetector(config, PreprocessData(config))
-
-  def apply(config: DetectionConfig, preprocessor: Preprocessor): JumpEventsDetector =
-    new JumpEventsDetector(config, preprocessor)
+  def apply(config: JumpEventsConfig): JumpEventsDetector =
+    new JumpEventsDetector(config)
 
 }

@@ -11,12 +11,12 @@ private[beesight] object Kinematics {
   /**
    * Computes acceleration by comparing velocity changes between two consecutive data points.
    */
-  def compute[A: PointReader](prev: A, curr: A): PointKinematics =
+  def compute(prev: IndexedPoint, curr: IndexedPoint): PointKinematics =
     val dt           = Duration.between(prev.time, curr.time).toMillis / 1000.0
     val acceleration = (curr.speed - prev.speed) / dt
 
     PointKinematics(
-      point = DataPoint.fromReader(curr),
+      point = curr,
       acceleration = acceleration,
     )
 

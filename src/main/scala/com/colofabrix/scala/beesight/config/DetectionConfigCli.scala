@@ -69,7 +69,7 @@ object DetectionConfigCli {
   given ConfigReader[DetectionConfig] =
     ConfigReader.derived
 
-  given ConfigReader[GlobalConfig] =
+  given ConfigReader[JumpEventsConfig] =
     ConfigReader.derived
 
   given ConfigReader[PreprocessConfig] =

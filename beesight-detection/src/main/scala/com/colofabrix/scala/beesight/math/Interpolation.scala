@@ -31,13 +31,15 @@ private[beesight] object Interpolation {
     )
 
   /**
-   * Linearly interpolates between two data points values to a target time.
+   * Linearly interpolates between two indexed points to a target time. The interpolated point inherits the index of
+   * the later point.
    */
-  def interpolate[A: PointReader](p1: A, p2: A, time: Instant): DataPoint =
+  def interpolate(p1: IndexedPoint, p2: IndexedPoint, time: Instant): IndexedPoint =
     interpolate_(p1, p2, time)(tParam(p1.time, p2.time, time))
 
-  private def interpolate_[A: PointReader](p1: A, p2: A, time: Instant)(t: Double): DataPoint =
-    DataPoint(
+  private def interpolate_(p1: IndexedPoint, p2: IndexedPoint, time: Instant)(t: Double): IndexedPoint =
+    IndexedPoint(
+      idx = p2.idx,
       time = time,
       altitude = interpolate_(p1.altitude, p2.altitude)(t),
       speed = interpolate_(p1.speed, p2.speed)(t),

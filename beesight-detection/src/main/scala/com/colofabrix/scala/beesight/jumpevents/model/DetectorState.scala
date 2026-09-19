@@ -4,6 +4,12 @@ import cats.data.IndexedState
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.*
 import com.colofabrix.scala.beesight.model.*
 
+private[jumpevents] type Transition[S <: DetectorState, A] =
+  IndexedState[S, DetectorState, A]
+
+private[jumpevents] type Step[S <: DetectorState, A] =
+  IndexedState[S, S, A]
+
 /**
  * Common supertype for detection pipeline states.
  */
@@ -54,9 +60,3 @@ final private[jumpevents] case class WindowEntry(
 private[jumpevents] enum FocusPosition {
   case Zero, StageFocus
 }
-
-private[jumpevents] type Transition[S <: DetectorState, A] =
-  IndexedState[S, DetectorState, A]
-
-private[jumpevents] type Step[S <: DetectorState, A] =
-  IndexedState[S, S, A]

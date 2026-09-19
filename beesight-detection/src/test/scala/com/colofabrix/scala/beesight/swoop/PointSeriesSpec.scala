@@ -1,6 +1,6 @@
 package com.colofabrix.scala.beesight.swoop
 
-import com.colofabrix.scala.beesight.model.{ DataPoint, GeoVector, IndexedPoint }
+import com.colofabrix.scala.beesight.model.{ GeoVector, IndexedPoint }
 import com.colofabrix.scala.beesight.swoop.model.PointSeries
 import java.time.Instant
 import org.scalatest.freespec.AnyFreeSpec
@@ -19,15 +19,13 @@ class PointSeriesSpec extends AnyFreeSpec with Matchers {
   ): IndexedPoint = {
     val rad = Math.toRadians(headingDeg)
     IndexedPoint(
-      tMillis,
-      DataPoint(
-        time = Instant.ofEpochMilli(tMillis),
-        altitude = alt,
-        speed = GeoVector(
-          north = hSpeed * Math.cos(rad),
-          east = hSpeed * Math.sin(rad),
-          vertical = vSpeed,
-        )
+      idx = tMillis,
+      time = Instant.ofEpochMilli(tMillis),
+      altitude = alt,
+      speed = GeoVector(
+        north = hSpeed * Math.cos(rad),
+        east = hSpeed * Math.sin(rad),
+        vertical = vSpeed,
       )
     )
   }
@@ -49,9 +47,9 @@ class PointSeriesSpec extends AnyFreeSpec with Matchers {
 
     "apply returns the point at the given index" in {
       val pts = simpleSeries
-      pts(0).point.altitude shouldBe 1000.0
-      pts(1).point.altitude shouldBe 900.0
-      pts(2).point.altitude shouldBe 800.0
+      pts(0).altitude shouldBe 1000.0
+      pts(1).altitude shouldBe 900.0
+      pts(2).altitude shouldBe 800.0
     }
 
     "verticalSpeed returns the vertical component" in {

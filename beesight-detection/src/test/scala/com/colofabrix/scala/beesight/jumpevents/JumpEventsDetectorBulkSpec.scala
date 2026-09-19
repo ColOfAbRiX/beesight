@@ -116,8 +116,8 @@ class JumpEventsDetectorBulkSpec extends AnyWordSpec with Matchers with IOValues
 
   private def detectLastEvents(filePath: java.nio.file.Path): IO[FlightEvents] =
     TestFilesHandler
-      .readCsv[DataPoint](filePath)
-      .through(JumpEventsDetector(DetectionConfig.default).detectEvents)
+      .readCsv[CsvPoint](filePath)
+      .through(JumpEventsDetector(DetectionConfig.default.jumpevents).detectEvents)
       .compile
       .last
       .map {

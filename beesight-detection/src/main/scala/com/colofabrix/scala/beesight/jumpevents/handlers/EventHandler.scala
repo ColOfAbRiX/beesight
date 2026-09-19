@@ -1,7 +1,7 @@
 package com.colofabrix.scala.beesight.jumpevents.handlers
 
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
-import com.colofabrix.scala.beesight.config.DetectionConfig
+import com.colofabrix.scala.beesight.config.JumpEventsConfig
 import com.colofabrix.scala.beesight.jumpevents.model.WindowEntry
 import com.colofabrix.scala.beesight.model.*
 
@@ -27,7 +27,7 @@ private[jumpevents] trait EventHandler {
 
 private[jumpevents] object EventHandler {
 
-  def apply(config: DetectionConfig, eventType: EventType): EventHandler =
+  def apply(config: JumpEventsConfig, eventType: EventType): EventHandler =
     eventType match {
       case EventType.Takeoff  => TakeoffHandler(config.takeoff)
       case EventType.Freefall => FreefallHandler(config.freefall)

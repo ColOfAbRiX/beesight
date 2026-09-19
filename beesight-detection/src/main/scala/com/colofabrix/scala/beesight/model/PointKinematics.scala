@@ -6,7 +6,7 @@ import java.time.Instant
  * Represents complete kinematic state of a flight point including position, velocity, and acceleration.
  */
 final private[beesight] case class PointKinematics(
-  point: DataPoint,
+  point: IndexedPoint,
   acceleration: GeoVector,
 )
 

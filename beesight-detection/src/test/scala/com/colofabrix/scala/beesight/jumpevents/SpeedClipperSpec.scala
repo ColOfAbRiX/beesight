@@ -1,4 +1,4 @@
-package com.colofabrix.scala.beesight.preprocess
+package com.colofabrix.scala.beesight.jumpevents
 
 import cats.effect.IO
 import com.colofabrix.scala.beesight.IOValues
@@ -10,9 +10,9 @@ import java.time.Instant
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
-class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
+class SpeedClipperSpec extends AnyFreeSpec with Matchers with IOValues {
 
-  "PreprocessData" - {
+  "SpeedClipper" - {
 
     "preprocess pipe" - {
 
@@ -415,13 +415,15 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
   }
 
   private def buildConfig(
-    preprocessWindowSize: Int = DetectionConfig.default.preprocess.preprocessWindowSize.value,
-    accelerationClip: Double = DetectionConfig.default.preprocess.accelerationClip,
+    preprocessWindowSize: Int = DetectionConfig.default.jumpevents.preprocess.preprocessWindowSize.value,
+    accelerationClip: Double = DetectionConfig.default.jumpevents.preprocess.accelerationClip,
   ): DetectionConfig =
     DetectionConfig.default.copy(
-      preprocess = DetectionConfig.default.preprocess.copy(
-        preprocessWindowSize = WindowSize(preprocessWindowSize.refineUnsafe),
-        accelerationClip = accelerationClip,
+      jumpevents = DetectionConfig.default.jumpevents.copy(
+        preprocess = DetectionConfig.default.jumpevents.preprocess.copy(
+          preprocessWindowSize = WindowSize(preprocessWindowSize.refineUnsafe),
+          accelerationClip = accelerationClip,
+        ),
       ),
     )
 
@@ -431,25 +433,26 @@ class PreprocessDataSpec extends AnyFreeSpec with Matchers with IOValues {
     northSpeed: Double = 0.0,
     eastSpeed: Double = 0.0,
     verticalSpeed: Double = 0.0,
-  ): DataPoint =
-    DataPoint(
+  ): IndexedPoint =
+    IndexedPoint(
+      idx = seconds,
       time = Instant.ofEpochSecond(seconds),
       altitude = altitude,
       speed = GeoVector(north = northSpeed, east = eastSpeed, vertical = verticalSpeed),
     )
 
   private def runPreprocess(
-    points: List[DataPoint],
+    points: List[IndexedPoint],
     config: DetectionConfig = DetectionConfig.default,
-  ): List[DataPoint] =
+  ): List[IndexedPoint] =
     Stream
-      .emits[IO, DataPoint](points)
-      .through(PreprocessData(config).preprocess)
+      .emits[IO, IndexedPoint](points)
+      .through(SpeedClipper(config.jumpevents).clip)
       .compile
       .toList
       .result()
 
-  private def extract(dp: DataPoint): (Instant, Double, GeoVector) =
+  private def extract(dp: IndexedPoint): (Instant, Double, GeoVector) =
     (dp.time, dp.altitude, dp.speed)
 
 }

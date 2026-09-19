@@ -1,6 +1,6 @@
 package com.colofabrix.scala.beesight.swoop
 
-import com.colofabrix.scala.beesight.model.{ DataPoint, GeoVector, IndexedPoint }
+import com.colofabrix.scala.beesight.model.{ GeoVector, IndexedPoint }
 import com.colofabrix.scala.beesight.swoop.model.PointSeries
 import java.time.Instant
 import org.scalatest.freespec.AnyFreeSpec
@@ -52,15 +52,13 @@ class SwoopMetricsSpec extends AnyFreeSpec with Matchers {
         .map { i =>
           val rad = Math.toRadians(headings(i))
           IndexedPoint(
-            i.toLong,
-            DataPoint(
-              Instant.ofEpochMilli((i * dtMillis).toLong),
-              1000.0 - i,
-              GeoVector(
-                north = horizontal(i) * Math.cos(rad),
-                east = horizontal(i) * Math.sin(rad),
-                vertical = vertical(i),
-              )
+            idx = i.toLong,
+            time = Instant.ofEpochMilli((i * dtMillis).toLong),
+            altitude = 1000.0 - i,
+            speed = GeoVector(
+              north = horizontal(i) * Math.cos(rad),
+              east = horizontal(i) * Math.sin(rad),
+              vertical = vertical(i),
             )
           )
         }

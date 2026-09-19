@@ -3,17 +3,17 @@ package com.colofabrix.scala.beesight.jumpevents
 import cats.data.*
 import com.colofabrix.scala.beesight.collections.NEW.*
 import com.colofabrix.scala.beesight.config.*
-import com.colofabrix.scala.beesight.jumpevents.EventPointDetector.*
+import com.colofabrix.scala.beesight.jumpevents.StagesHandler.*
 import com.colofabrix.scala.beesight.jumpevents.handlers.EventHandler
 import com.colofabrix.scala.beesight.jumpevents.model.*
-import com.colofabrix.scala.beesight.jumpevents.model.DetectorConfigActions.*
+import com.colofabrix.scala.beesight.jumpevents.model.JumpEventsConfigActions.*
 import com.colofabrix.scala.beesight.model.*
 import scala.annotation.tailrec
 
 /**
  * Orchestrates per-event handlers, sweeping the focus across the window to find transitions.
  */
-final private[jumpevents] class EventPointDetector private (config: DetectionConfig) {
+final private[jumpevents] class StagesHandler private (config: JumpEventsConfig) {
 
   private val takeoffHandler  = EventHandler(config, EventType.Takeoff)
   private val freefallHandler = EventHandler(config, EventType.Freefall)
@@ -139,7 +139,7 @@ final private[jumpevents] class EventPointDetector private (config: DetectionCon
 
 }
 
-object EventPointDetector {
+object StagesHandler {
 
   final private case class LoopState(
     eventType: EventType,
@@ -161,7 +161,7 @@ object EventPointDetector {
   private type Detector =
     Option[(DetectorState, Vector[FlightEvents])]
 
-  private[jumpevents] def apply(config: DetectionConfig): EventPointDetector =
-    new EventPointDetector(config)
+  private[jumpevents] def apply(config: JumpEventsConfig): StagesHandler =
+    new StagesHandler(config)
 
 }

@@ -4,11 +4,11 @@ import com.colofabrix.scala.beesight.config.*
 import com.colofabrix.scala.beesight.model.{ EventType, FlightPhase }
 
 /**
- * Extension methods for looking up event-specific configurations from DetectionConfig.
+ * Extension methods for looking up event-specific configurations from JumpEventsConfig.
  */
-private[jumpevents] object DetectorConfigActions {
+private[jumpevents] object JumpEventsConfigActions {
 
-  extension (self: DetectionConfig) {
+  extension (self: JumpEventsConfig) {
 
     def getEventConfigs(eventType: EventType): EventConfigs =
       eventType match {
@@ -32,7 +32,12 @@ private[jumpevents] object DetectorConfigActions {
       }
 
     def eventConfigsAsList: Vector[EventConfigs] =
-      Vector(self.takeoff, self.freefall, self.canopy, self.landing)
+      Vector(
+        self.takeoff,
+        self.freefall,
+        self.canopy,
+        self.landing
+      )
 
   }
 

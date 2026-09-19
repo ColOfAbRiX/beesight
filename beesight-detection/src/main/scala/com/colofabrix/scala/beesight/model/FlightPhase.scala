@@ -8,8 +8,6 @@ package com.colofabrix.scala.beesight.model
  *   - `Freefall` (2) — after exit, in free fall
  *   - `UnderCanopy` (3) — after deployment, descending under canopy
  *   - `Landed` (4) — on the ground after landing
- *
- * @param sequence Ordinal position in the jump timeline (0–4)
  */
 private[beesight] enum FlightPhase(val sequence: Int) {
   case BeforeTakeoff extends FlightPhase(0)

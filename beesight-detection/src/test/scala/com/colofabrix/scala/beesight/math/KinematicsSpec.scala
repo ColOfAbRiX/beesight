@@ -164,8 +164,9 @@ class KinematicsSpec extends AnyFreeSpec with Matchers {
     northSpeed: Double = 0.0,
     eastSpeed: Double = 0.0,
     verticalSpeed: Double = 0.0,
-  ): DataPoint =
-    DataPoint(
+  ): IndexedPoint =
+    IndexedPoint(
+      idx = seconds,
       time = Instant.ofEpochSecond(seconds),
       altitude = altitude,
       speed = GeoVector(north = northSpeed, east = eastSpeed, vertical = verticalSpeed),

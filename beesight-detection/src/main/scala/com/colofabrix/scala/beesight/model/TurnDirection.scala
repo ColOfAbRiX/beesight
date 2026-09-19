@@ -15,7 +15,7 @@ object TurnDirection {
    * right.
    */
   def fromRotation(degrees: Double): TurnDirection =
-    if degrees < 0 then TurnDirection.Left 
+    if degrees < 0 then TurnDirection.Left
     else TurnDirection.Right
 
 }

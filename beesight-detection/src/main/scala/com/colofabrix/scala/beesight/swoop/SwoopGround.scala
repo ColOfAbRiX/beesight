@@ -46,8 +46,8 @@ private[swoop] object SwoopGround {
         .points
         .view
         .drop(fromIndex)
-        .takeWhile(!_.point.time.isAfter(startTime.plus(duration)))
-        .map(_.point.altitude).toArray
+        .takeWhile(!_.time.isAfter(startTime.plus(duration)))
+        .map(_.altitude).toArray
         .toArray
 
     Stats.median(window)

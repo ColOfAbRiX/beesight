@@ -17,31 +17,31 @@ final private[swoop] class PointSeries(val points: Vector[IndexedPoint]) {
     points.length
 
   def verticalSpeed(index: Int): Double =
-    points(index).point.speed.vertical
+    points(index).speed.vertical
 
   def horizontalSpeed(index: Int): Double =
-    points(index).point.speed.horizontal
+    points(index).speed.horizontal
 
   def totalSpeed(index: Int): Double =
-    points(index).point.speed.magnitude
+    points(index).speed.magnitude
 
   def northSpeed(index: Int): Double =
-    points(index).point.speed.north
+    points(index).speed.north
 
   def eastSpeed(index: Int): Double =
-    points(index).point.speed.east
+    points(index).speed.east
 
   def altitude(index: Int): Double =
-    points(index).point.altitude
+    points(index).altitude
 
   def heading(index: Int): Double =
-    Heading.headingDegrees(points(index).point.speed)
+    Heading.headingDegrees(points(index).speed)
 
   def time(index: Int): Instant =
-    points(index).point.time
+    points(index).time
 
   def timeMillis(index: Int): Double =
-    points(index).point.time.toEpochMilli.toDouble
+    points(index).time.toEpochMilli.toDouble
 
 }
 

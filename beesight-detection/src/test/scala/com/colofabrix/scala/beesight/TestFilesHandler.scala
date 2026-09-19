@@ -5,6 +5,7 @@ import com.colofabrix.scala.beesight.model.*
 import fs2.data.csv.*
 import java.io.FileInputStream
 import java.nio.file.{ Path, Paths }
+import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 import java.util.zip.ZipInputStream
@@ -85,15 +86,15 @@ private[beesight] object TestFilesHandler {
       }
     }
 
-  given CsvRowDecoder[DataPoint, String] with
-    def apply(row: CsvRow[String]): DecoderResult[DataPoint] =
+  given CsvRowDecoder[CsvPoint, String] with
+    def apply(row: CsvRow[String]): DecoderResult[CsvPoint] =
       for
         time <- row.as[OffsetDateTime]("time")
         hMSL <- row.as[Double]("hMSL")
         velN <- row.as[Double]("velN")
         velE <- row.as[Double]("velE")
         velD <- row.as[Double]("velD")
-      yield DataPoint(
+      yield CsvPoint(
         time = time.toInstant,
         altitude = hMSL,
         speed = GeoVector(
@@ -102,5 +103,24 @@ private[beesight] object TestFilesHandler {
           vertical = velD
         ),
       )
+
+}
+
+/**
+ * A raw flight data point decoded from the test CSV files, usable as detector input via its [[PointReader]].
+ */
+final private[beesight] case class CsvPoint(
+  time: Instant,
+  altitude: Double,
+  speed: GeoVector,
+)
+
+private[beesight] object CsvPoint {
+
+  given PointReader[CsvPoint] with {
+    def time(point: CsvPoint): Instant    = point.time
+    def altitude(point: CsvPoint): Double = point.altitude
+    def speed(point: CsvPoint): GeoVector = point.speed
+  }
 
 }

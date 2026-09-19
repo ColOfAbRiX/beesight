@@ -147,12 +147,12 @@ sealed private[beesight] trait NonEmptyWindow[A] {
 
 }
 
-object NonEmptyWindow {
+private[beesight] object NonEmptyWindow {
 
   /**
    * A non-empty window that is still being filled (1 ≤ length < capacity).
    */
-  final class NonEmptyFilling[A] private[NonEmptyWindow] (
+  final private[beesight] class NonEmptyFilling[A] private[NonEmptyWindow] (
     protected var buffer: Array[Any],
     protected var head: Int,
     private var len: Int,
@@ -218,7 +218,7 @@ object NonEmptyWindow {
   /**
    * A non-empty window that has reached capacity (length == capacity).
    */
-  final class NonEmptyFilled[A] private[NonEmptyWindow] (
+  final private[beesight] class NonEmptyFilled[A] private[NonEmptyWindow] (
     protected var buffer: Array[Any],
     protected var head: Int,
     protected var focusIdx: Int,
