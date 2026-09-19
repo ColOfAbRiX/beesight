@@ -2,8 +2,6 @@ package com.colofabrix.scala.beesight.config
 
 import io.github.iltotore.iron.*
 
-// FIXME: Validate that all the parameters here are used and, if not, remove the unused ones
-
 /**
  * Top-level configuration for the flight stage detection algorithm.
  *
@@ -26,10 +24,8 @@ object DetectionConfig {
   val default: DetectionConfig =
     DetectionConfig(
       jumpevents = JumpEventsConfig(
-        preprocess = PreprocessConfig(
-          preprocessWindowSize = WindowSize(20),
-          accelerationClip = 20.0,
-        ),
+        preprocessWindowSize = WindowSize(20),
+        accelerationClip = 20.0,
         takeoff = TakeoffConfig(
           smoothingWindowSize = WindowSize(5),
           backtrackWindowSize = WindowSize(10),
@@ -63,20 +59,12 @@ object DetectionConfig {
           validationWindowSize = WindowSize(100),
           verticalSpeedThreshold = 1.0,
           stabilityThreshold = 0.5,
-          validationVerticalSpeed = 0.05,
           horizontalSpeedThreshold = 2.0,
         ),
       ),
       swoop = SwoopConfig(
-        minSwoopVerticalSpeed = 5.0,
-        minHorizontalSpeed = 2.0,
-        maxSwoopHeight = 300.0,
-        recoveryFraction = 0.5,
-        minSwoopDescent = 30.0,
         pullThreshold = 11.176,
         rolloutWindow = 30.48,
-        sustainedRecoverySamples = 10,
-        recoveryHeight = 45.0,
       ),
     )
 

@@ -70,9 +70,15 @@ final class SwoopDataDetector private (config: SwoopConfig) {
     SwoopData(
       turnInitiation = EventPoint(series(topOfTurn).idx, agl(topOfTurn)),
       rolloutStart = EventPoint(series(rolloutIdx).idx, agl(rolloutIdx)),
-      maxVerticalSpeed = SpeedAtAltitude(maxSpeeds.vertical.speed, agl(maxSpeeds.vertical.index)),
-      maxTotalSpeed = SpeedAtAltitude(maxSpeeds.total.speed, agl(maxSpeeds.total.index)),
-      maxHorizontalSpeed = SpeedAtAltitude(maxSpeeds.horizontal.speed, agl(maxSpeeds.horizontal.index)),
+      maxVerticalSpeed =
+        SpeedAtAltitude(series(maxSpeeds.vertical.index).idx, maxSpeeds.vertical.speed, agl(maxSpeeds.vertical.index)),
+      maxTotalSpeed =
+        SpeedAtAltitude(series(maxSpeeds.total.index).idx, maxSpeeds.total.speed, agl(maxSpeeds.total.index)),
+      maxHorizontalSpeed = SpeedAtAltitude(
+        series(maxSpeeds.horizontal.index).idx,
+        maxSpeeds.horizontal.speed,
+        agl(maxSpeeds.horizontal.index)
+      ),
       degreesOfRotation = degreesOfRotation,
       turnDirection = TurnDirection.fromRotation(degreesOfRotation),
       timeToExecuteTurn = Duration.between(series.time(topOfTurn), series.time(rolloutIdx)),

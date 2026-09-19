@@ -14,7 +14,7 @@ import com.colofabrix.scala.beesight.utils.*
 private[jumpevents] class SpeedClipper private (config: JumpEventsConfig) {
 
   private val windowCapacity =
-    Math.max(2, config.preprocess.preprocessWindowSize.value)
+    Math.max(2, config.preprocessWindowSize.value)
 
   /**
    * Removes GPS data spikes and smooths velocity readings via a small sliding window.
@@ -61,7 +61,7 @@ private[jumpevents] class SpeedClipper private (config: JumpEventsConfig) {
     val expectedVelocity = expectedPoint.point.speed.vertical
     val deviation        = Math.abs(actualVelocity - expectedVelocity)
 
-    if deviation <= config.preprocess.accelerationClip then
+    if deviation <= config.accelerationClip then
       focused
     else
       focused.modifyFocus(_ => expectedPoint)

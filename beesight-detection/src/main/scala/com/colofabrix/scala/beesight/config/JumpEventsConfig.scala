@@ -3,31 +3,20 @@ package com.colofabrix.scala.beesight.config
 /**
  * Configuration for the jump-events detection algorithm.
  *
- * @param preprocess Settings for the despiking stage
+ * @param preprocessWindowSize Size of the sliding window used for despiking; larger values smooth more aggressively
+ * @param accelerationClip Maximum allowed velocity deviation (m/s) before a point is considered a spike
  * @param takeoff Thresholds and window sizes for takeoff detection
  * @param freefall Thresholds and window sizes for freefall/exit detection
  * @param canopy Thresholds and window sizes for canopy deployment detection
  * @param landing Thresholds and window sizes for landing detection
  */
 final case class JumpEventsConfig(
-  preprocess: PreprocessConfig,
+  preprocessWindowSize: WindowSize,
+  accelerationClip: Double,
   takeoff: TakeoffConfig,
   freefall: FreefallConfig,
   canopy: CanopyConfig,
   landing: LandingConfig,
-)
-
-/**
- * Configuration for the preprocessing stage.
- *
- * FIXME: Remover PreprocessConfig and move its memebers inside JumpEventsConfig.
- *
- * @param preprocessWindowSize Size of the sliding window used for despiking; larger values smooth more aggressively
- * @param accelerationClip Maximum allowed velocity deviation (m/s) before a point is considered a spike
- */
-final case class PreprocessConfig(
-  preprocessWindowSize: WindowSize,
-  accelerationClip: Double,
 )
 
 /**
@@ -118,7 +107,6 @@ final case class CanopyConfig(
  * @param validationWindowSize Forward-looking window for landing stability confirmation
  * @param verticalSpeedThreshold Maximum absolute vertical speed (m/s); must be nearly stationary
  * @param stabilityThreshold Maximum std dev of vertical speed across the window for stability confirmation
- * @param validationVerticalSpeed Reserved for future use in landing validation
  * @param horizontalSpeedThreshold Maximum absolute horizontal speed (m/s); must be nearly stopped
  */
 final case class LandingConfig(
@@ -127,6 +115,5 @@ final case class LandingConfig(
   validationWindowSize: WindowSize,
   verticalSpeedThreshold: Double,
   stabilityThreshold: Double,
-  validationVerticalSpeed: Double,
   horizontalSpeedThreshold: Double,
 ) extends EventConfigs
