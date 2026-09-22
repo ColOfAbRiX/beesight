@@ -4,7 +4,7 @@ import cats.syntax.option.*
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
 import com.colofabrix.scala.beesight.config.LandingConfig
 import com.colofabrix.scala.beesight.jumpevents.model.WindowEntry
-import com.colofabrix.scala.beesight.math.Stats
+import com.colofabrix.scala.beesight.math.*
 import com.colofabrix.scala.beesight.model.*
 
 /**
@@ -16,7 +16,7 @@ final private[handlers] class LandingHandler private (config: LandingConfig) ext
     val entry = window.focus
 
     val isVerticalSpeedStable =
-      Stats.stdDevBy(window)(_.smoothedSpeed.vertical) < config.stabilityThreshold
+      window.stdDevBy(_.smoothedSpeed.vertical) < config.stabilityThreshold
 
     val speedTrigger =
       Math.abs(entry.smoothedSpeed.vertical) < config.verticalSpeedThreshold &&
@@ -37,7 +37,7 @@ final private[handlers] class LandingHandler private (config: LandingConfig) ext
     window
       .right
       .map { stabilityWindow =>
-        Stats.stdDevBy(stabilityWindow)(_.smoothedSpeed.vertical) < config.stabilityThreshold
+        stabilityWindow.stdDevBy(_.smoothedSpeed.vertical) < config.stabilityThreshold
       }
       .getOrElse(false)
 

@@ -45,9 +45,6 @@ private[swoop] object SwoopConstants {
   /** Ground fallback: total speed below which a point counts as slow. */
   val groundSlowSpeed = 4.4704 // 10mph
 
-  /** Unwrap pass: descent rate above which a point is inside a fast dive. */
-  val diveVerticalSpeed = 26.8224 // 60mph
-
   //  Angles  //
 
   /** Stop: heading deviation from the swoop heading that ends the search. */
@@ -56,19 +53,21 @@ private[swoop] object SwoopConstants {
   /** Steepening walk: turn rate that aborts the walk. */
   val maxTurnRate = 30.0
 
-  /** Unwrap pass: dive angle above which a point is inside a steep dive. */
-  val diveAngleCap = 60.0
+  //  Carve (turn angle)  //
 
-  /** Unwrap pass: per-sample turn angle above which a point turns right, below which it turns left. */
-  val turnStateThreshold = 2.0
+  /** Carve: smoothed turn rate above which a sample belongs to the carve. */
+  val carveRateThreshold = 20.0 // deg/s
 
-  /** Unwrap pass: resolved segment heading change below which the segment angles are replaced. */
-  val segmentAngleCap = 315.0
+  /** Carve: minimum horizontal speed for the GPS heading to be reliable. */
+  val carveReliableSpeed = 4.0 // ~9mph
 
-  /** Unwrap pass: maximum dead-reckoned displacement of a segment from its start. */
-  val segmentDisplacementCap = 9.144 // 30ft
+  /** Carve: maximum run of below-threshold samples tolerated inside the carve. */
+  val carveGapSamples = 5
 
-  /** Turn degrees: per-sample turn angles at or above this value are skipped. */
-  val fullTurnAngle = 360.0
+  /** Carve: samples either side of the dive point establishing the turn direction. */
+  val carveDirectionSamples = 10
+
+  /** Carve: minimum net heading change around the dive point for a turn direction to be established. */
+  val carveMinDirectionChange = 5.0 // deg
 
 }

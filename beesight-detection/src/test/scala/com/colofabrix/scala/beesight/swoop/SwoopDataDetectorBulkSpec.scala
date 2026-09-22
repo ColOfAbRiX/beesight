@@ -54,19 +54,17 @@ class BulkSwoopDetectionSpec extends AnyWordSpec with Matchers with IOValues wit
           }
           .result(timeout = 5.minutes)
 
-      if (failures.nonEmpty) {
-        val total       = expectedValues.size
-        val failed      = failures.size
-        val successRate = 1.0 - (failed.toDouble / total.toDouble)
+      val total       = expectedValues.size
+      val failed      = failures.size
+      val successRate = 1.0 - (failed.toDouble / total.toDouble)
 
+      if (failed > 0) then
         info(f"Success rate is ${successRate * 100.0}%.1f%%")
         info(f"    Total number of files: $total")
         info(f"    Failed files:          $failed\n")
         info(s"Failing tests summary:\n${failures.mkString("\n\n")}")
 
-        successRate shouldBe 1.0
-      }
-
+      successRate shouldBe 1.0
     }
 
   }

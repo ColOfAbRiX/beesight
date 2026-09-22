@@ -1,7 +1,7 @@
 package com.colofabrix.scala.beesight.bench
 
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow
-import com.colofabrix.scala.beesight.math.Stats
+import com.colofabrix.scala.beesight.math.*
 import com.colofabrix.scala.beesight.model.GeoVector
 import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations.*
@@ -38,7 +38,7 @@ class StatsBenchmark {
 
   @Benchmark
   def medianBy_geoVector(): GeoVector =
-    Stats.medianBy(geoWindow)(identity)
+    geoWindow.medianBy(identity)
 
   //  stdDevBy  //
 
@@ -57,7 +57,7 @@ class StatsBenchmark {
 
   @Benchmark
   def stdDevBy_double(): Double =
-    Stats.stdDevBy(doubleWindow)(identity)
+    doubleWindow.stdDevBy(identity)
 
   //  findInflectionBy  //
 
@@ -77,6 +77,6 @@ class StatsBenchmark {
 
   @Benchmark
   def findInflectionBy_double(): Option[Int] =
-    Stats.findInflectionBy(inflectionWindow)(identity)
+    inflectionWindow.findInflectionBy(identity)
 
 }

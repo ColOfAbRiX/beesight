@@ -1,63 +1,45 @@
 package com.colofabrix.scala.beesight.math
 
-import com.colofabrix.scala.beesight.model.*
 import java.time.Instant
 
 /**
- * Provides linear interpolation functions for various flight data types.
+ * Algebraic linear blend
  */
-private[beesight] object Interpolation {
+private[beesight] trait Lerp[A] {
+  def lerp(a: A, b: A, t1: Instant, t2: Instant, t: Instant): A
+}
 
-  /**
-   * Linearly interpolates between two Double values based on time.
-   */
-  def interpolate(x1: Double, x2: Double)(t1: Instant, t2: Instant, time: Instant): Double =
-    interpolate_(x1, x2)(tParam(t1, t2, time))
+private[beesight] object Lerp {
 
-  private def interpolate_(x1: Double, x2: Double)(t: Double): Double =
-    x1 + (x2 - x1) * t
+  def apply[A: Lerp]: Lerp[A] = 
+    summon
 
-  /**
-   * Linearly interpolates between two GeoVector values based on time.
-   */
-  def interpolate(v1: GeoVector, v2: GeoVector)(t1: Instant, t2: Instant, time: Instant): GeoVector =
-    interpolate_(v1, v2)(tParam(t1, t2, time))
+  given Lerp[Double] with
+    def lerp(a: Double, b: Double, t1: Instant, t2: Instant, t: Instant): Double =
+      a + (b - a) * tParam(t1, t2, t)
 
-  private def interpolate_(v1: GeoVector, v2: GeoVector)(t: Double): GeoVector =
-    GeoVector(
-      north = interpolate_(v1.north, v2.north)(t),
-      east = interpolate_(v1.east, v2.east)(t),
-      vertical = interpolate_(v1.vertical, v2.vertical)(t),
-    )
-
-  /**
-   * Linearly interpolates between two indexed points to a target time. The interpolated point inherits the index of
-   * the later point.
-   */
-  def interpolate(p1: IndexedPoint, p2: IndexedPoint, time: Instant): IndexedPoint =
-    interpolate_(p1, p2, time)(tParam(p1.time, p2.time, time))
-
-  private def interpolate_(p1: IndexedPoint, p2: IndexedPoint, time: Instant)(t: Double): IndexedPoint =
-    IndexedPoint(
-      idx = p2.idx,
-      time = time,
-      altitude = interpolate_(p1.altitude, p2.altitude)(t),
-      speed = interpolate_(p1.speed, p2.speed)(t),
-    )
-
-  /**
-   * Linearly interpolates between two PointKinematics values to a target time.
-   */
-  def interpolate(k1: PointKinematics, k2: PointKinematics, time: Instant): PointKinematics =
-    interpolate_(k1, k2, time)(tParam(k1.time, k2.time, time))
-
-  private def interpolate_(k1: PointKinematics, k2: PointKinematics, time: Instant)(t: Double): PointKinematics =
-    PointKinematics(
-      point = interpolate(k1.point, k2.point, time),
-      acceleration = interpolate_(k1.acceleration, k2.acceleration)(t),
-    )
-
-  private def tParam(t1: Instant, t2: Instant, time: Instant): Double =
+  def tParam(t1: Instant, t2: Instant, time: Instant): Double =
     ((time.toEpochMilli - t1.toEpochMilli).toDouble / (t2.toEpochMilli - t1.toEpochMilli))
 
 }
+
+private[beesight] trait Interpolation[A] {
+
+  def interpolate(a: A, b: A, time: Instant): A
+
+}
+
+private[beesight] object Interpolation {
+
+  def apply[A: Interpolation]: Interpolation[A] = 
+    summon
+
+}
+
+extension [A: Interpolation](self: A)
+  def interpolate(x2: A)(time: Instant): A =
+    Interpolation[A].interpolate(self, x2, time)
+
+extension [A: Lerp](self: A)
+  def interpolate(x2: A)(t1: Instant, t2: Instant, time: Instant): A =
+    Lerp[A].lerp(self, x2, t1, t2, time)

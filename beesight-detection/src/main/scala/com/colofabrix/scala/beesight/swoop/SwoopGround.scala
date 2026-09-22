@@ -1,6 +1,6 @@
 package com.colofabrix.scala.beesight.swoop
 
-import com.colofabrix.scala.beesight.math.Stats
+import com.colofabrix.scala.beesight.math.*
 import com.colofabrix.scala.beesight.model.EventPoint
 import com.colofabrix.scala.beesight.swoop.model.PointSeries
 import java.time.Duration
@@ -41,15 +41,11 @@ private[swoop] object SwoopGround {
   private def medianAltitude(series: PointSeries, fromIndex: Int, duration: Duration): Double =
     val startTime = series.time(fromIndex)
 
-    val window =
-      series
-        .points
-        .view
-        .drop(fromIndex)
-        .takeWhile(!_.time.isAfter(startTime.plus(duration)))
-        .map(_.altitude).toArray
-        .toArray
-
-    Stats.median(window)
+    series
+      .points
+      .drop(fromIndex)
+      .takeWhile(!_.time.isAfter(startTime.plus(duration)))
+      .toArrayBy(_.altitude)
+      .median
 
 }

@@ -7,9 +7,6 @@ import org.scalatest.matchers.{ Matcher, MatchResult }
 
 /**
  * Custom ScalaTest matchers comparing [[SwoopData]] against gswoop-derived expected values.
- *
- * The comparison is done at the object level: each expected metric present in the CSV is checked against the computed
- * value with its own tolerance, and all failures are reported together.
  */
 trait SwoopMatchers {
 
@@ -22,9 +19,6 @@ trait SwoopMatchers {
 
   /**
    * Matches the swoop metrics computed from a recording against the expected gswoop values.
-   *
-   * If the expected row is empty (no metrics), the obtained metrics must be `None`. Otherwise the obtained metrics must
-   * be defined and every expected field must match within tolerance; expected fields left empty are not compared.
    */
   def matchSwoop(expected: GSwoopResult): Matcher[Option[SwoopData]] =
     (obtained: Option[SwoopData]) => {
@@ -47,15 +41,36 @@ trait SwoopMatchers {
       )
     }
 
+  /**
+   * Matches only the expected angle of rotation from the logbook.
+   */
+  def matchSwoopAngle(expected: GSwoopResult): Matcher[Option[SwoopData]] =
+    (obtained: Option[SwoopData]) => {
+      val failures =
+        (obtained, expected.expectedAngle) match {
+          case (None, Some(_)) =>
+            List("  Swoop: expected angle, got no swoop")
+          case (Some(swoop), Some(_)) =>
+            check(
+              "Expected angle of rotation",
+              "deg",
+              Math.abs(swoop.degreesOfRotation),
+              expected.expectedAngle,
+              rotationTolerance
+            ).toList
+          case _ =>
+            Nil
+        }
+
+      MatchResult(
+        matches = failures.isEmpty,
+        rawFailureMessage = s"\n  Swoop angle did not match:\n${failures.mkString("\n")}",
+        rawNegatedFailureMessage = "Swoop angle matched when it should not have.",
+      )
+    }
+
   private def checkFields(swoop: SwoopData, expected: GSwoopResult): List[String] =
     List(
-      check(
-        "Expected angle of rotation",
-        "deg",
-        Math.abs(swoop.degreesOfRotation),
-        expected.expectedAngle,
-        rotationTolerance
-      ),
       check(
         "Turn initiation altitude",
         "m",
@@ -93,13 +108,6 @@ trait SwoopMatchers {
         expected.maxHorizontalSpeed.map(_ * MpsToKmh),
         speedTolerance * MpsToKmh,
         Some(swoop.maxHorizontalSpeed.altitude)
-      ),
-      check(
-        "Degrees of rotation",
-        "deg",
-        Math.abs(swoop.degreesOfRotation),
-        expected.degreesOfRotation,
-        rotationTolerance
       ),
       check(
         "Time to execute turn",

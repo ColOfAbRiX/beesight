@@ -4,7 +4,7 @@ import cats.syntax.option.*
 import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
 import com.colofabrix.scala.beesight.config.TakeoffConfig
 import com.colofabrix.scala.beesight.jumpevents.model.WindowEntry
-import com.colofabrix.scala.beesight.math.Stats
+import com.colofabrix.scala.beesight.math.*
 import com.colofabrix.scala.beesight.model.*
 import java.time.Duration
 
@@ -38,7 +38,7 @@ final private[handlers] class TakeoffHandler private (config: TakeoffConfig) ext
     val discoveredInflection =
       for {
         backWindow <- window.left
-        inflection <- Stats.findInflectionBy(backWindow)(_.smoothedSpeed.vertical)
+        inflection <- backWindow.findInflectionBy(_.smoothedSpeed.vertical)
       } yield inflection
 
     discoveredInflection orElse window.focusIndex.some

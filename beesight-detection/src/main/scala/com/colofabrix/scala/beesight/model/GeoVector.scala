@@ -2,6 +2,8 @@ package com.colofabrix.scala.beesight.model
 
 import cats.Order
 import java.lang.Math.*
+import com.colofabrix.scala.beesight.math.*
+import java.time.Instant
 
 /**
  * Represents a 3D velocity vector with north, east, and vertical components.
@@ -95,7 +97,34 @@ object GeoVector {
   /**
    * Scala Ordering instance derived from the Cats Order.
    */
-  given Ordering[GeoVector] =
+  given Ordering[GeoVector] = 
     implicitly[Order[GeoVector]].toOrdering
+
+  given Lerp[GeoVector] with {
+    def lerp(a: GeoVector, b: GeoVector, t1: Instant, t2: Instant, t: Instant): GeoVector =
+      a + (b - a) * Lerp.tParam(t1, t2, t)
+  }
+
+  given Median[GeoVector] with {
+    def median(values: Array[GeoVector]): GeoVector =
+      val n     = values.length
+      val north = new Array[Double](n)
+      val east  = new Array[Double](n)
+      val vert  = new Array[Double](n)
+
+      var i = 0
+      while i < n do
+        val v = values(i)
+        north(i) = v.north
+        east(i) = v.east
+        vert(i) = v.vertical
+        i += 1
+
+      GeoVector(
+        north = north.median,
+        east = east.median,
+        vertical = vert.median,
+      )
+  }
 
 }

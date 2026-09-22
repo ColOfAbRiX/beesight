@@ -64,24 +64,54 @@ final class SwoopDataDetector private (config: SwoopConfig) {
     val agl  = (j: Int) => series.altitude(j) - ground
     val last = series.length - 1
 
-    val maxSpeeds         = SwoopMetrics.maxSpeeds(series, diveIdx, topOfTurn, rolloutIdx, stopIdx)
-    val degreesOfRotation = SwoopMetrics.turnDegrees(series, topOfTurn, Math.min(bottomIdx, last))
+    val maxSpeeds =
+      SwoopMetrics.maxSpeeds(series, diveIdx, topOfTurn, rolloutIdx, stopIdx)
 
-    SwoopData(
-      turnInitiation = EventPoint(series(topOfTurn).idx, agl(topOfTurn)),
-      rolloutStart = EventPoint(series(rolloutIdx).idx, agl(rolloutIdx)),
-      maxVerticalSpeed =
-        SpeedAtAltitude(series(maxSpeeds.vertical.index).idx, maxSpeeds.vertical.speed, agl(maxSpeeds.vertical.index)),
-      maxTotalSpeed =
-        SpeedAtAltitude(series(maxSpeeds.total.index).idx, maxSpeeds.total.speed, agl(maxSpeeds.total.index)),
-      maxHorizontalSpeed = SpeedAtAltitude(
+    val degreesOfRotation =
+      SwoopMetrics.turnDegrees(series, topOfTurn, Math.min(bottomIdx, last), diveIdx)
+
+    val turnInitiation =
+      EventPoint(series(topOfTurn).idx, agl(topOfTurn))
+
+    val rolloutStart =
+      EventPoint(series(rolloutIdx).idx, agl(rolloutIdx))
+
+    val maxVerticalSpeed =
+      SpeedAtAltitude(
+        series(maxSpeeds.vertical.index).idx,
+        maxSpeeds.vertical.speed,
+        agl(maxSpeeds.vertical.index)
+      )
+
+    val maxTotalSpeed =
+      SpeedAtAltitude(
+        series(maxSpeeds.total.index).idx,
+        maxSpeeds.total.speed,
+        agl(maxSpeeds.total.index)
+      )
+
+    val maxHorizontalSpeed =
+      SpeedAtAltitude(
         series(maxSpeeds.horizontal.index).idx,
         maxSpeeds.horizontal.speed,
         agl(maxSpeeds.horizontal.index)
-      ),
+      )
+
+    val turnDirection =
+      TurnDirection.fromRotation(degreesOfRotation)
+
+    val timeToExecuteTurn =
+      Duration.between(series.time(topOfTurn), series.time(rolloutIdx))
+
+    SwoopData(
+      turnInitiation = turnInitiation,
+      rolloutStart = rolloutStart,
+      maxVerticalSpeed = maxVerticalSpeed,
+      maxTotalSpeed = maxTotalSpeed,
+      maxHorizontalSpeed = maxHorizontalSpeed,
       degreesOfRotation = degreesOfRotation,
-      turnDirection = TurnDirection.fromRotation(degreesOfRotation),
-      timeToExecuteTurn = Duration.between(series.time(topOfTurn), series.time(rolloutIdx)),
+      turnDirection = turnDirection,
+      timeToExecuteTurn = timeToExecuteTurn,
     )
 
 }

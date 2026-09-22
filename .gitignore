@@ -1,3 +1,5 @@
+# FIXME: Cleanup this file to keep only entries relevant to this project
+
 # macOS
 .DS_Store
 
@@ -26,11 +28,6 @@ local.sbt
 metals.sbt
 *.semanticdb
 
-# IDEA
-.idea
-.idea_modules
-/.worksheet/
-
 # Native image binaries
 dist/beesight.bin
 
@@ -38,9 +35,6 @@ dist/beesight.bin
 real_data/
 processed/
 .cline*
-
-# Reverse engineering workspace (gswoop.exe artifacts)
-gswoop/
 /*.log
 /*.csv
 __pycache__
@@ -48,3 +42,9 @@ __pycache__
 # AI
 .roo/
 plans/
+
+
+# FIXME: These are temporary until problems fixed
+**/test/resources/test_files/csv_files/
+gswoop/
+angle-analysis/

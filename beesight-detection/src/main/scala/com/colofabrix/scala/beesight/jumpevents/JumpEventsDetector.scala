@@ -155,13 +155,11 @@ final class JumpEventsDetector private (config: JumpEventsConfig) {
       if smoothingCap <= 1 then
         currentPoint.speed
       else
-        val smoothingWindow =
-          previousWindow
-            .takeNewest(smoothingCap)
-            .map(_.point)
-            .enqueue(currentPoint)
-
-        Stats.medianBy(smoothingWindow)(_.speed)
+        previousWindow
+          .takeNewest(smoothingCap)
+          .map(_.point)
+          .enqueue(currentPoint)
+          .medianBy(_.speed)
 
     val acceleration = (currentPoint.speed - previousPoint.speed) / dt
 

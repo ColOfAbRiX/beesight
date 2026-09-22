@@ -16,7 +16,7 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
         val t2   = Instant.ofEpochSecond(10)
         val time = Instant.ofEpochSecond(0)
 
-        val result = Interpolation.interpolate(10.0, 20.0)(t1, t2, time)
+        val result = 10.0.interpolate(20.0)(t1, t2, time)
 
         result shouldBe 10.0
       }
@@ -26,7 +26,7 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
         val t2   = Instant.ofEpochSecond(10)
         val time = Instant.ofEpochSecond(10)
 
-        val result = Interpolation.interpolate(10.0, 20.0)(t1, t2, time)
+        val result = 10.0.interpolate(20.0)(t1, t2, time)
 
         result shouldBe 20.0
       }
@@ -36,7 +36,7 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
         val t2   = Instant.ofEpochSecond(10)
         val time = Instant.ofEpochSecond(5)
 
-        val result = Interpolation.interpolate(10.0, 20.0)(t1, t2, time)
+        val result = 10.0.interpolate(20.0)(t1, t2, time)
 
         result shouldBe 15.0
       }
@@ -46,17 +46,19 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
         val t2   = Instant.ofEpochSecond(4)
         val time = Instant.ofEpochSecond(1)
 
-        val result = Interpolation.interpolate(0.0, 100.0)(t1, t2, time)
+        val result = 0.0.interpolate(100.0)(t1, t2, time)
 
         result shouldBe 25.0
       }
 
       "should handle negative values" in {
+        val x1   = -50.0
+        val x2   = 50.0
         val t1   = Instant.ofEpochSecond(0)
         val t2   = Instant.ofEpochSecond(10)
         val time = Instant.ofEpochSecond(5)
 
-        val result = Interpolation.interpolate(-50.0, 50.0)(t1, t2, time)
+        val result = x1.interpolate(x2)(t1, t2, time)
 
         result shouldBe 0.0
       }
@@ -69,7 +71,7 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
         val p1 = point(1, verticalSpeed = 10.0)
         val p2 = point(3, verticalSpeed = 30.0)
 
-        val result = Interpolation.interpolate(p1, p2, Instant.ofEpochSecond(1))
+        val result = p1.interpolate(p2)(Instant.ofEpochSecond(1))
 
         result.speed.vertical shouldBe 10.0
       }
@@ -78,7 +80,7 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
         val p1 = point(1, verticalSpeed = 10.0)
         val p2 = point(3, verticalSpeed = 30.0)
 
-        val result = Interpolation.interpolate(p1, p2, Instant.ofEpochSecond(3))
+        val result = p1.interpolate(p2)(Instant.ofEpochSecond(3))
 
         result.speed.vertical shouldBe 30.0
       }
@@ -87,7 +89,7 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
         val p1 = point(1, verticalSpeed = 10.0)
         val p2 = point(3, verticalSpeed = 30.0)
 
-        val result = Interpolation.interpolate(p1, p2, Instant.ofEpochSecond(2))
+        val result = p1.interpolate(p2)(Instant.ofEpochSecond(2))
 
         result.speed.vertical shouldBe 20.0
       }
@@ -96,7 +98,7 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
         val p1 = point(0, northSpeed = 0.0, eastSpeed = 0.0, verticalSpeed = 0.0)
         val p2 = point(10, northSpeed = 100.0, eastSpeed = 50.0, verticalSpeed = -20.0)
 
-        val result = Interpolation.interpolate(p1, p2, Instant.ofEpochSecond(5))
+        val result = p1.interpolate(p2)(Instant.ofEpochSecond(5))
 
         result.speed.north shouldBe 50.0
         result.speed.east shouldBe 25.0
@@ -107,7 +109,7 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
         val p1 = point(0, altitude = 1000.0)
         val p2 = point(10, altitude = 500.0)
 
-        val result = Interpolation.interpolate(p1, p2, Instant.ofEpochSecond(5))
+        val result = p1.interpolate(p2)(Instant.ofEpochSecond(5))
 
         result.altitude shouldBe 750.0
       }
@@ -117,7 +119,7 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
         val p2      = point(5)
         val midTime = Instant.ofEpochSecond(3)
 
-        val result = Interpolation.interpolate(p1, p2, midTime)
+        val result = p1.interpolate(p2)(midTime)
 
         result.time shouldBe midTime
       }
@@ -126,7 +128,7 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
         val oldest = point(1, verticalSpeed = 10.0)
         val newest = point(5, verticalSpeed = 10.0)
 
-        val result = Interpolation.interpolate(oldest, newest, Instant.ofEpochSecond(2))
+        val result = oldest.interpolate(newest)(Instant.ofEpochSecond(2))
 
         result.speed.vertical shouldBe 10.0
       }
@@ -135,7 +137,7 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
         val oldest = point(1, verticalSpeed = 10.0)
         val newest = point(5, verticalSpeed = 100.0)
 
-        val result = Interpolation.interpolate(oldest, newest, Instant.ofEpochSecond(2))
+        val result = oldest.interpolate(newest)(Instant.ofEpochSecond(2))
 
         result.speed.vertical shouldBe 32.5
       }
@@ -151,7 +153,7 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
         val t2   = Instant.ofEpochSecond(10)
         val time = Instant.ofEpochSecond(5)
 
-        val result = Interpolation.interpolate(v1, v2)(t1, t2, time)
+        val result = v1.interpolate(v2)(t1, t2, time)
 
         result.north shouldBe 50.0
         result.east shouldBe 25.0
@@ -164,7 +166,7 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
         val t1 = Instant.ofEpochSecond(0)
         val t2 = Instant.ofEpochSecond(10)
 
-        val result = Interpolation.interpolate(v1, v2)(t1, t2, t1)
+        val result = v1.interpolate(v2)(t1, t2, t1)
 
         result shouldBe v1
       }
@@ -175,7 +177,7 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
         val t1 = Instant.ofEpochSecond(0)
         val t2 = Instant.ofEpochSecond(10)
 
-        val result = Interpolation.interpolate(v1, v2)(t1, t2, t2)
+        val result = v1.interpolate(v2)(t1, t2, t2)
 
         result shouldBe v2
       }
@@ -189,7 +191,7 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
         val t2   = Instant.ofEpochSecond(20)
         val time = Instant.ofEpochSecond(0)
 
-        val result = Interpolation.interpolate(10.0, 20.0)(t1, t2, time)
+        val result = 10.0.interpolate(20.0)(t1, t2, time)
 
         result shouldBe 0.0
       }
@@ -199,7 +201,7 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
         val t2   = Instant.ofEpochSecond(10)
         val time = Instant.ofEpochSecond(20)
 
-        val result = Interpolation.interpolate(10.0, 20.0)(t1, t2, time)
+        val result = 10.0.interpolate(20.0)(t1, t2, time)
 
         result shouldBe 30.0
       }
@@ -212,7 +214,7 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
         val t1   = Instant.ofEpochSecond(5)
         val time = Instant.ofEpochSecond(5)
 
-        val result = Interpolation.interpolate(10.0, 20.0)(t1, t1, time)
+        val result = 10.0.interpolate(20.0)(t1, t1, time)
 
         result.isNaN shouldBe true
       }
@@ -235,7 +237,7 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
             acceleration = GeoVector(north = 15.0, east = 0.0, vertical = 0.0),
           )
 
-        val result = Interpolation.interpolate(k1, k2, Instant.ofEpochSecond(5))
+        val result = k1.interpolate(k2)(Instant.ofEpochSecond(5))
 
         result.altitude shouldBe 900.0
         result.speed shouldBe GeoVector(north = 20.0, east = 0.0, vertical = 0.0)

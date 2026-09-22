@@ -51,7 +51,7 @@ private[jumpevents] class SpeedClipper private (config: JumpEventsConfig) {
     val focused      = window.focusAt(1)
     val secondOldest = focused.focus
 
-    val interpolated = Interpolation.interpolate(oldest, newest, secondOldest.point.time)
+    val interpolated = oldest.interpolate(newest)(secondOldest.point.time)
 
     // The interpolated point replaces the focused point, so it inherits its index
     val expectedPoint =
