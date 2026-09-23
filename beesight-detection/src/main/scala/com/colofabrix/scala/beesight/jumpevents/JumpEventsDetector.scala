@@ -12,6 +12,7 @@ import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.utils.*
 import java.time.Duration as JavaDuration
 import scala.annotation.tailrec
+import com.colofabrix.scala.beesight.readers.PointReader
 
 /**
  * Detects flight event points from flight data streams.

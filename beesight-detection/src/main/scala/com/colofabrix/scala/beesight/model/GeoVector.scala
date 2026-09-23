@@ -97,7 +97,7 @@ object GeoVector {
   /**
    * Scala Ordering instance derived from the Cats Order.
    */
-  given Ordering[GeoVector] = 
+  given Ordering[GeoVector] =
     implicitly[Order[GeoVector]].toOrdering
 
   given Lerp[GeoVector] with {

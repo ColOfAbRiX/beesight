@@ -7,6 +7,7 @@ import com.colofabrix.scala.beesight.config.JumpEventsConfig
 import com.colofabrix.scala.beesight.math.*
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.utils.*
+import java.time.Duration
 
 /**
  * Detects and removes velocity spikes by interpolating outlier points.
@@ -29,7 +30,7 @@ private[jumpevents] class SpeedClipper private (config: JumpEventsConfig) {
 
       clipped
         .push {
-          Kinematics.compute(window.newest.point, currentRow)
+          computeKinematic(window.newest.point, currentRow)
         }
         .swap
         .bimap(identity, _.map(_.point))
@@ -65,6 +66,15 @@ private[jumpevents] class SpeedClipper private (config: JumpEventsConfig) {
       focused
     else
       focused.modifyFocus(_ => expectedPoint)
+
+  private def computeKinematic(prev: IndexedPoint, curr: IndexedPoint): PointKinematics =
+    val dt           = Duration.between(prev.time, curr.time).toMillis / 1000.0
+    val acceleration = (curr.speed - prev.speed) / dt
+
+    PointKinematics(
+      point = curr,
+      acceleration = acceleration,
+    )
 
 }
 

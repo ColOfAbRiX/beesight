@@ -2,6 +2,7 @@ package com.colofabrix.scala.beesight.formats
 
 import cats.data.NonEmptyList
 import com.colofabrix.scala.beesight.model.*
+import com.colofabrix.scala.beesight.readers.*
 import fs2.data.csv.*
 import java.time.*
 
@@ -88,6 +89,19 @@ private[beesight] object DekunuPoint {
         east = speedMs * Math.sin(headingRad),
         vertical = point.instVertSpeed.getOrElse(0.0),
       )
+  }
+
+  given dekunuGpsReader: GpsReader[DekunuPoint] with {
+    def horizontalAccuracy(point: DekunuPoint): Option[Double] =
+      None
+    def verticalAccuracy(point: DekunuPoint): Option[Double] =
+      None
+    def speedAccuracy(point: DekunuPoint): Option[Double] =
+      None
+    def courseAccuracy(point: DekunuPoint): Option[Double] =
+      None
+    def satellites(point: DekunuPoint): Option[Int] =
+      point.gpsNumOfSats
   }
 
   given csvRowDecoder: CsvRowDecoder[DekunuPoint, String] with {

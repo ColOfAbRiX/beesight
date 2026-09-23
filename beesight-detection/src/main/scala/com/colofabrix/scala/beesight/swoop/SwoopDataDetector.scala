@@ -4,6 +4,7 @@ import cats.effect.kernel.Concurrent
 import cats.syntax.functor.*
 import com.colofabrix.scala.beesight.config.{ DetectionConfig, SwoopConfig }
 import com.colofabrix.scala.beesight.model.*
+import com.colofabrix.scala.beesight.readers.PointReader
 import com.colofabrix.scala.beesight.swoop.model.*
 import java.time.Duration
 

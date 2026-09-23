@@ -90,24 +90,23 @@ private[swoop] object SwoopMetrics {
         val dtSec = (series.timeMillis(i) - series.timeMillis(i - 1)) / 1000.0
         if dtSec <= 0 then None
         else if series.horizontalSpeed(i) < SwoopConstants.carveReliableSpeed ||
-          series.horizontalSpeed(i - 1) < SwoopConstants.carveReliableSpeed then None
+          series.horizontalSpeed(i - 1) < SwoopConstants.carveReliableSpeed
+        then None
         else Some(wrapDegrees(series.heading(i) - series.heading(i - 1)) / dtSec)
       }
 
     /** Turn rate smoothed over a +/-2 sample window. */
     def smoothRate(i: Int): Option[Double] =
       val values = (i - 2 to i + 2).flatMap(rate)
-      if values.isEmpty then None 
+      if values.isEmpty then None
       else Some(values.sum / values.size)
 
     //  Dominant direction: the net heading change over +/-2 s of reliable samples around the dive point  //
-    val backRef = 
-      (diveIdx - SwoopConstants.carveDirectionSamples to topOfTurn by -1)
+    val backRef = (diveIdx - SwoopConstants.carveDirectionSamples to topOfTurn by -1)
       .find(i => series.horizontalSpeed(i) >= SwoopConstants.carveReliableSpeed)
       .getOrElse((diveIdx - SwoopConstants.carveDirectionSamples) max topOfTurn)
 
-    val fwdRef = 
-      (diveIdx + SwoopConstants.carveDirectionSamples to bottomIdx)
+    val fwdRef = (diveIdx + SwoopConstants.carveDirectionSamples to bottomIdx)
       .find(i => series.horizontalSpeed(i) >= SwoopConstants.carveReliableSpeed)
       .getOrElse((diveIdx + SwoopConstants.carveDirectionSamples) min bottomIdx)
 
@@ -131,8 +130,8 @@ private[swoop] object SwoopMetrics {
 
     //  Expand backward from the dive point while the rotation persists  //
     var start = diveIdx
-    misses    = 0
-    i         = diveIdx
+    misses = 0
+    i = diveIdx
     while i > topOfTurn + 1 do
       smoothRate(i) match
         case Some(r) if r * dir > SwoopConstants.carveRateThreshold =>

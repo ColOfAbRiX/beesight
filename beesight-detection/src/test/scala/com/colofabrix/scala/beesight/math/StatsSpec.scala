@@ -333,6 +333,45 @@ class StatsSpec extends AnyFreeSpec with Matchers {
 
     }
 
+    "slopeAgainst" - {
+
+      "should return the exact slope of a perfect line" in {
+        val x = Array(0.0, 0.5, 1.0, 1.5, 2.0)
+        val y = Array(1.0, 3.0, 5.0, 7.0, 9.0)
+
+        x.slopeAgainst(y) shouldBe 4.0 +- 1e-9
+      }
+
+      "should return 0 for a constant sequence" in {
+        val x = Array(0.0, 0.5, 1.0, 1.5, 2.0)
+        val y = Array.fill(5)(7.0)
+
+        x.slopeAgainst(y) shouldBe 0.0
+      }
+
+      "should return 0 for fewer than two points" in {
+        val x = Array(1.0)
+        val y = Array(2.0)
+
+        x.slopeAgainst(y) shouldBe 0.0
+      }
+
+      "should return 0 for all-equal x values" in {
+        val x = Array(1.0, 1.0, 1.0)
+        val y = Array(1.0, 2.0, 3.0)
+
+        x.slopeAgainst(y) shouldBe 0.0
+      }
+
+      "should stay close to the true slope for noisy data" in {
+        val x = Array(0.0, 0.5, 1.0, 1.5, 2.0)
+        val y = Array(1.1, 2.1, 2.8, 4.2, 4.8)
+
+        x.slopeAgainst(y) should (be > 1.5 and be < 2.5)
+      }
+
+    }
+
   }
 
   private def filledWindow(first: Double, rest: Double*): NonEmptyFilled[Double] =

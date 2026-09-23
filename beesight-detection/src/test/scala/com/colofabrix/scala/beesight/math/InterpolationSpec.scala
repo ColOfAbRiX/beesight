@@ -4,6 +4,7 @@ import com.colofabrix.scala.beesight.model.*
 import java.time.Instant
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
+import com.colofabrix.scala.beesight.readers.*
 
 class InterpolationSpec extends AnyFreeSpec with Matchers {
 

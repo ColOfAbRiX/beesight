@@ -3,6 +3,7 @@ package com.colofabrix.scala.beesight.formats
 import cats.data.NonEmptyList
 import com.colofabrix.scala.beesight.formats.derivation.given
 import com.colofabrix.scala.beesight.model.*
+import com.colofabrix.scala.beesight.readers.*
 import fs2.data.csv.*
 import java.time.*
 
@@ -109,6 +110,19 @@ private[beesight] object FlysightPoint {
       point.hMSL
     def speed(point: FlysightPoint): GeoVector =
       GeoVector(north = point.velN, east = point.velE, vertical = point.velD)
+  }
+
+  given flysightGpsReader: GpsReader[FlysightPoint] with {
+    def horizontalAccuracy(point: FlysightPoint): Option[Double] =
+      Some(point.hAcc)
+    def verticalAccuracy(point: FlysightPoint): Option[Double] =
+      Some(point.vAcc)
+    def speedAccuracy(point: FlysightPoint): Option[Double] =
+      Some(point.sAcc)
+    def courseAccuracy(point: FlysightPoint): Option[Double] =
+      Some(point.cAcc)
+    def satellites(point: FlysightPoint): Option[Int] =
+      Some(point.numSV)
   }
 
   given csvRowDecoder: CsvRowDecoder[FlysightPoint, String] with {

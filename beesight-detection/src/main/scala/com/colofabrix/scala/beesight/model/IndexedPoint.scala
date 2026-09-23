@@ -2,6 +2,7 @@ package com.colofabrix.scala.beesight.model
 
 import java.time.Instant
 import com.colofabrix.scala.beesight.math.*
+import com.colofabrix.scala.beesight.readers.*
 
 /**
  * Internal representation of a flight data point with its position in the stream, time, altitude, and velocity.
@@ -28,7 +29,7 @@ private[beesight] object IndexedPoint {
     def altitude(point: IndexedPoint): Double = point.altitude
     def speed(point: IndexedPoint): GeoVector = point.speed
   }
-  
+
   given Interpolation[IndexedPoint] with
     def interpolate(p1: IndexedPoint, p2: IndexedPoint, time: Instant): IndexedPoint =
       IndexedPoint(

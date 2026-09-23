@@ -22,6 +22,35 @@ private[math] object StatsAlgorithms {
     Math.sqrt(Math.max(0.0, sumSq / n - mean * mean))
 
   /**
+   * Least-squares slope of `y` against `x`. Returns 0.0 when the fit is degenerate: fewer than two points, or
+   * all-equal x values.
+   */
+  def slope(x: Array[Double], y: Array[Double]): Double =
+    val n = x.length
+    if n < 2 then
+      return 0.0
+
+    var sumX  = 0.0
+    var sumY  = 0.0
+    var sumXX = 0.0
+    var sumXY = 0.0
+
+    var i = 0
+    while i < n do
+      val xi = x(i)
+      val yi = y(i)
+      sumX  += xi
+      sumY  += yi
+      sumXX += xi * xi
+      sumXY += xi * yi
+      i     += 1
+
+    val denom = n * sumXX - sumX * sumX
+
+    if Math.abs(denom) < 1e-12 then 0.0
+    else (n * sumXY - sumX * sumY) / denom
+
+  /**
    * Finds the inflection point where a signal transitions between a changing region and a stable one (or vice versa).
    *
    * Fits two-segment linear regressions for every candidate split point and returns the index that minimises total

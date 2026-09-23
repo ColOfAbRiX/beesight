@@ -6,12 +6,14 @@ import java.time.Instant
  * Algebraic linear blend
  */
 private[beesight] trait Lerp[A] {
+
   def lerp(a: A, b: A, t1: Instant, t2: Instant, t: Instant): A
+
 }
 
 private[beesight] object Lerp {
 
-  def apply[A: Lerp]: Lerp[A] = 
+  def apply[A: Lerp]: Lerp[A] =
     summon
 
   given Lerp[Double] with
@@ -31,7 +33,7 @@ private[beesight] trait Interpolation[A] {
 
 private[beesight] object Interpolation {
 
-  def apply[A: Interpolation]: Interpolation[A] = 
+  def apply[A: Interpolation]: Interpolation[A] =
     summon
 
 }

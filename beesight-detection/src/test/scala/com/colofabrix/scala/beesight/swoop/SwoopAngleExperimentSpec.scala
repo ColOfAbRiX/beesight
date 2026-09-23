@@ -15,10 +15,12 @@ import scala.concurrent.duration.*
 /**
  * FIXME: This file is temporary, remove when analysis and fix is done.
  *
- * Focused comparison of carve turn-angle variants against the logbook: the production carve (core and tail rate
- * 20 deg/s, reliable speed 4 m/s) against a lower tail rate of 8 deg/s, both with the original reliable speed of
- * 4 m/s and with the raised 6 m/s of the original carveT8 candidate. For every recording it reports each variant's
- * value; the summary lists which files each variant fixes or breaks relative to the production carve.
+ * Speed-floor sweep for the carve turn angle. Hypothesis: in the expected-0 recordings the rotation seen by the
+ * detector is the turn into final, flown at low speed before the swoop - the swoop itself is straight and speed
+ * builds only after the turn. If so, raising the reliable-speed floor should exclude the approach turn while
+ * keeping the swoop's own rotation. Sweeps the floor from 4 to 15 m/s (tail and core rate fixed at 20 deg/s) and
+ * reports, per recording, every variant's value plus the baseline carve window with the horizontal speed at its
+ * start, at the dive point, at its end and over the whole window.
  */
 class SwoopAngleExperimentSpec extends AnyWordSpec with IOValues {
 
@@ -26,10 +28,11 @@ class SwoopAngleExperimentSpec extends AnyWordSpec with IOValues {
   private val resultsFile  = Paths.get("src/test/resources/test_files/swoop_results.csv")
 
   private val tolerance = 30.0
+  private val floors    = List(4.0, 6.0, 8.0, 10.0, 12.0, 15.0)
 
   "Swoop angle experiment" should {
 
-    "compare carve tail-rate variants against the logbook" in {
+    "sweep the carve reliable-speed floor against the logbook" in {
       val expectedValues =
         TestFilesHandler.readCsv[GSwoopResult](resultsFile).compile.toList.result()
 
@@ -43,10 +46,11 @@ class SwoopAngleExperimentSpec extends AnyWordSpec with IOValues {
         }
         .result(timeout = 15.minutes)
 
-      val outPath = java.nio.file.Paths.get("target", "swoop-angle-carve-comparison.txt")
+      val outPath = java.nio.file.Paths.get("target", "swoop-angle-speed-floor.txt")
       java.nio.file.Files.createDirectories(outPath.getParent)
 
-      val header  = "filename,expected,production,carve20,carveT8,carveT8hs4"
+      val header = "filename,expected," + floors.map(f => f"hs$f%.0f").mkString(",") +
+        ",start,end,dive,hsStart,hsDive,hsEnd,hsMin,hsMax"
       val summary = summarize(rows)
 
       val content = header :: rows ::: List("", summary)
@@ -57,7 +61,7 @@ class SwoopAngleExperimentSpec extends AnyWordSpec with IOValues {
 
   }
 
-  /** One line per file: the expected angle and every variant's value. */
+  /** One line per file: the expected angle, every floor variant's value, and the baseline carve window diagnostics. */
   private def evaluateFile(filePath: java.nio.file.Path, expected: GSwoopResult): IO[Option[String]] =
     if expected.expectedAngle.isEmpty then IO.pure(None)
     else
@@ -78,49 +82,62 @@ class SwoopAngleExperimentSpec extends AnyWordSpec with IOValues {
           val rolloutOpt = stopOpt.flatMap { stop =>
             SwoopCascade.findRolloutStart(series, top, stop, DetectionConfig.default.swoop.rolloutWindow)
           }
-          val bottomOpt = for { r <- rolloutOpt; s <- stopOpt } yield SwoopCascade.findBottomOfTurn(series, r, s)
+          val bottomOpt = for {
+            r <- rolloutOpt
+            s <- stopOpt
+          } yield SwoopCascade.findBottomOfTurn(series, r, s)
 
           stopOpt.flatMap { stop =>
             rolloutOpt.flatMap { rollout =>
               val bottom = bottomOpt.getOrElse(stop)
 
-              val production = SwoopMetrics.turnDegrees(series, top, Math.min(bottom, series.length - 1), dive)
-              val carve20    = rateCarve(series, top, bottom, dive, coreRate = 20.0, tailRate = 20.0, minHs = 4.0, gap = 5)
-              val carveT8    = rateCarve(series, top, bottom, dive, coreRate = 20.0, tailRate = 8.0, minHs = 6.0, gap = 5)
-              val carveT8hs4 = rateCarve(series, top, bottom, dive, coreRate = 20.0, tailRate = 8.0, minHs = 4.0, gap = 5)
+              val results = floors.map(f =>
+                rateCarve(series, top, bottom, dive, coreRate = 20.0, tailRate = 20.0, minHs = f, gap = 5)
+              )
+              val base = results.head
+
+              val hsMin = (base.start to base.end).map(series.horizontalSpeed).min
+              val hsMax = (base.start to base.end).map(series.horizontalSpeed).max
+
+              val values = results.map(r => f"${r.value}%.1f").mkString(",")
+              val diag   =
+                f"${base.start},${base.end},$dive,${series.horizontalSpeed(base.start)}%.1f,${series.horizontalSpeed(dive)}%.1f,${series.horizontalSpeed(base.end)}%.1f,$hsMin%.1f,$hsMax%.1f"
 
               val exp = expected.expectedAngle.getOrElse(Double.NaN)
-              Some(f"${expected.filename},$exp%.0f,$production%.1f,$carve20%.1f,$carveT8%.1f,$carveT8hs4%.1f")
+              Some(f"${expected.filename},$exp%.0f,${results.map(_.value).map(v => f"$v%.1f").mkString(",")},$diag")
             }
           }
         }
       }
 
-  /** Pass-rate summary per variant column, plus fixed/broken file lists relative to carve20. */
+  /** Pass-rate summary per floor variant, plus fixed/broken file lists relative to the 4 m/s baseline. */
   private def summarize(rows: List[String]): String = {
     val parsed = rows.map(_.split(",").toList)
-    val names  = List("production", "carve20", "carveT8", "carveT8hs4")
+    val names  = floors.map(f => f"hs$f%.0f")
 
     def passes(col: Int): List[Boolean] =
       parsed.map(p => Math.abs(Math.abs(p(col).toDouble) - Math.abs(p(1).toDouble)) <= tolerance)
 
     val counts = names.zipWithIndex.map { (name, i) =>
       val n = passes(i + 2).count(identity)
-      f"$name%-10s: $n%3d / ${parsed.size}%3d  (${100.0 * n / parsed.size}%.1f%%)"
+      f"$name%-6s: $n%3d / ${parsed.size}%3d  (${100.0 * n / parsed.size}%.1f%%)"
     }
 
-    val base = passes(3) // carve20
-    val diffs = List(4, 5).map { col =>
-      val flags  = passes(col)
+    val base  = passes(2)
+    val diffs = names.zipWithIndex.tail.map { (name, i) =>
+      val flags  = passes(i + 2)
       val fixed  = parsed.zip(flags).zip(base).collect { case ((p, f), b) if f && !b => p(0) }
       val broken = parsed.zip(flags).zip(base).collect { case ((p, f), b) if !f && b => p(0) }
-      s"${names(col - 2)} vs carve20: fixes ${fixed.size} [${fixed.mkString(", ")}], breaks ${broken.size} [${broken.mkString(", ")}]"
+      s"$name vs hs4: fixes ${fixed.size} [${fixed.mkString(", ")}], breaks ${broken.size} [${broken.mkString(", ")}]"
     }
 
     (f"Total files: ${parsed.size}" :: counts ::: List("") ::: diffs).mkString("\n")
   }
 
   //  The validated carve formula, parameterised  //
+
+  /** The carve turn angle plus the window it was measured over. */
+  final case class CarveResult(value: Double, start: Int, end: Int)
 
   /**
    * The carve turn angle: the net heading change over the maximal interval around the dive point where the smoothed
@@ -136,7 +153,7 @@ class SwoopAngleExperimentSpec extends AnyWordSpec with IOValues {
     tailRate: Double,
     minHs: Double,
     gap: Int
-  ): Double = {
+  ): CarveResult = {
     val n = series.length
 
     //  Per-sample turn rate (deg/s), only where both samples are reliable  //
@@ -156,10 +173,10 @@ class SwoopAngleExperimentSpec extends AnyWordSpec with IOValues {
     }
 
     //  Dominant direction: the net heading change around the dive point over +/-2 s of reliable samples  //
-    val backRef = (dive - 10 to top by -1).find(i => series.horizontalSpeed(i) >= minHs).getOrElse(dive - 10 max top)
-    val fwdRef  = (dive + 10 to bottom).find(i => series.horizontalSpeed(i) >= minHs).getOrElse(dive + 10 min bottom)
+    val backRef   = (dive - 10 to top by -1).find(i => series.horizontalSpeed(i) >= minHs).getOrElse(dive - 10 max top)
+    val fwdRef    = (dive + 10 to bottom).find(i => series.horizontalSpeed(i) >= minHs).getOrElse(dive + 10 min bottom)
     val aroundNet = netChange(series, backRef, fwdRef)
-    if Math.abs(aroundNet) < 5.0 then return 0.0
+    if Math.abs(aroundNet) < 5.0 then return CarveResult(0.0, dive, dive)
     val dir = if aroundNet > 0 then 1 else -1
 
     //  Expand forward from the dive point while the rotation persists  //
@@ -169,7 +186,7 @@ class SwoopAngleExperimentSpec extends AnyWordSpec with IOValues {
     while i <= bottom do {
       smoothRate(i) match {
         case Some(r) if r * dir > tailRate => end = i; misses = 0
-        case _ =>
+        case _                             =>
           misses += 1
           if misses > gap then { end = i - misses; i = bottom + 1 }
       }
@@ -178,12 +195,12 @@ class SwoopAngleExperimentSpec extends AnyWordSpec with IOValues {
 
     //  Expand backward from the dive point  //
     var start = dive
-    misses    = 0
-    i         = dive
+    misses = 0
+    i = dive
     while i > top + 1 do {
       smoothRate(i) match {
         case Some(r) if r * dir > tailRate => start = i - 1; misses = 0
-        case _ =>
+        case _                             =>
           misses += 1
           if misses > gap then { start = i + misses - 1; i = 0 }
       }
@@ -194,9 +211,9 @@ class SwoopAngleExperimentSpec extends AnyWordSpec with IOValues {
     val hasCore = (start to end).exists { k =>
       smoothRate(k).exists(r => r * dir > coreRate)
     }
-    if !hasCore then return 0.0
+    if !hasCore then return CarveResult(0.0, start, end)
 
-    netChange(series, start, end)
+    CarveResult(netChange(series, start, end), start, end)
   }
 
   /** Net heading change between two indices, wrapped to [-180, 180]. */

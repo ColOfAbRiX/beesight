@@ -14,7 +14,7 @@ import scala.concurrent.duration.*
 
 /**
  * FIXME: This file is temporary, remove when analysis and fix is done.
- * 
+ *
  * Diagnostic spec: dumps the swoop detection internals for files whose detected turn angle disagrees with the
  * logbook. Not an assertion suite - it prints data for manual analysis.
  */
@@ -24,15 +24,16 @@ class SwoopAngleDebugSpec extends AnyWordSpec with IOValues {
 
   /** Representative failing files: under-reports, over-reports, and the dedicated angles/ samples. */
   private val files = List(
-    //  carve20 regressions and residuals  //
-    "csv_files/jump_1378.zip",         // expected   0, carve20 -175.4
-    "csv_files/jump_841.zip",          // expected   0, carve20 -161.3
-    "csv_files/jump_963.zip",          // expected  90, carve20  -44.1 (current -69.4 passes)
-    "csv_files/jump_971.zip",          // expected  90, carve20    0.0 (current -89.5 passes)
-    "csv_files/jump_1155.zip",         // expected  90, carve20    0.0
-    "csv_files/jump_1749.zip",         // expected 135, carve20  -12.6
-    "csv_files/jump_1859.zip",         // expected 135, carve20    0.0
-    "csv_files/jump_925.zip",          // expected   0, carve20  138.3
+    //  group 05: expected 0, rotation detected - hypothesis: the turn into final before the dive  //
+    "csv_files/jump_841.zip",  // expected   0, carve20 -161.3, carve hs 6.3-22.6
+    "csv_files/jump_1358.zip", // expected   0, carve20  -52.4, carve hs 15.6-18.7
+    "csv_files/jump_1377.zip", // expected   0, carve20  -57.5, carve hs 19.5-21.2
+    "csv_files/jump_1382.zip", // expected   0, carve20   77.6, carve hs 16.5-18.5
+    "csv_files/jump_1417.zip", // expected   0, carve20  -67.8, carve hs 19.6-22.6
+    //  passing carves for contrast  //
+    "csv_files/jump_1155.zip", // expected  90, carve20   86.4
+    "csv_files/jump_1163.zip", // expected  90, carve20  107.4
+    "csv_files/jump_1423.zip", // expected  90, carve20   99.3
   )
 
   "Swoop angle debug" should {
@@ -55,49 +56,62 @@ class SwoopAngleDebugSpec extends AnyWordSpec with IOValues {
 
   private def debugFile(filePath: java.nio.file.Path): IO[List[String]] =
     for {
-      events  <- detectEvents(filePath)
-      points  <- TestFilesHandler.readCsv[CsvPoint](filePath).compile.toVector
+      events <- detectEvents(filePath)
+      points <- TestFilesHandler.readCsv[CsvPoint](filePath).compile.toVector
     } yield {
-                   val series = PointSeries(points.zipWithIndex.map { case (p, i) => IndexedPoint.fromZip(p, i.toLong) })
+      val series = PointSeries(points.zipWithIndex.map { case (p, i) => IndexedPoint.fromZip(p, i.toLong) })
 
-                   val ground        = SwoopGround.detect(series, events.landing)
-                   val patternEntry  = SwoopCascade.findPatternEntry(series, ground)
-                   val dive          = SwoopCascade.findDivePoint(series, patternEntry.getOrElse(0), ground)
-                   val topOfTurn     = dive.map(d => SwoopCascade.findTopOfTurn(series, d, patternEntry.getOrElse(0), DetectionConfig.default.swoop.pullThreshold))
-                   val stop          = dive.flatMap(d => SwoopCascade.findStop(series, d))
-                   val rollout       = for { d <- dive; t <- topOfTurn; s <- stop } yield SwoopCascade.findRolloutStart(series, t, s, DetectionConfig.default.swoop.rolloutWindow).getOrElse(-1)
-                   val bottom        = for { r <- rollout; s <- stop } yield SwoopCascade.findBottomOfTurn(series, r, s)
+      val ground       = SwoopGround.detect(series, events.landing)
+      val patternEntry = SwoopCascade.findPatternEntry(series, ground)
+      val dive         = SwoopCascade.findDivePoint(series, patternEntry.getOrElse(0), ground)
+      val topOfTurn    = dive.map(d =>
+        SwoopCascade.findTopOfTurn(series, d, patternEntry.getOrElse(0), DetectionConfig.default.swoop.pullThreshold)
+      )
+      val stop    = dive.flatMap(d => SwoopCascade.findStop(series, d))
+      val rollout = for {
+        d <- dive
+        t <- topOfTurn
+        s <- stop
+      } yield SwoopCascade.findRolloutStart(series, t, s, DetectionConfig.default.swoop.rolloutWindow).getOrElse(-1)
+      val bottom = for {
+        r <- rollout
+        s <- stop
+      } yield SwoopCascade.findBottomOfTurn(series, r, s)
 
-                   val header = List(
-                     f"ground=$ground%.1f  patternEntry=$patternEntry  dive=$dive  topOfTurn=$topOfTurn  rollout=$rollout  bottom=$bottom  stop=$stop"
-                   )
+      val header = List(
+        f"ground=$ground%.1f  patternEntry=$patternEntry  dive=$dive  topOfTurn=$topOfTurn  rollout=$rollout  bottom=$bottom  stop=$stop"
+      )
 
-                   val turnDegrees = for { d <- dive; t <- topOfTurn; b <- bottom } yield SwoopMetrics.turnDegrees(series, t, b, d)
+      val turnDegrees = for {
+        d <- dive
+        t <- topOfTurn
+        b <- bottom
+      } yield SwoopMetrics.turnDegrees(series, t, b, d)
 
-                   val summary = List(
-                     f"turnDegrees=${turnDegrees.getOrElse("n/a")}",
-                     f"events: landing=${events.landing.isDefined} canopy=${events.canopy.isDefined}"
-                   )
+      val summary = List(
+        f"turnDegrees=${turnDegrees.getOrElse("n/a")}",
+        f"events: landing=${events.landing.isDefined} canopy=${events.canopy.isDefined}"
+      )
 
-                   //  Per-sample dump over the turn window (with a little margin)  //
-                   val from = topOfTurn.getOrElse(0) - 3 max 0
-                   val to   = (bottom.getOrElse(series.length - 1) + 3) min (series.length - 1)
-                   val agl  = (i: Int) => series.altitude(i) - ground
+      //  Per-sample dump over the turn window (with a little margin)  //
+      val from = topOfTurn.getOrElse(0) - 3 max 0
+      val to   = (bottom.getOrElse(series.length - 1) + 3) min (series.length - 1)
+      val agl  = (i: Int) => series.altitude(i) - ground
 
-                   def wrap(raw: Double): Double =
-                     if raw > 180.0 then raw - 360.0 else if raw < -180.0 then raw + 360.0 else raw
+      def wrap(raw: Double): Double =
+        if raw > 180.0 then raw - 360.0 else if raw < -180.0 then raw + 360.0 else raw
 
-                   val rows = (from to to).map { i =>
-                     val rawDelta = if i == 0 then 0.0 else wrap(series.heading(i) - series.heading(i - 1))
-                     val diveAngle =
-                       val h = series.horizontalSpeed(i)
-                       val v = series.verticalSpeed(i)
-                       if h == 0.0 then (if v < 0 then -90.0 else 90.0) else Math.toDegrees(Math.atan(v / h))
-                     f"  i=$i%5d  t=${(series.timeMillis(i) - series.timeMillis(from)) / 1000.0}%7.2f  agl=${agl(i)}%7.1f  vz=${series.verticalSpeed(i)}%7.2f  hs=${series.horizontalSpeed(i)}%6.2f  hdg=${series.heading(i)}%6.1f  dHdg=$rawDelta%7.1f  diveAng=$diveAngle%6.1f"
-                   }
+      val rows = (from to to).map { i =>
+        val rawDelta  = if i == 0 then 0.0 else wrap(series.heading(i) - series.heading(i - 1))
+        val diveAngle =
+          val h = series.horizontalSpeed(i)
+          val v = series.verticalSpeed(i)
+          if h == 0.0 then (if v < 0 then -90.0 else 90.0) else Math.toDegrees(Math.atan(v / h))
+        f"  i=$i%5d  t=${(series.timeMillis(i) - series.timeMillis(from)) / 1000.0}%7.2f  agl=${agl(i)}%7.1f  vz=${series.verticalSpeed(i)}%7.2f  hs=${series.horizontalSpeed(i)}%6.2f  hdg=${series.heading(i)}%6.1f  dHdg=$rawDelta%7.1f  diveAng=$diveAngle%6.1f"
+      }
 
-                   header ++ summary ++ rows
-                 }
+      header ++ summary ++ rows
+    }
 
   private def detectEvents(filePath: java.nio.file.Path): IO[FlightEvents] =
     TestFilesHandler

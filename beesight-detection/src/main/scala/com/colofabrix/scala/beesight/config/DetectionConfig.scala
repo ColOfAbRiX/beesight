@@ -10,10 +10,12 @@ import io.github.iltotore.iron.*
  *
  * @param jumpevents Settings for the jump-events detection algorithm
  * @param swoop Thresholds and settings for swoop metrics computation
+ * @param metrics Settings for the per-point flight metrics computation
  */
 final case class DetectionConfig(
   jumpevents: JumpEventsConfig,
   swoop: SwoopConfig,
+  metrics: MetricsConfig,
 )
 
 object DetectionConfig {
@@ -65,6 +67,11 @@ object DetectionConfig {
       swoop = SwoopConfig(
         pullThreshold = 11.176,
         rolloutWindow = 30.48,
+      ),
+      metrics = MetricsConfig(
+        slopeHalfWindow = 4,
+        mass = 90.0,
+        planformArea = 10.0,
       ),
     )
 

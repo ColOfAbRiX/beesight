@@ -3,6 +3,7 @@ package com.colofabrix.scala.beesight.formats
 import cats.data.NonEmptyList
 import com.colofabrix.scala.beesight.formats.derivation.given
 import com.colofabrix.scala.beesight.model.*
+import com.colofabrix.scala.beesight.readers.*
 import fs2.data.csv.*
 import java.time.*
 
@@ -126,6 +127,19 @@ private[beesight] object AirlogPoint {
         east = point.motion.speed * Math.sin(headingRad),
         vertical = point.motion.sink,
       )
+  }
+
+  given airlogGpsReader: GpsReader[AirlogPoint] with {
+    def horizontalAccuracy(point: AirlogPoint): Option[Double] =
+      None
+    def verticalAccuracy(point: AirlogPoint): Option[Double] =
+      None
+    def speedAccuracy(point: AirlogPoint): Option[Double] =
+      None
+    def courseAccuracy(point: AirlogPoint): Option[Double] =
+      None
+    def satellites(point: AirlogPoint): Option[Int] =
+      Some(point.metadata.numSat)
   }
 
   given csvRowDecoder: CsvRowDecoder[AirlogPoint, String] with {
