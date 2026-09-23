@@ -4,8 +4,8 @@ import cats.syntax.all.*
 import com.colofabrix.scala.beesight.*
 import com.colofabrix.scala.beesight.config.Config
 import com.colofabrix.scala.beesight.model.*
-import java.nio.file.*
 import com.colofabrix.scala.beesight.readers.*
+import java.nio.file.*
 
 /**
  * Generates interactive HTML charts showing flight data and detected stages.

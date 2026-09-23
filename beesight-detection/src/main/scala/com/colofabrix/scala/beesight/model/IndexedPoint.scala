@@ -1,8 +1,8 @@
 package com.colofabrix.scala.beesight.model
 
-import java.time.Instant
 import com.colofabrix.scala.beesight.math.*
 import com.colofabrix.scala.beesight.readers.*
+import java.time.Instant
 
 /**
  * Internal representation of a flight data point with its position in the stream, time, altitude, and velocity.

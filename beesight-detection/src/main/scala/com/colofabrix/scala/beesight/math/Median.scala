@@ -1,9 +1,5 @@
 package com.colofabrix.scala.beesight.math
 
-import cats.Foldable
-import cats.syntax.all.*
-import com.colofabrix.scala.beesight.model.GeoVector
-import scala.reflect.ClassTag
 import scala.math.*
 
 /**

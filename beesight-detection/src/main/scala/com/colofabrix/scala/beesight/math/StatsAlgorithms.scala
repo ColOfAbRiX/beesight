@@ -1,7 +1,5 @@
 package com.colofabrix.scala.beesight.math
 
-import scala.math.*
-
 /** Pure array-based statistical algorithms, decoupled from any container. */
 private[math] object StatsAlgorithms {
 

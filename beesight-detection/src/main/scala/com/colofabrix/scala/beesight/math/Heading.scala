@@ -27,14 +27,15 @@ private[beesight] object Heading {
     abs(((h2 - h1 + 180.0) % 360.0 + 360.0) % 360.0 - 180.0)
 
   /**
-   * Wraps an angle delta to the signed range [-180, 180].
+   * Wraps an angle delta to the signed range (-180, 180], whatever the number of whole turns it carries.
    *
-   * @return The equivalent delta in [-180, 180]
+   * @return The equivalent delta in (-180, 180]
    */
   def wrapSigned(delta: Double): Double =
-    if delta > 180.0 then delta - 360.0
-    else if delta < -180.0 then delta + 360.0
-    else delta
+    val wrapped = delta % 360.0
+    if wrapped > 180.0 then wrapped - 360.0
+    else if wrapped <= -180.0 then wrapped + 360.0
+    else wrapped
 
   /**
    * Computes cumulative absolute heading change across a sequence of points.

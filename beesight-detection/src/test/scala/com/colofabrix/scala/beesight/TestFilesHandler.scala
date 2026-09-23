@@ -6,9 +6,8 @@ import com.colofabrix.scala.beesight.readers.*
 import fs2.data.csv.*
 import java.io.FileInputStream
 import java.nio.file.{ Path, Paths }
-import java.time.Instant
-import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
+import java.time.{ Instant, OffsetDateTime }
 import java.util.zip.ZipInputStream
 import scala.io.Source
 

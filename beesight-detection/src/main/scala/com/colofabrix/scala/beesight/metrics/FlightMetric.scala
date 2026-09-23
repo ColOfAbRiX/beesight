@@ -35,42 +35,34 @@ import java.time.Instant
  * @param accelerationCrossTrack Acceleration component to the right of the direction of travel, "Right" (m/s²)
  * @param totalEnergy            Specific mechanical energy: kinetic plus potential (J/kg)
  * @param energyRate             Rate of change of the specific mechanical energy (J/kg/s)
- * @param shericalErrorProbably  Spherical error probable: 3D 95th-percentile position error estimate (m)
+ * @param sphericalErrorProbably Spherical error probable: 3D 95th-percentile position error estimate (m)
  * @param speedScoreAccuracy     Accuracy of the 3-second speed-score average (m/s)
  */
 final case class FlightMetric(
   time: Instant,
   altitude: Double,
-  // Speed
   verticalSpeed: Double,
   horizontalSpeed: Double,
   totalSpeed: Double,
-  // Not yet sure how "course" works
   course: Double,
   courseRate: Double,
   courseAccuracy: Option[Double],
-  // Flight performance
   glideRatio: Double,
   liftCoefficient: Double,
   dragCoefficient: Double,
-  // Dive
   diveAngle: Double,
   diveRate: Double,
   turnRate: Double,
-  // Accuracy
   speedAccuracy: Option[Double],
   horizontalAccuracy: Option[Double],
   verticalAccuracy: Option[Double],
   satellites: Option[Int],
-  // Acceleration
   acceleration: GeoVector,
   accelerationMagnitude: Double,
   accelerationAlongTrack: Double,
   accelerationCrossTrack: Double,
-  // Energy
   totalEnergy: Double,
   energyRate: Double,
-  // Other
-  shericalErrorProbably: Option[Double],
+  sphericalErrorProbably: Option[Double],
   speedScoreAccuracy: Option[Double],
 )

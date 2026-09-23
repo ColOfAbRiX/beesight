@@ -2,11 +2,10 @@ package com.colofabrix.scala.beesight.metrics
 
 import cats.syntax.all.*
 import com.colofabrix.scala.beesight.config.MetricsConfig
+import com.colofabrix.scala.beesight.metrics.FlightMetricsCalculator.MetricsState
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.readers.*
 import com.colofabrix.scala.beesight.utils.*
-
-import FlightMetricsCalculator.MetricsState
 
 /**
  * Computes per-point flight metrics replicating the FlySight Viewer main-plot curves.
@@ -65,12 +64,12 @@ final class FlightMetricsCalculator private (config: MetricsConfig) {
     val speed     = center.speed
     val diveAngle = PerPointMetrics.diveAngle(speed)
 
-    val horizontalAccuracy    = center.horizontalAccuracy
-    val verticalAccuracy      = center.verticalAccuracy
-    val acceleration          = WindowedMetrics.acceleration(window)
-    val totalSpeed            = speed.magnitude
-    val totalSpeedRate        = WindowedMetrics.totalSpeedRate(window)
-    val shericalErrorProbably = (horizontalAccuracy, verticalAccuracy).mapN(GpsMetrics.sphericalErrorProbable)
+    val horizontalAccuracy     = center.horizontalAccuracy
+    val verticalAccuracy       = center.verticalAccuracy
+    val acceleration           = WindowedMetrics.acceleration(window)
+    val totalSpeed             = speed.magnitude
+    val totalSpeedRate         = WindowedMetrics.totalSpeedRate(window)
+    val sphericalErrorProbably = (horizontalAccuracy, verticalAccuracy).mapN(GpsMetrics.sphericalErrorProbable)
 
     FlightMetric(
       time = center.time,
@@ -97,7 +96,7 @@ final class FlightMetricsCalculator private (config: MetricsConfig) {
       accelerationCrossTrack = PerPointMetrics.accelerationCrossTrack(acceleration, speed),
       totalEnergy = PerPointMetrics.totalEnergy(center.altitude, totalSpeed),
       energyRate = totalSpeed * totalSpeedRate - MetricsConstants.Gravity * speed.vertical,
-      shericalErrorProbably = shericalErrorProbably,
+      sphericalErrorProbably = sphericalErrorProbably,
       speedScoreAccuracy = verticalAccuracy.map(GpsMetrics.speedScoreAccuracy),
     )
 
@@ -106,7 +105,10 @@ final class FlightMetricsCalculator private (config: MetricsConfig) {
 object FlightMetricsCalculator {
 
   /** Rolling buffer of the most recent points, at most one full window long, plus the total point count. */
-  final private[metrics] case class MetricsState[A](points: Vector[A], count: Long)
+  final private[metrics] case class MetricsState[A](
+    points: Vector[A],
+    count: Long
+  )
 
   def apply(config: MetricsConfig): FlightMetricsCalculator =
     new FlightMetricsCalculator(config)

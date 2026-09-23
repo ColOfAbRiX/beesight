@@ -1,8 +1,8 @@
 package com.colofabrix.scala.beesight.math
 
 import cats.Foldable
-import scala.reflect.ClassTag
 import scala.math.*
+import scala.reflect.ClassTag
 
 extension [F[_]: Foldable, A](window: F[A]) {
 

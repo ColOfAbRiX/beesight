@@ -88,7 +88,7 @@ class SwoopAngleExperimentSpec extends AnyWordSpec with IOValues {
           } yield SwoopCascade.findBottomOfTurn(series, r, s)
 
           stopOpt.flatMap { stop =>
-            rolloutOpt.flatMap { rollout =>
+            rolloutOpt.flatMap { _ =>
               val bottom = bottomOpt.getOrElse(stop)
 
               val results = floors.map(f =>
@@ -99,8 +99,8 @@ class SwoopAngleExperimentSpec extends AnyWordSpec with IOValues {
               val hsMin = (base.start to base.end).map(series.horizontalSpeed).min
               val hsMax = (base.start to base.end).map(series.horizontalSpeed).max
 
-              val values = results.map(r => f"${r.value}%.1f").mkString(",")
-              val diag   =
+              results.map(r => f"${r.value}%.1f").mkString(",")
+              val diag =
                 f"${base.start},${base.end},$dive,${series.horizontalSpeed(base.start)}%.1f,${series.horizontalSpeed(dive)}%.1f,${series.horizontalSpeed(base.end)}%.1f,$hsMin%.1f,$hsMax%.1f"
 
               val exp = expected.expectedAngle.getOrElse(Double.NaN)

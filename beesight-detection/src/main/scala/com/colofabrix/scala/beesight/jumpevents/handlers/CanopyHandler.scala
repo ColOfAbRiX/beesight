@@ -5,7 +5,6 @@ import com.colofabrix.scala.beesight.collections.NonEmptyWindow.NonEmptyFilled
 import com.colofabrix.scala.beesight.config.{ CanopyConfig, FreefallConfig }
 import com.colofabrix.scala.beesight.jumpevents.model.WindowEntry
 import com.colofabrix.scala.beesight.math.*
-import com.colofabrix.scala.beesight.model.*
 import java.time.Duration
 
 /**

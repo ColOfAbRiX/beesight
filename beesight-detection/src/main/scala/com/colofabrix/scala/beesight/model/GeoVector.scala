@@ -1,8 +1,8 @@
 package com.colofabrix.scala.beesight.model
 
 import cats.Order
-import java.lang.Math.*
 import com.colofabrix.scala.beesight.math.*
+import java.lang.Math.*
 import java.time.Instant
 
 /**

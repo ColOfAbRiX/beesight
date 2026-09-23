@@ -42,7 +42,7 @@ final private[metrics] class Aerodynamics private (config: MetricsConfig) {
 
 object Aerodynamics {
 
-  def apply(config: MetricsConfig): Aerodynamics = 
+  def apply(config: MetricsConfig): Aerodynamics =
     new Aerodynamics(config)
 
 }

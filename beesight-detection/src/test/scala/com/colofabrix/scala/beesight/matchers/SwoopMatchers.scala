@@ -2,7 +2,6 @@ package com.colofabrix.scala.beesight.matchers
 
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.swoop.*
-import com.colofabrix.scala.beesight.swoop.model.*
 import org.scalatest.matchers.{ Matcher, MatchResult }
 
 /**

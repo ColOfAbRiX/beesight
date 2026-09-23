@@ -71,6 +71,32 @@ class HeadingSpec extends AnyWordSpec with Matchers {
 
     }
 
+    "wrapSigned" should {
+
+      "leave deltas already in (-180, 180] unchanged" in {
+        Heading.wrapSigned(0.0) shouldBe 0.0
+        Heading.wrapSigned(90.0) shouldBe 90.0
+        Heading.wrapSigned(-90.0) shouldBe -90.0
+        Heading.wrapSigned(180.0) shouldBe 180.0
+      }
+
+      "wrap a single turn to the equivalent delta" in {
+        Heading.wrapSigned(190.0) shouldBe -170.0
+        Heading.wrapSigned(-190.0) shouldBe 170.0
+        Heading.wrapSigned(360.0) shouldBe 0.0
+        Heading.wrapSigned(-180.0) shouldBe 180.0
+      }
+
+      "wrap any number of whole turns to the equivalent delta" in {
+        Heading.wrapSigned(720.0) shouldBe 0.0
+        Heading.wrapSigned(-720.0) shouldBe 0.0
+        Heading.wrapSigned(540.0) shouldBe 180.0
+        Heading.wrapSigned(-540.0) shouldBe 180.0
+        Heading.wrapSigned(-394.062093) shouldBe -34.062093 +- 1e-9
+      }
+
+    }
+
     "cumulativeHeadingChange" should {
 
       "return 0 for empty or single-point sequences" in {

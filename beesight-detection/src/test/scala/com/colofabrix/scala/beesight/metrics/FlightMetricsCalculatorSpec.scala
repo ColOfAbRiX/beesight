@@ -140,7 +140,7 @@ class FlightMetricsCalculatorSpec extends AnyFreeSpec with Matchers with IOValue
       metric.speedAccuracy shouldBe Some(0.5)
       metric.courseAccuracy shouldBe Some(3.0)
       metric.satellites shouldBe Some(11)
-      metric.shericalErrorProbably.get shouldBe 0.5127 * 4.0 +- 1e-9
+      metric.sphericalErrorProbably.get shouldBe 0.5127 * 4.0 +- 1e-9
       metric.speedScoreAccuracy.get shouldBe Math.sqrt(2.0) * 2.0 / 3.0 +- 1e-9
     }
 
@@ -155,7 +155,7 @@ class FlightMetricsCalculatorSpec extends AnyFreeSpec with Matchers with IOValue
       metric.speedAccuracy shouldBe None
       metric.courseAccuracy shouldBe None
       metric.satellites shouldBe None
-      metric.shericalErrorProbably shouldBe None
+      metric.sphericalErrorProbably shouldBe None
       metric.speedScoreAccuracy shouldBe None
     }
 
@@ -189,7 +189,7 @@ class FlightMetricsCalculatorSpec extends AnyFreeSpec with Matchers with IOValue
         accelerationCrossTrack = 0.0,
         totalEnergy = 9.80665 * 1000.0,
         energyRate = 0.0,
-        shericalErrorProbably = Some(0.5127 * 4.0),
+        sphericalErrorProbably = Some(0.5127 * 4.0),
         speedScoreAccuracy = Some(Math.sqrt(2.0) * 2.0 / 3.0),
       )
 
