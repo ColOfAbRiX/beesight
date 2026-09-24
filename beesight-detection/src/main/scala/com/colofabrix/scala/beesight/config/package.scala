@@ -5,6 +5,8 @@ import cats.syntax.contravariant.*
 import io.github.iltotore.iron.*
 import io.github.iltotore.iron.constraint.numeric.*
 
+// FIXME: Introduce iron types for all primitive data types in the configuration case classes. Use the pattern below to add more types. Create group of types if possible
+
 /**
  * Size of a sliding window used during detection (must be ≥ 1).
  */

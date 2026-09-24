@@ -12,7 +12,7 @@ import java.time.Instant
  * clamped ±`slopeHalfWindow` window of points (see [[FlightMetricsCalculator]]).
  *
  * @param time                   Timestamp of the data point
- * @param altitude               Altitude above mean sea level (m)
+ * @param altitude               Altitude above ground level (m); see [[MetricsGround]]
  * @param verticalSpeed          Vertical speed (m/s), positive downward
  * @param horizontalSpeed        Magnitude of the horizontal speed (m/s)
  * @param totalSpeed             3D speed magnitude (m/s)

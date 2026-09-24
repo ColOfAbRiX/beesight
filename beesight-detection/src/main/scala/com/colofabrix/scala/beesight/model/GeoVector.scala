@@ -12,7 +12,7 @@ import java.time.Instant
  * @param east Eastward component (m/s)
  * @param vertical Vertical component (m/s; positive = downward for Flysight convention)
  */
-final case class GeoVector(
+final private[beesight] case class GeoVector(
   north: Double,
   east: Double,
   vertical: Double,

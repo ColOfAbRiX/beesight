@@ -13,7 +13,7 @@ import com.colofabrix.scala.beesight.utils.*
  * Every input point produces one [[FlightMetric]]. Windowed metrics use a least-squares slope over a clamped
  * ±`slopeHalfWindow` window (9 samples by default), replicating FlySight's `getSlope`.
  */
-final class FlightMetricsCalculator private (config: MetricsConfig) {
+final class FlightMetricsCalculator private (config: MetricsConfig, groundElevation: Double) {
 
   private val windowCapacity: Int = 2 * config.slopeHalfWindow + 1
 
@@ -70,10 +70,11 @@ final class FlightMetricsCalculator private (config: MetricsConfig) {
     val totalSpeed             = speed.magnitude
     val totalSpeedRate         = WindowedMetrics.totalSpeedRate(window)
     val sphericalErrorProbably = (horizontalAccuracy, verticalAccuracy).mapN(GpsMetrics.sphericalErrorProbable)
+    val elevation              = center.altitude - groundElevation
 
     FlightMetric(
       time = center.time,
-      altitude = center.altitude,
+      altitude = elevation,
       verticalSpeed = speed.vertical,
       horizontalSpeed = speed.horizontal,
       totalSpeed = totalSpeed,
@@ -94,7 +95,7 @@ final class FlightMetricsCalculator private (config: MetricsConfig) {
       accelerationMagnitude = acceleration.magnitude,
       accelerationAlongTrack = PerPointMetrics.accelerationAlongTrack(acceleration, speed),
       accelerationCrossTrack = PerPointMetrics.accelerationCrossTrack(acceleration, speed),
-      totalEnergy = PerPointMetrics.totalEnergy(center.altitude, totalSpeed),
+      totalEnergy = PerPointMetrics.totalEnergy(elevation, totalSpeed),
       energyRate = totalSpeed * totalSpeedRate - MetricsConstants.Gravity * speed.vertical,
       sphericalErrorProbably = sphericalErrorProbably,
       speedScoreAccuracy = verticalAccuracy.map(GpsMetrics.speedScoreAccuracy),
@@ -110,7 +111,7 @@ object FlightMetricsCalculator {
     count: Long
   )
 
-  def apply(config: MetricsConfig): FlightMetricsCalculator =
-    new FlightMetricsCalculator(config)
+  def apply(config: MetricsConfig, groundElevation: Double = 0.0): FlightMetricsCalculator =
+    new FlightMetricsCalculator(config, groundElevation)
 
 }

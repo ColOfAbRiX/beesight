@@ -5,7 +5,8 @@ import cats.syntax.all.given
 import com.colofabrix.scala.beesight.IOValues
 import com.colofabrix.scala.beesight.TestFilesHandler
 import com.colofabrix.scala.beesight.config.DetectionConfig
-import com.colofabrix.scala.beesight.model.GeoVector
+import com.colofabrix.scala.beesight.jumpevents.JumpEventsDetector
+import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.readers.*
 import fs2.data.csv.*
 import java.nio.file.Path
@@ -71,18 +72,32 @@ class FlightMetricsBulkSpec extends AnyWordSpec with Matchers with IOValues with
 
   private def validatePair(pair: MetricsValidationPair, idx: Int): IO[List[String]] =
     for
-      obtained <- computeMetrics(testFilesDir.resolve(pair.inputFile))
+      obtained <- computeMetrics(testFilesDir.resolve(pair.inputFile), pair.groundElevationResidual)
       golden   <- TestFilesHandler.readCsv[FlySightMetricsResult](testFilesDir.resolve(pair.metricsFile)).compile.toList
     yield
       val failures = compareWithGolden(obtained, golden)
       if failures.isEmpty then Nil else s"[$idx] ${pair.inputFile}:" :: failures
 
-  private def computeMetrics(inputPath: Path): IO[List[FlightMetric]] =
+  private def computeMetrics(inputPath: Path, residual: Option[Double] = None): IO[List[FlightMetric]] =
+    for
+      events         <- detectEvents(inputPath)
+      config          = DetectionConfig.default.metrics
+      detectedGround  = MetricsGround.detect(events.landing, config)
+      groundElevation = detectedGround + residual.getOrElse(0.0)
+      metrics        <- TestFilesHandler
+                   .readCsv[GpsCsvPoint](inputPath)
+                   .through(FlightMetricsCalculator(config, groundElevation).compute[IO, GpsCsvPoint])
+                   .compile
+                   .toList
+    yield metrics
+
+  private def detectEvents(inputPath: Path): IO[FlightEvents] =
     TestFilesHandler
       .readCsv[GpsCsvPoint](inputPath)
-      .through(FlightMetricsCalculator(DetectionConfig.default.metrics).compute[IO, GpsCsvPoint])
+      .through(JumpEventsDetector(DetectionConfig.default.jumpevents).detectEvents)
       .compile
-      .toList
+      .last
+      .map(_.getOrElse(FlightEvents.empty))
 
   /**
    * Aligns the computed metrics with the golden rows by timestamp and summarises the mismatches per field: one line

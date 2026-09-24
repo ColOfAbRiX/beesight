@@ -118,6 +118,7 @@ private[beesight] object FlySightMetricsResult {
 final private[beesight] case class MetricsValidationPair(
   inputFile: String,
   metricsFile: String,
+  groundElevationResidual: Option[Double] = None,
 )
 
 private[beesight] object MetricsValidationPair {
@@ -125,11 +126,19 @@ private[beesight] object MetricsValidationPair {
   given CsvRowDecoder[MetricsValidationPair, String] with
     def apply(row: CsvRow[String]): DecoderResult[MetricsValidationPair] =
       for
-        inputFile   <- row.as[String]("input_file")
-        metricsFile <- row.as[String]("metrics_file")
+        inputFile               <- row.as[String]("input_file")
+        metricsFile             <- row.as[String]("metrics_file")
+        groundElevationResidual <- optDouble(row, "ground_elevation_residual")
       yield MetricsValidationPair(
         inputFile = inputFile.trim,
         metricsFile = metricsFile.trim,
+        groundElevationResidual = groundElevationResidual,
       )
+
+  private def optDouble(row: CsvRow[String], name: String): DecoderResult[Option[Double]] =
+    row.as[String](name).map { s =>
+      val trimmed = s.trim
+      if trimmed.isEmpty || trimmed.equalsIgnoreCase("nan") then None else Some(trimmed.toDouble)
+    }
 
 }

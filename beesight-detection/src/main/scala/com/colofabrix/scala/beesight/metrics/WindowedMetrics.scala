@@ -14,6 +14,7 @@ private[metrics] object WindowedMetrics {
   /** Component-wise least-squares slopes of the speed over the window (m/s²). */
   def acceleration[A: PointReader](window: Vector[A]): GeoVector =
     val times  = relativeSeconds(window)
+    // FICME: This can be done more efficiently with a foldLeft
     val norths = window.toArrayBy(_.speed.north)
     val easts  = window.toArrayBy(_.speed.east)
     val downs  = window.toArrayBy(_.speed.vertical)
@@ -57,6 +58,7 @@ private[metrics] object WindowedMetrics {
       if dt <= 0.0 then
         0.0
       else
+        // FIXME: Create an additional val for the content of wrapSigned
         val turn = Heading.wrapSigned(PerPointMetrics.course(current.speed) - PerPointMetrics.course(previous.speed))
         turn / dt
 

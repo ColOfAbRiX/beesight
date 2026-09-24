@@ -40,6 +40,8 @@ final class JumpEventsDetector private (config: JumpEventsConfig) {
 
   /**
    * Streaming pipe that detects flight event points using the provided configuration.
+   *
+   * FIXME: Rename to `detect`
    */
   def detectEvents[F[_], A: PointReader]: fs2.Pipe[F, A, FlightEvents] =
     _.through(mainDetectionPipe)

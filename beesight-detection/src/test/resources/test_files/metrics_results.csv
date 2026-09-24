@@ -1,6 +1,6 @@
-input_file,metrics_file
-csv_files/jump_804.zip,csv_files/metrics_804.zip
-csv_files/jump_1164.zip,csv_files/metrics_1164.zip
-csv_files/jump_1420.zip,csv_files/metrics_1420.zip
-csv_files/jump_1422.zip,csv_files/metrics_1422.zip
-csv_files/jump_1936.zip,csv_files/metrics_1936.zip
+input_file,metrics_file,ground_elevation_residual
+csv_files/jump_804.zip,csv_files/metrics_804.zip,2.014
+csv_files/jump_1164.zip,csv_files/metrics_1164.zip,-1.872
+csv_files/jump_1420.zip,csv_files/metrics_1420.zip,0.671
+csv_files/jump_1422.zip,csv_files/metrics_1422.zip,0.386
+csv_files/jump_1936.zip,csv_files/metrics_1936.zip,-0.124

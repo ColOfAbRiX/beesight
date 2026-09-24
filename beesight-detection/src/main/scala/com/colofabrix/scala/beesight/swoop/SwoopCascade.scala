@@ -19,7 +19,10 @@ private[swoop] object SwoopCascade {
     val agl = (i: Int) => series.altitude(i) - ground
 
     (0 until series.length - 1)
-      .find(i => agl(i) >= SwoopConstants.patternEntryAltitude && agl(i + 1) < SwoopConstants.patternEntryAltitude)
+      .find { i =>
+        // FIXME: Break down this long expression into distinct vals
+        agl(i) >= SwoopConstants.patternEntryAltitude && agl(i + 1) < SwoopConstants.patternEntryAltitude
+      }
       .map(_ + 1)
   }
 
@@ -64,7 +67,9 @@ private[swoop] object SwoopCascade {
     val afterPull =
       if series.verticalSpeed(crossed) >= pullThreshold then
         // keep the largest index among the minima (last occurrence of the minimum descent)
-        (patternEntry to diveIdx).reverse.minBy(series.verticalSpeed)
+        (patternEntry to diveIdx)
+          .reverse
+          .minBy(series.verticalSpeed)
       else
         crossed
 
@@ -120,11 +125,13 @@ private[swoop] object SwoopCascade {
   }
 
   /** The accumulator value after processing sample `i`: reset when the descent stops accelerating downward, increased by the descent-rate rise otherwise. */
-  private def updatedSteepening(series: PointSeries, i: Int, dtSec: Double, steepening: Double): Double = {
+  private def updatedSteepening(series: PointSeries, i: Int, dtSec: Double, steepening: Double): Double =
     val descentIncrease = series.verticalSpeed(i) - series.verticalSpeed(i - 1)
-    if descentIncrease / dtSec <= 0 then 0.0
-    else steepening + descentIncrease
-  }
+
+    if descentIncrease / dtSec <= 0 then
+      0.0
+    else
+      steepening + descentIncrease
 
   /** True when the vertical speed is still increasing at point `i` (the descent is accelerating downward there). */
   private def isSteepening(series: PointSeries, i: Int): Boolean = {
@@ -155,13 +162,16 @@ private[swoop] object SwoopCascade {
       }
 
     headingIdx.flatMap { slowIdx =>
-      val swoopHeading = series.heading(slowIdx)
+      lazy val swoopHeading = series.heading(slowIdx)
 
       (slowIdx until series.length)
         .find { i =>
-          val nearlyStopped = series.horizontalSpeed(i) < SwoopConstants.stopEndHorizontal
-          val turnedAway    = Heading.angularDistance(series.heading(i), swoopHeading) >
-            SwoopConstants.stopHeadingDeviation
+          val nearlyStopped =
+            series.horizontalSpeed(i) < SwoopConstants.stopEndHorizontal
+
+          val turnedAway =
+            Heading.angularDistance(series.heading(i), swoopHeading) > SwoopConstants.stopHeadingDeviation
+
           nearlyStopped || turnedAway
         }
     }
@@ -177,6 +187,7 @@ private[swoop] object SwoopCascade {
    */
   def findRolloutStart(series: PointSeries, topOfTurn: Int, stopIdx: Int, rolloutWindow: Double): Option[Int] = {
     var startIdx = topOfTurn
+
     while startIdx <= stopIdx && (series.altitude(startIdx) - series.altitude(stopIdx)) >= rolloutWindow do
       startIdx += 1
 
@@ -188,16 +199,16 @@ private[swoop] object SwoopCascade {
 
     while walking do {
       val prev = curIdx - 1
-      if prev < topOfTurn then {
+
+      if prev < topOfTurn then
         failed = true // could not find the rollout
         walking = false
-      } else {
+      else
         val ascending = negVzMax < series.verticalSpeed(prev)
         rollout = curIdx
         negVzMax = series.verticalSpeed(prev)
         curIdx = prev
         walking = ascending
-      }
     }
 
     Option.unless(failed)(rollout)
@@ -221,7 +232,7 @@ private[swoop] object SwoopCascade {
   }
 
   /** Forward walk from the rollout while the altitude strictly decreases or the descent stays fast; the last such point is the bottom candidate. */
-  private def bottomCandidateWalk(series: PointSeries, rolloutIdx: Int, stopIdx: Int): Int = {
+  private def bottomCandidateWalk(series: PointSeries, rolloutIdx: Int, stopIdx: Int): Int =
     var minAltitude     = series.altitude(rolloutIdx)
     var k               = rolloutIdx
     var bottomCandidate = stopIdx
@@ -229,29 +240,29 @@ private[swoop] object SwoopCascade {
 
     while walking do {
       val j = k + 1
+
       if stopIdx < j then
         walking = false
-      else {
+      else
         val stillDescending = series.altitude(j) < minAltitude
         minAltitude = series.altitude(j)
+        
         val previous = k
         k = j
-        if !(stillDescending || series.verticalSpeed(j) >= SwoopConstants.bottomDescentThreshold) then {
+
+        if !(stillDescending || series.verticalSpeed(j) >= SwoopConstants.bottomDescentThreshold) then
           bottomCandidate = previous
           walking = false
-        }
-      }
     }
 
     bottomCandidate
-  }
 
   /** Backward bracket: first point more than the altitude offset above the bottom altitude, with the interpolated crossing time at the target altitude. */
   private def backwardAltitudeBracket(
     series: PointSeries,
     rolloutIdx: Int,
     bottomCandidate: Int
-  ): Option[(Int, Double)] = {
+  ): Option[(Int, Double)] =
     val targetAltitude = series.altitude(bottomCandidate) + SwoopConstants.bottomAltitudeOffset
 
     var cross   = Option.empty[(Int, Double)]
@@ -264,19 +275,18 @@ private[swoop] object SwoopCascade {
         walking = false
       else {
         k = j
-        if series.altitude(j) > targetAltitude then {
+        if series.altitude(j) > targetAltitude then 
+          // FIXME: Break down this long expression into intermediate vals
           val fraction = (targetAltitude - series.altitude(j)) / (series.altitude(j + 1) - series.altitude(j))
           cross = Some((j, series.timeMillis(j) + fraction * (series.timeMillis(j + 1) - series.timeMillis(j))))
           walking = false
-        }
       }
     }
 
     cross
-  }
 
   /** Forward bracket: first point whose descent rate drops to the crossing threshold, with the interpolated crossing time. */
-  private def forwardDescentBracket(series: PointSeries, rolloutIdx: Int, stopIdx: Int): Option[(Int, Double)] = {
+  private def forwardDescentBracket(series: PointSeries, rolloutIdx: Int, stopIdx: Int): Option[(Int, Double)] =
     var cross   = Option.empty[(Int, Double)]
     var k       = rolloutIdx
     var walking = true
@@ -285,21 +295,20 @@ private[swoop] object SwoopCascade {
       val j = k + 1
       if stopIdx < j then
         walking = false
-      else {
+      else
         val previous = k
         k = j
         if series.verticalSpeed(j) <= SwoopConstants.bottomVzCross then {
+          // FIXME: Break down this long expression into intermediate vals
           val fraction = (SwoopConstants.bottomVzCross - series.verticalSpeed(previous)) /
             (series.verticalSpeed(j) - series.verticalSpeed(previous))
           cross =
             Some((previous, series.timeMillis(previous) + fraction * (series.timeMillis(j) - series.timeMillis(previous))))
           walking = false
         }
-      }
     }
 
     cross
-  }
 
   /** The crossing with the earlier interpolated time, when both exist. */
   private def earlierCrossing(back: Option[(Int, Double)], fwd: Option[(Int, Double)]): Option[Int] =

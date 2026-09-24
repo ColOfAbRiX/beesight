@@ -15,8 +15,11 @@ private[beesight] object Heading {
    */
   def headingDegrees(speed: GeoVector): Double =
     val h = toDegrees(atan2(speed.east, speed.north))
-    if h < 0 then h + 360.0
-    else h
+
+    if h < 0 then
+      h + 360.0
+    else
+      h
 
   /**
    * Computes the shortest angular distance between two headings, handling 0°/360° wrapping.
@@ -33,9 +36,13 @@ private[beesight] object Heading {
    */
   def wrapSigned(delta: Double): Double =
     val wrapped = delta % 360.0
-    if wrapped > 180.0 then wrapped - 360.0
-    else if wrapped <= -180.0 then wrapped + 360.0
-    else wrapped
+
+    if wrapped > 180.0 then
+      wrapped - 360.0
+    else if wrapped <= -180.0 then
+      wrapped + 360.0
+    else
+      wrapped
 
   /**
    * Computes cumulative absolute heading change across a sequence of points.

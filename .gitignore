@@ -45,6 +45,7 @@ plans/
 
 
 # FIXME: These are temporary until problems fixed
-**/test/resources/test_files/csv_files/
 gswoop/
 angle-analysis/
+
+TODO.md
