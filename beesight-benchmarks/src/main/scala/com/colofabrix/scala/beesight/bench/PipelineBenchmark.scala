@@ -295,7 +295,7 @@ object PipelineBenchmark {
     val start = System.nanoTime()
     val _     =
       readFlysightStream(filePath)
-        .through(detector.detectEvents)
+        .through(detector.detect)
         .compile
         .last
         .unsafeRunSync()

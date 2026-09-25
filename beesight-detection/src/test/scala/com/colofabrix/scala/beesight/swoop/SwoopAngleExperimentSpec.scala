@@ -13,8 +13,6 @@ import org.scalatest.wordspec.AnyWordSpec
 import scala.concurrent.duration.*
 
 /**
- * FIXME: This file is temporary, remove when analysis and fix is done.
- *
  * Speed-floor sweep for the carve turn angle. Hypothesis: in the expected-0 recordings the rotation seen by the
  * detector is the turn into final, flown at low speed before the swoop - the swoop itself is straight and speed
  * builds only after the turn. If so, raising the reliable-speed floor should exclude the approach turn while
@@ -226,7 +224,7 @@ class SwoopAngleExperimentSpec extends AnyWordSpec with IOValues {
   private def detectEvents(filePath: java.nio.file.Path): IO[FlightEvents] =
     TestFilesHandler
       .readCsv[CsvPoint](filePath)
-      .through(JumpEventsDetector(DetectionConfig.default.jumpevents).detectEvents)
+      .through(JumpEventsDetector(DetectionConfig.default.jumpevents).detect)
       .compile
       .last
       .map(_.getOrElse(FlightEvents.empty))

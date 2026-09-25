@@ -7,7 +7,7 @@ import java.time.Instant
 /**
  * Represents complete kinematic state of a flight point including position, velocity, and acceleration.
  *
- * FIXME: This is used only by the speed clipper, we can probably remove it
+ * FIXME: This is used only by the speed clipper, we can probably remove it as a case class
  */
 final private[beesight] case class PointKinematics(
   point: IndexedPoint,

@@ -5,7 +5,10 @@ import cats.syntax.contravariant.*
 import io.github.iltotore.iron.*
 import io.github.iltotore.iron.constraint.numeric.*
 
-// FIXME: Introduce iron types for all primitive data types in the configuration case classes. Use the pattern below to add more types. Create group of types if possible
+// TODO: Introduce iron types for configuration primitives where a meaningful constraint exists.
+//  The existing types (WindowSize, Percent, KeepPoints) have universal bounds. The remaining raw
+//  Doubles are domain-specific thresholds whose valid ranges depend on context and are not
+//  suitable for opaque refinement types.
 
 /**
  * Size of a sliding window used during detection (must be ≥ 1).

@@ -73,7 +73,7 @@ class JumpEventsDetectorSpec extends AnyWordSpec with Matchers with IOValues {
   private def processInput: List[FlightEvents] =
     TestFilesHandler
       .readCsv[CsvPoint](inputData)
-      .through(JumpEventsDetector(DetectionConfig.default.jumpevents).detectEvents)
+      .through(JumpEventsDetector(DetectionConfig.default.jumpevents).detect)
       .streamResult()
 
 }

@@ -20,8 +20,9 @@ private[swoop] object SwoopCascade {
 
     (0 until series.length - 1)
       .find { i =>
-        // FIXME: Break down this long expression into distinct vals
-        agl(i) >= SwoopConstants.patternEntryAltitude && agl(i + 1) < SwoopConstants.patternEntryAltitude
+        val aboveOrAt = agl(i) >= SwoopConstants.patternEntryAltitude
+        val below      = agl(i + 1) < SwoopConstants.patternEntryAltitude
+        aboveOrAt && below
       }
       .map(_ + 1)
   }
@@ -275,10 +276,12 @@ private[swoop] object SwoopCascade {
         walking = false
       else {
         k = j
-        if series.altitude(j) > targetAltitude then 
-          // FIXME: Break down this long expression into intermediate vals
-          val fraction = (targetAltitude - series.altitude(j)) / (series.altitude(j + 1) - series.altitude(j))
-          cross = Some((j, series.timeMillis(j) + fraction * (series.timeMillis(j + 1) - series.timeMillis(j))))
+        if series.altitude(j) > targetAltitude then
+          val altDelta    = series.altitude(j + 1) - series.altitude(j)
+          val fraction    = (targetAltitude - series.altitude(j)) / altDelta
+          val timeDelta   = series.timeMillis(j + 1) - series.timeMillis(j)
+          val crossing    = series.timeMillis(j) + fraction * timeDelta
+          cross = Some((j, crossing))
           walking = false
       }
     }
@@ -299,11 +302,11 @@ private[swoop] object SwoopCascade {
         val previous = k
         k = j
         if series.verticalSpeed(j) <= SwoopConstants.bottomVzCross then {
-          // FIXME: Break down this long expression into intermediate vals
-          val fraction = (SwoopConstants.bottomVzCross - series.verticalSpeed(previous)) /
-            (series.verticalSpeed(j) - series.verticalSpeed(previous))
-          cross =
-            Some((previous, series.timeMillis(previous) + fraction * (series.timeMillis(j) - series.timeMillis(previous))))
+          val vzDelta   = series.verticalSpeed(j) - series.verticalSpeed(previous)
+          val fraction  = (SwoopConstants.bottomVzCross - series.verticalSpeed(previous)) / vzDelta
+          val timeDelta = series.timeMillis(j) - series.timeMillis(previous)
+          val crossing  = series.timeMillis(previous) + fraction * timeDelta
+          cross = Some((previous, crossing))
           walking = false
         }
     }

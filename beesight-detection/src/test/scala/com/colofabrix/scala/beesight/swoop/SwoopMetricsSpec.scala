@@ -26,13 +26,11 @@ class SwoopMetricsSpec extends AnyFreeSpec with Matchers {
 
       val result = SwoopMetrics.maxSpeeds(series, diveIdx = 1, topOfTurn = 2, rolloutIdx = 4, stopIdx = 8)
 
-      // FIXME: Never ever test single fields. Use full objects instead
-      result.vertical.speed shouldBe 8.0 +- 1e-9
-      result.vertical.index shouldBe 7
-      result.total.speed shouldBe Math.sqrt(149.0) +- 1e-9
-      result.total.index shouldBe 5
-      result.horizontal.speed shouldBe 12.0 +- 1e-9
-      result.horizontal.index shouldBe 4
+      result shouldBe SwoopMetrics.MaxSpeeds(
+        total = SwoopMetrics.MaxSpeed(Math.sqrt(149.0), 5),
+        vertical = SwoopMetrics.MaxSpeed(8.0, 7),
+        horizontal = SwoopMetrics.MaxSpeed(12.0, 4),
+      )
     }
 
     "treats the stop index as exclusive and the window starts as inclusive" in {
@@ -44,25 +42,38 @@ class SwoopMetricsSpec extends AnyFreeSpec with Matchers {
 
       val result = SwoopMetrics.maxSpeeds(series, diveIdx = 1, topOfTurn = 2, rolloutIdx = 4, stopIdx = 8)
 
-      result.vertical.index shouldBe 2                   // first of the tied 1 m/s values
-      result.total.speed shouldBe Math.sqrt(5.0) +- 1e-9 // sqrt(2^2 + 1^2), first of the tied maxima
-      result.total.index shouldBe 4
-      result.horizontal.index shouldBe 4
+      result shouldBe SwoopMetrics.MaxSpeeds(
+        total = SwoopMetrics.MaxSpeed(Math.sqrt(5.0), 4),
+        vertical = SwoopMetrics.MaxSpeed(1.0, 2),
+        horizontal = SwoopMetrics.MaxSpeed(2.0, 4),
+      )
     }
 
     "returns the earliest index when the maximum is tied" in {
       val startTie = speedSeries(Vector(1, 1, 5, 1, 1, 5, 1, 1, 1, 1), Vector.fill(10)(1.0))
       val midTie   = speedSeries(Vector(1, 1, 1, 5, 1, 1, 5, 1, 1, 1), Vector.fill(10)(1.0))
 
-      SwoopMetrics.maxSpeeds(startTie, diveIdx = 1, topOfTurn = 2, rolloutIdx = 4, stopIdx = 8).vertical.index shouldBe
-      2
-      SwoopMetrics.maxSpeeds(midTie, diveIdx = 1, topOfTurn = 2, rolloutIdx = 4, stopIdx = 8).vertical.index shouldBe 3
+      SwoopMetrics.maxSpeeds(startTie, diveIdx = 1, topOfTurn = 2, rolloutIdx = 4, stopIdx = 8) shouldBe
+      SwoopMetrics.MaxSpeeds(
+        total = SwoopMetrics.MaxSpeed(Math.sqrt(26.0), 2),
+        vertical = SwoopMetrics.MaxSpeed(5.0, 2),
+        horizontal = SwoopMetrics.MaxSpeed(1.0, 4),
+      )
+      SwoopMetrics.maxSpeeds(midTie, diveIdx = 1, topOfTurn = 2, rolloutIdx = 4, stopIdx = 8) shouldBe SwoopMetrics.MaxSpeeds(
+        total = SwoopMetrics.MaxSpeed(Math.sqrt(26.0), 3),
+        vertical = SwoopMetrics.MaxSpeed(5.0, 3),
+        horizontal = SwoopMetrics.MaxSpeed(1.0, 4),
+      )
     }
 
     "skips non-positive speeds when scanning" in {
       val series = speedSeries(Vector(1, 1, -5, 1, -1, 2, 1, 1, 1, 1), Vector.fill(10)(1.0))
 
-      SwoopMetrics.maxSpeeds(series, diveIdx = 1, topOfTurn = 2, rolloutIdx = 4, stopIdx = 8).vertical.index shouldBe 5
+      SwoopMetrics.maxSpeeds(series, diveIdx = 1, topOfTurn = 2, rolloutIdx = 4, stopIdx = 8) shouldBe SwoopMetrics.MaxSpeeds(
+        total = SwoopMetrics.MaxSpeed(Math.sqrt(26.0), 2),
+        vertical = SwoopMetrics.MaxSpeed(2.0, 5),
+        horizontal = SwoopMetrics.MaxSpeed(1.0, 4),
+      )
     }
 
     "skips NaN speeds when scanning" in {
@@ -70,8 +81,11 @@ class SwoopMetricsSpec extends AnyFreeSpec with Matchers {
 
       val result = SwoopMetrics.maxSpeeds(series, diveIdx = 1, topOfTurn = 2, rolloutIdx = 4, stopIdx = 8)
 
-      result.vertical.index shouldBe 2
-      result.vertical.speed shouldBe 1.0 +- 1e-9
+      result shouldBe SwoopMetrics.MaxSpeeds(
+        total = SwoopMetrics.MaxSpeed(Math.sqrt(2.0), 2),
+        vertical = SwoopMetrics.MaxSpeed(1.0, 2),
+        horizontal = SwoopMetrics.MaxSpeed(1.0, 4),
+      )
     }
 
     "falls back to the dive point when the vertical and total windows are empty" in {
@@ -84,14 +98,14 @@ class SwoopMetricsSpec extends AnyFreeSpec with Matchers {
       val emptyAtStop   = SwoopMetrics.maxSpeeds(series, diveIdx = 1, topOfTurn = 5, rolloutIdx = 5, stopIdx = 5)
       val emptyReversed = SwoopMetrics.maxSpeeds(series, diveIdx = 1, topOfTurn = 6, rolloutIdx = 5, stopIdx = 5)
 
-      def check(result: SwoopMetrics.MaxSpeeds): Unit = {
-        result.vertical.speed shouldBe 3.5 +- 1e-9
-        result.vertical.index shouldBe 1
-        result.total.speed shouldBe Math.sqrt(13.25) +- 1e-9 // sqrt(3.5^2 + 1^2) at the dive point
-        result.total.index shouldBe 1
-        result.horizontal.speed shouldBe 9.0 +- 1e-9
-        result.horizontal.index shouldBe 5
-      }
+      val expected = SwoopMetrics.MaxSpeeds(
+        total = SwoopMetrics.MaxSpeed(Math.sqrt(13.25), 1),
+        vertical = SwoopMetrics.MaxSpeed(3.5, 1),
+        horizontal = SwoopMetrics.MaxSpeed(9.0, 5),
+      )
+
+      def check(result: SwoopMetrics.MaxSpeeds): Unit =
+        result shouldBe expected
 
       check(emptyAtStop)
       check(emptyReversed)
@@ -108,10 +122,11 @@ class SwoopMetricsSpec extends AnyFreeSpec with Matchers {
 
       val result = SwoopMetrics.maxSpeeds(series, diveIdx = 1, topOfTurn = 2, rolloutIdx = 4, stopIdx = 8)
 
-      result.horizontal.speed shouldBe 0.0 +- 1e-9
-      result.horizontal.index shouldBe 4
-      result.vertical.index shouldBe 7
-      result.total.index shouldBe 7
+      result shouldBe SwoopMetrics.MaxSpeeds(
+        total = SwoopMetrics.MaxSpeed(8.0, 7),
+        vertical = SwoopMetrics.MaxSpeed(8.0, 7),
+        horizontal = SwoopMetrics.MaxSpeed(0.0, 4),
+      )
     }
 
   }

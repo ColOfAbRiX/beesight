@@ -74,7 +74,7 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
 
         val result = p1.interpolate(p2)(Instant.ofEpochSecond(1))
 
-        result.speed.vertical shouldBe 10.0
+        result shouldBe IndexedPoint(3, Instant.ofEpochSecond(1), 1000.0, GeoVector(0.0, 0.0, 10.0))
       }
 
       "should return p2 values when time equals p2.time" in {
@@ -83,7 +83,7 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
 
         val result = p1.interpolate(p2)(Instant.ofEpochSecond(3))
 
-        result.speed.vertical shouldBe 30.0
+        result shouldBe IndexedPoint(3, Instant.ofEpochSecond(3), 1000.0, GeoVector(0.0, 0.0, 30.0))
       }
 
       "should return midpoint values when time is midway" in {
@@ -92,7 +92,7 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
 
         val result = p1.interpolate(p2)(Instant.ofEpochSecond(2))
 
-        result.speed.vertical shouldBe 20.0
+        result shouldBe IndexedPoint(3, Instant.ofEpochSecond(2), 1000.0, GeoVector(0.0, 0.0, 20.0))
       }
 
       "should interpolate all velocity components" in {
@@ -101,9 +101,7 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
 
         val result = p1.interpolate(p2)(Instant.ofEpochSecond(5))
 
-        result.speed.north shouldBe 50.0
-        result.speed.east shouldBe 25.0
-        result.speed.vertical shouldBe -10.0
+        result shouldBe IndexedPoint(10, Instant.ofEpochSecond(5), 1000.0, GeoVector(50.0, 25.0, -10.0))
       }
 
       "should interpolate altitude" in {
@@ -131,7 +129,7 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
 
         val result = oldest.interpolate(newest)(Instant.ofEpochSecond(2))
 
-        result.speed.vertical shouldBe 10.0
+        result shouldBe IndexedPoint(5, Instant.ofEpochSecond(2), 1000.0, GeoVector(0.0, 0.0, 10.0))
       }
 
       "should interpolate spike boundary correctly" in {
@@ -140,7 +138,7 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
 
         val result = oldest.interpolate(newest)(Instant.ofEpochSecond(2))
 
-        result.speed.vertical shouldBe 32.5
+        result shouldBe IndexedPoint(5, Instant.ofEpochSecond(2), 1000.0, GeoVector(0.0, 0.0, 32.5))
       }
 
     }

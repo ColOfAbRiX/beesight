@@ -13,8 +13,6 @@ import org.scalatest.wordspec.AnyWordSpec
 import scala.concurrent.duration.*
 
 /**
- * FIXME: This file is temporary, remove when analysis and fix is done.
- *
  * Diagnostic spec: dumps the swoop detection internals for files whose detected turn angle disagrees with the
  * logbook. Not an assertion suite - it prints data for manual analysis.
  */
@@ -116,7 +114,7 @@ class SwoopAngleDebugSpec extends AnyWordSpec with IOValues {
   private def detectEvents(filePath: java.nio.file.Path): IO[FlightEvents] =
     TestFilesHandler
       .readCsv[CsvPoint](filePath)
-      .through(JumpEventsDetector(DetectionConfig.default.jumpevents).detectEvents)
+      .through(JumpEventsDetector(DetectionConfig.default.jumpevents).detect)
       .compile
       .last
       .map(_.getOrElse(FlightEvents.empty))

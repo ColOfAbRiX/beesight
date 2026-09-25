@@ -28,8 +28,7 @@ class FlightMetricsBulkSpec extends AnyWordSpec with Matchers with IOValues with
   /**
    * Minimum fraction of files whose metrics must match the export within tolerance.
    *
-   * TODO: raise to 1.0 once the FlySight parity of the metrics is verified; while the comparison is being calibrated
-   * the mismatches are only reported.
+   * Blocked on: FlySight parity verification — raise to 1.0 once confirmed.
    */
   private val minSuccessRate = 0.0
 
@@ -94,7 +93,7 @@ class FlightMetricsBulkSpec extends AnyWordSpec with Matchers with IOValues with
   private def detectEvents(inputPath: Path): IO[FlightEvents] =
     TestFilesHandler
       .readCsv[GpsCsvPoint](inputPath)
-      .through(JumpEventsDetector(DetectionConfig.default.jumpevents).detectEvents)
+      .through(JumpEventsDetector(DetectionConfig.default.jumpevents).detect)
       .compile
       .last
       .map(_.getOrElse(FlightEvents.empty))
