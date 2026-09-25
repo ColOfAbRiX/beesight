@@ -130,16 +130,11 @@ private[beesight] object AirlogPoint {
   }
 
   given airlogGpsReader: GpsReader[AirlogPoint] with {
-    def horizontalAccuracy(point: AirlogPoint): Option[Double] =
-      None
-    def verticalAccuracy(point: AirlogPoint): Option[Double] =
-      None
-    def speedAccuracy(point: AirlogPoint): Option[Double] =
-      None
-    def courseAccuracy(point: AirlogPoint): Option[Double] =
-      None
-    def satellites(point: AirlogPoint): Option[Int] =
-      Some(point.metadata.numSat)
+    def horizontalAccuracy(point: AirlogPoint): Option[Double] = None
+    def verticalAccuracy(point: AirlogPoint): Option[Double]   = None
+    def speedAccuracy(point: AirlogPoint): Option[Double]      = None
+    def courseAccuracy(point: AirlogPoint): Option[Double]     = None
+    def satellites(point: AirlogPoint): Option[Int]            = Some(point.metadata.numSat)
   }
 
   given csvRowDecoder: CsvRowDecoder[AirlogPoint, String] with {

@@ -92,16 +92,11 @@ private[beesight] object DekunuPoint {
   }
 
   given dekunuGpsReader: GpsReader[DekunuPoint] with {
-    def horizontalAccuracy(point: DekunuPoint): Option[Double] =
-      None
-    def verticalAccuracy(point: DekunuPoint): Option[Double] =
-      None
-    def speedAccuracy(point: DekunuPoint): Option[Double] =
-      None
-    def courseAccuracy(point: DekunuPoint): Option[Double] =
-      None
-    def satellites(point: DekunuPoint): Option[Int] =
-      point.gpsNumOfSats
+    def horizontalAccuracy(point: DekunuPoint): Option[Double] = None
+    def verticalAccuracy(point: DekunuPoint): Option[Double]   = None
+    def speedAccuracy(point: DekunuPoint): Option[Double]      = None
+    def courseAccuracy(point: DekunuPoint): Option[Double]     = None
+    def satellites(point: DekunuPoint): Option[Int]            = point.gpsNumOfSats
   }
 
   given csvRowDecoder: CsvRowDecoder[DekunuPoint, String] with {

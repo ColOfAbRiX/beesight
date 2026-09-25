@@ -113,16 +113,11 @@ private[beesight] object FlysightPoint {
   }
 
   given flysightGpsReader: GpsReader[FlysightPoint] with {
-    def horizontalAccuracy(point: FlysightPoint): Option[Double] =
-      Some(point.hAcc)
-    def verticalAccuracy(point: FlysightPoint): Option[Double] =
-      Some(point.vAcc)
-    def speedAccuracy(point: FlysightPoint): Option[Double] =
-      Some(point.sAcc)
-    def courseAccuracy(point: FlysightPoint): Option[Double] =
-      Some(point.cAcc)
-    def satellites(point: FlysightPoint): Option[Int] =
-      Some(point.numSV)
+    def horizontalAccuracy(point: FlysightPoint): Option[Double] = Some(point.hAcc)
+    def verticalAccuracy(point: FlysightPoint): Option[Double]   = Some(point.vAcc)
+    def speedAccuracy(point: FlysightPoint): Option[Double]      = Some(point.sAcc)
+    def courseAccuracy(point: FlysightPoint): Option[Double]     = Some(point.cAcc)
+    def satellites(point: FlysightPoint): Option[Int]            = Some(point.numSV)
   }
 
   given csvRowDecoder: CsvRowDecoder[FlysightPoint, String] with {

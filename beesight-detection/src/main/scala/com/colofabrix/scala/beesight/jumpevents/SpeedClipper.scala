@@ -1,13 +1,11 @@
 package com.colofabrix.scala.beesight.jumpevents
 
-import cats.syntax.all.*
 import com.colofabrix.scala.beesight.collections.*
 import com.colofabrix.scala.beesight.collections.NEW.*
 import com.colofabrix.scala.beesight.config.JumpEventsConfig
 import com.colofabrix.scala.beesight.math.*
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.utils.*
-import java.time.Duration
 
 /**
  * Detects and removes velocity spikes by interpolating outlier points.
@@ -24,57 +22,40 @@ private[jumpevents] class SpeedClipper private (config: JumpEventsConfig) {
     _.statefulMapEmits(initialState, drainWindow) { (currentRow, window) =>
       val clipped =
         window match {
-          case filled: NonEmptyFilled[PointKinematics] => clipWindow(filled)
-          case other                                   => other
+          case filled: NonEmptyFilled[IndexedPoint] => clipWindow(filled)
+          case other                                => other
         }
 
       clipped
-        .push {
-          computeKinematic(window.newest.point, currentRow)
-        }
+        .push(currentRow)
         .swap
-        .bimap(identity, _.map(_.point))
     }
 
-  private def initialState(firstPoint: IndexedPoint): (NEW[PointKinematics], Option[IndexedPoint]) =
-    val windowData    = PointKinematics(firstPoint, GeoVector.zero)
-    val initialWindow = NEW(windowCapacity, windowData)
-    (initialWindow, None)
+  private def initialState(firstPoint: IndexedPoint): (NEW[IndexedPoint], Option[IndexedPoint]) =
+    (NEW(windowCapacity, firstPoint), None)
 
-  private def drainWindow(window: NEW[PointKinematics]): Vector[IndexedPoint] =
-    window
-      .toVector
-      .map(_.point)
+  private def drainWindow(window: NEW[IndexedPoint]): Vector[IndexedPoint] =
+    window.toVector
 
-  private def clipWindow(window: NonEmptyFilled[PointKinematics]): NonEmptyFilled[PointKinematics] =
+  private def clipWindow(window: NonEmptyFilled[IndexedPoint]): NonEmptyFilled[IndexedPoint] =
     val oldest       = window.oldest
     val newest       = window.newest
     val focused      = window.focusAt(1)
     val secondOldest = focused.focus
 
-    val interpolated = oldest.interpolate(newest)(secondOldest.point.time)
+    val interpolated = oldest.interpolate(newest)(secondOldest.time)
 
     // The interpolated point replaces the focused point, so it inherits its index
-    val expectedPoint =
-      interpolated.copy(point = interpolated.point.copy(idx = secondOldest.point.idx))
+    val expectedPoint = interpolated.copy(idx = secondOldest.idx)
 
-    val actualVelocity   = secondOldest.point.speed.vertical
-    val expectedVelocity = expectedPoint.point.speed.vertical
+    val actualVelocity   = secondOldest.speed.vertical
+    val expectedVelocity = expectedPoint.speed.vertical
     val deviation        = Math.abs(actualVelocity - expectedVelocity)
 
     if deviation <= config.accelerationClip then
       focused
     else
       focused.modifyFocus(_ => expectedPoint)
-
-  private def computeKinematic(prev: IndexedPoint, curr: IndexedPoint): PointKinematics =
-    val dt           = Duration.between(prev.time, curr.time).toMillis / 1000.0
-    val acceleration = (curr.speed - prev.speed) / dt
-
-    PointKinematics(
-      point = curr,
-      acceleration = acceleration,
-    )
 
 }
 

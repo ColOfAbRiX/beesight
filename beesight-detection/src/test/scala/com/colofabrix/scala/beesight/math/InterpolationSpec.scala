@@ -220,30 +220,6 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
 
     }
 
-    "interpolate PointKinematics" - {
-
-      "should interpolate kinematics at midpoint" in {
-        val k1 =
-          PointKinematics(
-            point =
-              IndexedPoint(0L, Instant.ofEpochSecond(0), 1000.0, GeoVector(north = 10.0, east = 0.0, vertical = 0.0)),
-            acceleration = GeoVector(north = 5.0, east = 0.0, vertical = 0.0),
-          )
-        val k2 =
-          PointKinematics(
-            point =
-              IndexedPoint(1L, Instant.ofEpochSecond(10), 800.0, GeoVector(north = 30.0, east = 0.0, vertical = 0.0)),
-            acceleration = GeoVector(north = 15.0, east = 0.0, vertical = 0.0),
-          )
-
-        val result = k1.interpolate(k2)(Instant.ofEpochSecond(5))
-
-        result.altitude shouldBe 900.0
-        result.speed shouldBe GeoVector(north = 20.0, east = 0.0, vertical = 0.0)
-        result.acceleration shouldBe GeoVector(north = 10.0, east = 0.0, vertical = 0.0)
-      }
-
-    }
 
   }
 
