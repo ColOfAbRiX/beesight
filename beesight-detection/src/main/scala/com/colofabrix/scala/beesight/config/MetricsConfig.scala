@@ -10,7 +10,7 @@ package com.colofabrix.scala.beesight.config
  */
 final case class MetricsConfig(
   slopeHalfWindow: Int,
-  mass: Double,
-  planformArea: Double,
-  groundElevation: Option[Double] = None,
+  mass: Mass,
+  planformArea: Area,
+  groundElevation: Option[Altitude] = None,
 )

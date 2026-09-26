@@ -2,7 +2,7 @@ package com.colofabrix.scala.beesight.metrics
 
 import cats.effect.IO
 import com.colofabrix.scala.beesight.IOValues
-import com.colofabrix.scala.beesight.config.MetricsConfig
+import com.colofabrix.scala.beesight.config.{ Area, Mass, MetricsConfig }
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.readers.*
 import java.time.Instant
@@ -13,7 +13,7 @@ class FlightMetricsCalculatorSpec extends AnyFreeSpec with Matchers with IOValue
 
   private val GpsFix = Gps(1.0, 2.0, 0.5, 3.0, 11)
 
-  private val defaultConfig = MetricsConfig(slopeHalfWindow = 4, mass = 90.0, planformArea = 10.0)
+  private val defaultConfig = MetricsConfig(slopeHalfWindow = 4, mass = Mass(90.0), planformArea = Area(10.0))
 
   "FlightMetricsCalculator" - {
 
@@ -59,8 +59,8 @@ class FlightMetricsCalculatorSpec extends AnyFreeSpec with Matchers with IOValue
       val results = compute(points, defaultConfig)
       val metric  = results(4)
 
-      val mass         = defaultConfig.mass
-      val planformArea = defaultConfig.planformArea
+      val mass         = defaultConfig.mass.value
+      val planformArea = defaultConfig.planformArea.value
       val diveAngleRad = Math.atan2(10.0, 30.0)
       val totalSpeed   = Math.sqrt(1000.0)
       val airDensity   = 1.225 * Math.pow(1.0 - 2.25577e-5 * 980.0, 4.25588)

@@ -75,10 +75,10 @@ class SwoopAngleExperimentSpec extends AnyWordSpec with IOValues {
 
         diveOpt.flatMap { dive =>
           val pe         = patternEntry.getOrElse(0)
-          val top        = SwoopCascade.findTopOfTurn(series, dive, pe, DetectionConfig.default.swoop.pullThreshold)
+          val top        = SwoopCascade.findTopOfTurn(series, dive, pe, DetectionConfig.default.swoop.pullThreshold.value)
           val stopOpt    = SwoopCascade.findStop(series, dive)
           val rolloutOpt = stopOpt.flatMap { stop =>
-            SwoopCascade.findRolloutStart(series, top, stop, DetectionConfig.default.swoop.rolloutWindow)
+            SwoopCascade.findRolloutStart(series, top, stop, DetectionConfig.default.swoop.rolloutWindow.value)
           }
           val bottomOpt = for {
             r <- rolloutOpt

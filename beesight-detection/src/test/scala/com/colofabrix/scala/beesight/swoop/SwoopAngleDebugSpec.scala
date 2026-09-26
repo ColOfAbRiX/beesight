@@ -63,14 +63,14 @@ class SwoopAngleDebugSpec extends AnyWordSpec with IOValues {
       val patternEntry = SwoopCascade.findPatternEntry(series, ground)
       val dive         = SwoopCascade.findDivePoint(series, patternEntry.getOrElse(0), ground)
       val topOfTurn    = dive.map(d =>
-        SwoopCascade.findTopOfTurn(series, d, patternEntry.getOrElse(0), DetectionConfig.default.swoop.pullThreshold)
+        SwoopCascade.findTopOfTurn(series, d, patternEntry.getOrElse(0), DetectionConfig.default.swoop.pullThreshold.value)
       )
       val stop    = dive.flatMap(d => SwoopCascade.findStop(series, d))
       val rollout = for {
         d <- dive
         t <- topOfTurn
         s <- stop
-      } yield SwoopCascade.findRolloutStart(series, t, s, DetectionConfig.default.swoop.rolloutWindow).getOrElse(-1)
+      } yield SwoopCascade.findRolloutStart(series, t, s, DetectionConfig.default.swoop.rolloutWindow.value).getOrElse(-1)
       val bottom = for {
         r <- rollout
         s <- stop

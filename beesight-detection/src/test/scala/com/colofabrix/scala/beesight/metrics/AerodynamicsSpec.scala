@@ -1,12 +1,12 @@
 package com.colofabrix.scala.beesight.metrics
 
-import com.colofabrix.scala.beesight.config.MetricsConfig
+import com.colofabrix.scala.beesight.config.{ Area, Mass, MetricsConfig }
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
 class AerodynamicsSpec extends AnyFreeSpec with Matchers {
 
-  private val config       = MetricsConfig(slopeHalfWindow = 4, mass = 90.0, planformArea = 10.0)
+  private val config       = MetricsConfig(slopeHalfWindow = 4, mass = Mass(90.0), planformArea = Area(10.0))
   private val aerodynamics = Aerodynamics(config)
 
   "Aerodynamics" - {
@@ -19,8 +19,8 @@ class AerodynamicsSpec extends AnyFreeSpec with Matchers {
         val altitude   = 500.0
         val airDensity = 1.225 * Math.pow(1.0 - 2.25577e-5 * altitude, 4.25588)
         val expected   =
-          2.0 * config.mass * 9.80665 * Math.cos(Math.toRadians(diveAngle)) /
-          (airDensity * totalSpeed * totalSpeed * config.planformArea)
+          2.0 * config.mass.value * 9.80665 * Math.cos(Math.toRadians(diveAngle)) /
+          (airDensity * totalSpeed * totalSpeed * config.planformArea.value)
 
         aerodynamics.liftCoefficient(diveAngle, totalSpeed, altitude) shouldBe expected +- 1e-9
       }
@@ -46,8 +46,8 @@ class AerodynamicsSpec extends AnyFreeSpec with Matchers {
         val altitude   = 500.0
         val airDensity = 1.225 * Math.pow(1.0 - 2.25577e-5 * altitude, 4.25588)
         val expected   =
-          2.0 * config.mass * 9.80665 * Math.sin(Math.toRadians(diveAngle)) /
-          (airDensity * totalSpeed * totalSpeed * config.planformArea)
+          2.0 * config.mass.value * 9.80665 * Math.sin(Math.toRadians(diveAngle)) /
+          (airDensity * totalSpeed * totalSpeed * config.planformArea.value)
 
         aerodynamics.dragCoefficient(diveAngle, totalSpeed, altitude) shouldBe expected +- 1e-9
       }

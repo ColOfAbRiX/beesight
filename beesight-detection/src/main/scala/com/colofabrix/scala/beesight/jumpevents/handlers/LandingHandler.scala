@@ -16,11 +16,11 @@ final private[handlers] class LandingHandler private (config: LandingConfig) ext
     val entry = window.focus
 
     val isVerticalSpeedStable =
-      window.stdDevBy(_.smoothedSpeed.vertical) < config.stabilityThreshold
+      window.stdDevBy(_.smoothedSpeed.vertical) < config.stabilityThreshold.value
 
     val speedTrigger =
-      Math.abs(entry.smoothedSpeed.vertical) < config.verticalSpeedThreshold &&
-      Math.abs(entry.smoothedSpeed.horizontal) < config.horizontalSpeedThreshold
+      Math.abs(entry.smoothedSpeed.vertical) < config.verticalSpeedThreshold.value &&
+      Math.abs(entry.smoothedSpeed.horizontal) < config.horizontalSpeedThreshold.value
 
     val canopyAltitude =
       window
@@ -37,7 +37,7 @@ final private[handlers] class LandingHandler private (config: LandingConfig) ext
     window
       .right
       .map { stabilityWindow =>
-        stabilityWindow.stdDevBy(_.smoothedSpeed.vertical) < config.stabilityThreshold
+        stabilityWindow.stdDevBy(_.smoothedSpeed.vertical) < config.stabilityThreshold.value
       }
       .getOrElse(false)
 

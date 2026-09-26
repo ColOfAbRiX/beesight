@@ -52,7 +52,7 @@ private[jumpevents] class SpeedClipper private (config: JumpEventsConfig) {
     val expectedVelocity = expectedPoint.speed.vertical
     val deviation        = Math.abs(actualVelocity - expectedVelocity)
 
-    if deviation <= config.accelerationClip then
+    if deviation <= config.accelerationClip.value then
       focused
     else
       focused.modifyFocus(_ => expectedPoint)

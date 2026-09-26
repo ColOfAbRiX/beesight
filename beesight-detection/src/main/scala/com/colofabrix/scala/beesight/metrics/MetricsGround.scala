@@ -14,7 +14,7 @@ final private[metrics] class MetricsGround private (config: MetricsConfig) {
   def detect(landing: Option[EventPoint]): Double =
     landing
       .map(_.altitude)
-      .orElse(config.groundElevation)
+      .orElse(config.groundElevation.map(_.value))
       .getOrElse(0.0)
 
 }

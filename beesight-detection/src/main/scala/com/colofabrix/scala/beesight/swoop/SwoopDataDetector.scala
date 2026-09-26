@@ -46,9 +46,9 @@ final class SwoopDataDetector private (config: SwoopConfig) {
       ground        = SwoopGround.detect(series, events.landing)
       patternEntry <- SwoopCascade.findPatternEntry(series, ground)
       dive         <- SwoopCascade.findDivePoint(series, patternEntry, ground)
-      topOfTurn     = SwoopCascade.findTopOfTurn(series, dive, patternEntry, config.pullThreshold)
+      topOfTurn     = SwoopCascade.findTopOfTurn(series, dive, patternEntry, config.pullThreshold.value)
       stop         <- SwoopCascade.findStop(series, dive)
-      rollout      <- SwoopCascade.findRolloutStart(series, topOfTurn, stop, config.rolloutWindow)
+      rollout      <- SwoopCascade.findRolloutStart(series, topOfTurn, stop, config.rolloutWindow.value)
       bottom        = SwoopCascade.findBottomOfTurn(series, rollout, stop) if events.canopy.isDefined
       result        = buildSwoopData(series, dive, topOfTurn, rollout, bottom, stop, ground)
     yield result

@@ -17,14 +17,14 @@ final private[handlers] class FreefallHandler private (config: FreefallConfig) e
     val entry = window.focus
 
     val speedTrigger =
-      entry.smoothedSpeed.vertical > config.verticalSpeedThreshold
+      entry.smoothedSpeed.vertical > config.verticalSpeedThreshold.value
 
     val accelerationTrigger =
-      entry.acceleration > config.accelerationThreshold &&
-      entry.smoothedSpeed.vertical > config.accelerationMinVelocity
+      entry.acceleration > config.accelerationThreshold.value &&
+      entry.smoothedSpeed.vertical > config.accelerationMinVelocity.value
 
     val isAboveMinAltitude =
-      entry.point.altitude > config.minFreefallAltitude
+      entry.point.altitude > config.minFreefallAltitude.value
 
     isAboveMinAltitude && (speedTrigger || accelerationTrigger)
 
@@ -33,7 +33,7 @@ final private[handlers] class FreefallHandler private (config: FreefallConfig) e
     val newest = window.newest
     val dt     = Duration.between(focus.point.time, newest.point.time).toMillis / 1000.0
 
-    val validationDistance = config.validationVerticalSpeed * dt
+    val validationDistance = config.validationVerticalSpeed.value * dt
 
     newest.point.altitude < focus.point.altitude - validationDistance
 

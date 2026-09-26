@@ -7,6 +7,6 @@ package com.colofabrix.scala.beesight.config
  * @param rolloutWindow Height above the stop altitude (m) where the rollout search starts
  */
 final case class SwoopConfig(
-  pullThreshold: Double,
-  rolloutWindow: Double,
+  pullThreshold: Speed,
+  rolloutWindow: Altitude,
 )

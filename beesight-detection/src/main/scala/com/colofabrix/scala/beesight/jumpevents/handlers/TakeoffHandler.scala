@@ -17,11 +17,11 @@ final private[handlers] class TakeoffHandler private (config: TakeoffConfig) ext
     val entry = window.focus
 
     val speedTrigger =
-      entry.smoothedSpeed.vertical < config.verticalSpeedThreshold &&
-      entry.smoothedSpeed.horizontal > config.horizontalSpeedThreshold
+      entry.smoothedSpeed.vertical < config.verticalSpeedThreshold.value &&
+      entry.smoothedSpeed.horizontal > config.horizontalSpeedThreshold.value
 
     val isBelowMaxAltitude =
-      entry.point.altitude < config.maxTakeoffAltitude
+      entry.point.altitude < config.maxTakeoffAltitude.value
 
     isBelowMaxAltitude && speedTrigger
 
@@ -30,7 +30,7 @@ final private[handlers] class TakeoffHandler private (config: TakeoffConfig) ext
     val newest = window.newest
     val dt     = Duration.between(focus.point.time, newest.point.time).toMillis / 1000.0
 
-    val validationDistance = config.validationVerticalSpeed * dt
+    val validationDistance = config.validationVerticalSpeed.value * dt
 
     newest.point.altitude > focus.point.altitude - validationDistance
 

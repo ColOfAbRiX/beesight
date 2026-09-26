@@ -12,7 +12,7 @@ package com.colofabrix.scala.beesight.config
  */
 final case class JumpEventsConfig(
   preprocessWindowSize: WindowSize,
-  accelerationClip: Double,
+  accelerationClip: Speed,
   takeoff: TakeoffConfig,
   freefall: FreefallConfig,
   canopy: CanopyConfig,
@@ -51,10 +51,10 @@ final case class TakeoffConfig(
   smoothingWindowSize: WindowSize,
   backtrackWindowSize: WindowSize,
   validationWindowSize: WindowSize,
-  validationVerticalSpeed: Double,
-  verticalSpeedThreshold: Double,
-  horizontalSpeedThreshold: Double,
-  maxTakeoffAltitude: Double,
+  validationVerticalSpeed: Speed,
+  verticalSpeedThreshold: Speed,
+  horizontalSpeedThreshold: Speed,
+  maxTakeoffAltitude: Altitude,
 ) extends EventConfigs
 
 /**
@@ -73,11 +73,11 @@ final case class FreefallConfig(
   smoothingWindowSize: WindowSize,
   backtrackWindowSize: WindowSize,
   validationWindowSize: WindowSize,
-  verticalSpeedThreshold: Double,
-  accelerationThreshold: Double,
-  accelerationMinVelocity: Double,
-  minFreefallAltitude: Double,
-  validationVerticalSpeed: Double,
+  verticalSpeedThreshold: Speed,
+  accelerationThreshold: Acceleration,
+  accelerationMinVelocity: Speed,
+  minFreefallAltitude: Altitude,
+  validationVerticalSpeed: Speed,
 ) extends EventConfigs
 
 /**
@@ -94,9 +94,9 @@ final case class CanopyConfig(
   smoothingWindowSize: WindowSize,
   backtrackWindowSize: WindowSize,
   validationWindowSize: WindowSize,
-  verticalSpeedThreshold: Double,
-  minCanopyAltitude: Double,
-  validationVerticalSpeed: Double,
+  verticalSpeedThreshold: Speed,
+  minCanopyAltitude: Altitude,
+  validationVerticalSpeed: Speed,
 ) extends EventConfigs
 
 /**
@@ -113,7 +113,7 @@ final case class LandingConfig(
   smoothingWindowSize: WindowSize,
   backtrackWindowSize: WindowSize,
   validationWindowSize: WindowSize,
-  verticalSpeedThreshold: Double,
-  stabilityThreshold: Double,
-  horizontalSpeedThreshold: Double,
+  verticalSpeedThreshold: Speed,
+  stabilityThreshold: Speed,
+  horizontalSpeedThreshold: Speed,
 ) extends EventConfigs

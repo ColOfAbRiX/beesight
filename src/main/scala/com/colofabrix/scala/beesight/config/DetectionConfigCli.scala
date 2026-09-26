@@ -66,6 +66,21 @@ object DetectionConfigCli {
   given ConfigReader[WindowSize] =
     ConfigReader[Int].map(i => WindowSize(i.refineUnsafe))
 
+  given ConfigReader[Speed] =
+    ConfigReader[Double].map(Speed(_))
+
+  given ConfigReader[Altitude] =
+    ConfigReader[Double].map(Altitude(_))
+
+  given ConfigReader[Acceleration] =
+    ConfigReader[Double].map(Acceleration(_))
+
+  given ConfigReader[Mass] =
+    ConfigReader[Double].map(Mass(_))
+
+  given ConfigReader[Area] =
+    ConfigReader[Double].map(Area(_))
+
   given ConfigReader[DetectionConfig] =
     ConfigReader.derived
 

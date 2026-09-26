@@ -18,7 +18,7 @@ final private[handlers] class CanopyHandler private (config: CanopyConfig, freef
 
     val speedTrigger =
       entry.smoothedSpeed.vertical > 0.0 &&
-      entry.smoothedSpeed.vertical < config.verticalSpeedThreshold
+      entry.smoothedSpeed.vertical < config.verticalSpeedThreshold.value
 
     val accelerationTrigger =
       entry.acceleration.vertical < 0.0
@@ -32,7 +32,7 @@ final private[handlers] class CanopyHandler private (config: CanopyConfig, freef
 
     val isBelowFreefall = entry.point.altitude < freefallAltitude
 
-    val isAboveMinAltitude = entry.point.altitude > config.minCanopyAltitude
+    val isAboveMinAltitude = entry.point.altitude > config.minCanopyAltitude.value
 
     speedTrigger && accelerationTrigger && isBelowFreefall && isAboveMinAltitude
 
@@ -41,16 +41,16 @@ final private[handlers] class CanopyHandler private (config: CanopyConfig, freef
     val newest = window.newest
     val dt     = Duration.between(focus.point.time, newest.point.time).toMillis / 1000.0
 
-    val canopyDistance = config.validationVerticalSpeed * dt
+    val canopyDistance = config.validationVerticalSpeed.value * dt
     val isBelowCanopy  = newest.point.altitude < focus.point.altitude - canopyDistance
 
-    val freefallDistance = freefallConfig.verticalSpeedThreshold * dt
+    val freefallDistance = freefallConfig.verticalSpeedThreshold.value * dt
     val isAboveFreefall  = newest.point.altitude > focus.point.altitude - freefallDistance
 
     isBelowCanopy && isAboveFreefall
 
   protected def findInflection(window: NonEmptyFilled[WindowEntry]): Option[Int] =
-    val discoveredInflection =
+    val discoveredInflection =  
       for {
         backWindow <- window.left
         inflection <- backWindow.findInflectionBy(_.smoothedSpeed.vertical)

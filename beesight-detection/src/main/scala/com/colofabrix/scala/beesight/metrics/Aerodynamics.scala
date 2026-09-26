@@ -31,8 +31,8 @@ final private[metrics] class Aerodynamics private (config: MetricsConfig) {
     if totalSpeed == 0.0 then
       0.0
     else
-      val dynamicPressure = airDensity(altitude) * totalSpeed * totalSpeed * config.planformArea
-      2.0 * config.mass * Gravity * weightComponent(toRadians(diveAngle)) / dynamicPressure
+      val dynamicPressure = airDensity(altitude) * totalSpeed * totalSpeed * config.planformArea.value
+      2.0 * config.mass.value * Gravity * weightComponent(toRadians(diveAngle)) / dynamicPressure
 
   /** ISA troposphere air density (kg/m³) at the given altitude (m). */
   private def airDensity(altitude: Double): Double =

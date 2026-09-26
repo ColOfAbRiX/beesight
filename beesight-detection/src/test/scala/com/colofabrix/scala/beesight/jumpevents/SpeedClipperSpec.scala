@@ -416,12 +416,12 @@ class SpeedClipperSpec extends AnyFreeSpec with Matchers with IOValues {
 
   private def buildConfig(
     preprocessWindowSize: Int = DetectionConfig.default.jumpevents.preprocessWindowSize.value,
-    accelerationClip: Double = DetectionConfig.default.jumpevents.accelerationClip,
+    accelerationClip: Double = DetectionConfig.default.jumpevents.accelerationClip.value,
   ): DetectionConfig =
     DetectionConfig.default.copy(
       jumpevents = DetectionConfig.default.jumpevents.copy(
         preprocessWindowSize = WindowSize(preprocessWindowSize.refineUnsafe),
-        accelerationClip = accelerationClip,
+        accelerationClip = Speed(accelerationClip),
       ),
     )
 
