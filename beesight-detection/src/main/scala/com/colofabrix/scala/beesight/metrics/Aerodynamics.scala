@@ -2,41 +2,68 @@ package com.colofabrix.scala.beesight.metrics
 
 import com.colofabrix.scala.beesight.config.MetricsConfig
 import com.colofabrix.scala.beesight.metrics.MetricsConstants.*
+import com.colofabrix.scala.beesight.model.GeoVector
 import java.lang.Math.*
-import scala.math.pow
 
 /**
- * Aerodynamic coefficients from quasi-steady glide equilibrium, replicating FlySight's `initAerodynamics`.
+ * Aerodynamic coefficients from the gravity-corrected acceleration projected on the flight path
  *
- * In steady flight the weight resolves into `L = W·cos(γ)` perpendicular to the flight path and `D = W·sin(γ)` along
- * it, giving `C = 2·m·g·f(γ) / (ρ·V²·S)` with γ the dive angle, V the total speed, ρ the ISA air density and S the
- * planform area.
+ * Gravity is removed from the vertical component of the windowed acceleration; the component of the
+ * remaining acceleration along the velocity is the deceleration due to drag and everything
+ * perpendicular to it is due to lift. Each acceleration becomes a coefficient through the dynamic
+ * pressure `q = ρ·V²/2`, with ρ the ISA barometric air density at the given altitude:
+ * `C = m·a / (q·S)`.
  */
 final private[metrics] class Aerodynamics private (config: MetricsConfig) {
 
-  /** Lift coefficient `2·m·g·cos(γ) / (ρ·V²·S)`; 0 when the total speed is zero. */
-  def liftCoefficient(diveAngle: Double, totalSpeed: Double, altitude: Double): Double =
-    coefficient(diveAngle, totalSpeed, altitude)(cos)
+  private val GravityVector: GeoVector =
+    GeoVector(0.0, 0.0, Gravity)
 
-  /** Drag coefficient `2·m·g·sin(γ) / (ρ·V²·S)`; 0 when the total speed is zero. */
-  def dragCoefficient(diveAngle: Double, totalSpeed: Double, altitude: Double): Double =
-    coefficient(diveAngle, totalSpeed, altitude)(sin)
+  /** Lift coefficient `m·|a − proj·v̂| / (q·S)`; 0 when the total speed is zero. */
+  def liftCoefficient(acceleration: GeoVector, speed: GeoVector, altitude: Double): Double =
+    coefficients(acceleration, speed, altitude)._1
 
-  private def coefficient(
-    diveAngle: Double,
-    totalSpeed: Double,
+  /** Drag coefficient `m·|proj| / (q·S)`; 0 when the total speed is zero. */
+  def dragCoefficient(acceleration: GeoVector, speed: GeoVector, altitude: Double): Double =
+    coefficients(acceleration, speed, altitude)._2
+
+  private def coefficients(
+    acceleration: GeoVector,
+    speed: GeoVector,
     altitude: Double
-  )(weightComponent: Double => Double,
-  ): Double =
-    if totalSpeed == 0.0 then
-      0.0
-    else
-      val dynamicPressure = airDensity(altitude) * totalSpeed * totalSpeed * config.planformArea.value
-      2.0 * config.mass.value * Gravity * weightComponent(toRadians(diveAngle)) / dynamicPressure
+  ): (Double, Double) =
+    val vel = speed.magnitude
 
-  /** ISA troposphere air density (kg/m³) at the given altitude (m). */
+    if vel == 0.0 then
+      (0.0, 0.0)
+    else
+      // Gravity acts on the vertical component; what remains is the non-gravitational acceleration
+      val accelCorrected = acceleration - GravityVector
+
+      // Component of the gravity-corrected acceleration along the flight path: deceleration due to drag
+      val proj      = (accelCorrected dot speed) / vel
+
+      // Drag
+      val drag      = speed * proj / vel
+      val accelDrag = drag.magnitude
+
+      // Everything perpendicular to the flight path is due to lift
+      val lift      = accelCorrected - drag
+      val accelLift = lift.magnitude
+
+      val dynamicPressure = airDensity(altitude) * vel * vel / 2.0
+      val liftCoefficient = config.mass.value * accelLift / dynamicPressure / config.planformArea.value
+      val dragCoefficient = config.mass.value * accelDrag / dynamicPressure / config.planformArea.value
+
+      (liftCoefficient, dragCoefficient)
+
+  /** ISA troposphere barometric air density (kg/m³) at the given altitude (m), as the Viewer computes it. */
   private def airDensity(altitude: Double): Double =
-    SeaLevelAirDensity * pow(1.0 - IsaLapseCoefficient * altitude, IsaDensityExponent)
+    val exponent    = Gravity * MolarMassDryAir / UniversalGasConstant / TemperatureLapseRate
+    val pressure    = SeaLevelPressure * pow(1.0 - TemperatureLapseRate * altitude / SeaLevelTemperature, exponent)
+    val temperature = SeaLevelTemperature - TemperatureLapseRate * altitude
+
+    pressure / (UniversalGasConstant / MolarMassDryAir) / temperature
 
 }
 

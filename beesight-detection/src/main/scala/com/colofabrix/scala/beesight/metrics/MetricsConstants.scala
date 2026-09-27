@@ -8,13 +8,19 @@ private[metrics] object MetricsConstants {
   /** Standard gravity (m/s²). */
   val Gravity: Double = 9.80665
 
-  /** ISA standard air density at sea level (kg/m³). */
-  val SeaLevelAirDensity: Double = 1.225
+  /** ISA standard sea-level atmosphere pressure (Pa). */
+  val SeaLevelPressure: Double = 101325.0
 
-  /** ISA troposphere density lapse coefficient (1/m). */
-  val IsaLapseCoefficient: Double = 2.25577e-5
+  /** ISA temperature lapse rate in the troposphere (K/m). */
+  val TemperatureLapseRate: Double = 0.0065
 
-  /** ISA troposphere density lapse exponent (dimensionless). */
-  val IsaDensityExponent: Double = 4.25588
+  /** ISA standard sea-level temperature (K). */
+  val SeaLevelTemperature: Double = 288.15
+
+  /** Molar mass of dry air (kg/mol). */
+  val MolarMassDryAir: Double = 0.0289644
+
+  /** Universal gas constant (J/mol/K). */
+  val UniversalGasConstant: Double = 8.31447
 
 }

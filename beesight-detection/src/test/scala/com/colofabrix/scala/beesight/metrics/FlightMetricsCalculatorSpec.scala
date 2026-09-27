@@ -13,7 +13,7 @@ class FlightMetricsCalculatorSpec extends AnyFreeSpec with Matchers with IOValue
 
   private val GpsFix = Gps(1.0, 2.0, 0.5, Some(3.0), 11)
 
-  private val defaultConfig = MetricsConfig(slopeHalfWindow = 4, mass = Mass(90.0), planformArea = Area(10.0))
+  private val defaultConfig = MetricsConfig(slopeHalfWindow = 4, mass = Mass(90.0), planformArea = Area(2.0))
 
   "FlightMetricsCalculator" - {
 
@@ -61,13 +61,23 @@ class FlightMetricsCalculatorSpec extends AnyFreeSpec with Matchers with IOValue
 
       val mass         = defaultConfig.mass.value
       val planformArea = defaultConfig.planformArea.value
-      val diveAngleRad = Math.atan2(10.0, 30.0)
       val totalSpeed   = Math.sqrt(1000.0)
-      val airDensity   = 1.225 * Math.pow(1.0 - 2.25577e-5 * 980.0, 4.25588)
-      val denominator  = airDensity * totalSpeed * totalSpeed * planformArea
 
-      metric.liftCoefficient shouldBe (2.0 * mass * 9.80665 * Math.cos(diveAngleRad) / denominator) +- 1e-9
-      metric.dragCoefficient shouldBe (2.0 * mass * 9.80665 * Math.sin(diveAngleRad) / denominator) +- 1e-9
+      // The windowed acceleration is zero, so only gravity remains on the vertical component
+      val accelD      = 0.0 - 9.80665
+      val proj        = accelD * 10.0 / totalSpeed
+      val dragNorth   = proj * 30.0 / totalSpeed
+      val dragDown    = proj * 10.0 / totalSpeed
+      val accelDrag   = Math.sqrt(dragNorth * dragNorth + dragDown * dragDown)
+      val liftNorth   = 0.0 - dragNorth
+      val liftDown    = accelD - dragDown
+      val accelLift   = Math.sqrt(liftNorth * liftNorth + liftDown * liftDown)
+      val pressure    = 101325.0 * Math.pow(1.0 - 0.0065 * 980.0 / 288.15, 9.80665 * 0.0289644 / 8.31447 / 0.0065)
+      val airDensity  = pressure / (8.31447 / 0.0289644) / (288.15 - 0.0065 * 980.0)
+      val dynamicPressure = airDensity * totalSpeed * totalSpeed / 2.0
+
+      metric.liftCoefficient shouldBe (mass * accelLift / dynamicPressure / planformArea) +- 1e-9
+      metric.dragCoefficient shouldBe (mass * accelDrag / dynamicPressure / planformArea) +- 1e-9
     }
 
     "compute the acceleration of a linear speed ramp" in {

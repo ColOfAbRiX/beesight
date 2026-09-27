@@ -71,7 +71,7 @@ object DetectionConfig {
       metrics = MetricsConfig(
         slopeHalfWindow = 4,
         mass = Mass(90.0),
-        planformArea = Area(10.0),
+        planformArea = Area(2.0),
       ),
     )
 

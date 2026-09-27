@@ -52,6 +52,10 @@ object GeoVector {
         vertical = self.vertical * scalar,
       )
 
+    /** Scalar (dot) product of the two vectors. */
+    infix def dot(other: GeoVector): Double =
+      self.north * other.north + self.east * other.east + self.vertical * other.vertical
+
     /** Scalar division of all components. */
     infix def /(scalar: Double): GeoVector =
       GeoVector(
@@ -83,7 +87,7 @@ object GeoVector {
     /** 3D magnitude (Euclidean norm) of the vector. */
     def magnitude: Double =
       sqrt(self.east * self.east + self.north * self.north + self.vertical * self.vertical)
-
+      
   }
 
   /**

@@ -4,12 +4,12 @@ import com.colofabrix.scala.beesight.model.GeoVector
 import java.time.Instant
 
 /**
- * The flight metrics computed for a single data point, replicating the curves FlySight Viewer displays in its main
+ * The flight metrics computed for a single data point
  * plot.
  *
- * Conventions follow the FlySight data format: the vertical component of speed and acceleration is positive downward,
- * angles are in degrees with the course normalised to [0, 360), and the windowed rates are least-squares slopes over a
- * clamped ±`slopeHalfWindow` window of points (see [[FlightMetricsCalculator]]).
+ * The vertical component of speed and acceleration is positive downward, angles are in degrees with the course 
+ * normalised to [0, 360), and the windowed rates are least-squares slopes over a clamped ±`slopeHalfWindow` window of 
+ * points (see [[FlightMetricsCalculator]]).
  *
  * @param time                   Timestamp of the data point
  * @param altitude               Altitude above ground level (m); see [[MetricsGround]]
@@ -21,8 +21,8 @@ import java.time.Instant
  * @param courseAccuracy         GPS course accuracy (deg), when the format provides it; falls back to [[courseAccuracyEstimate]]
  * @param courseAccuracyEstimate Course accuracy derived from the speed accuracy
  * @param glideRatio             Horizontal distance covered per unit of descent; 0 when not descending
- * @param liftCoefficient        Lift coefficient from quasi-steady glide equilibrium; 0 when not moving
- * @param dragCoefficient        Drag coefficient from quasi-steady glide equilibrium; 0 when not moving
+ * @param liftCoefficient        Lift coefficient from the gravity-corrected acceleration across the flight path; 0 when not moving
+ * @param dragCoefficient        Drag coefficient from the gravity-corrected acceleration along the flight path; 0 when not moving
  * @param diveAngle              Angle between the flight path and the horizon (deg); positive when descending
  * @param diveRate               Least-squares slope of the dive angle over the window (deg/s)
  * @param turnRate               Instantaneous signed turn rate against the previous point (deg/s)
