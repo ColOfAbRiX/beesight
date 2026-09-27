@@ -11,7 +11,7 @@ import org.scalatest.matchers.should.Matchers
 
 class FlightMetricsCalculatorSpec extends AnyFreeSpec with Matchers with IOValues {
 
-  private val GpsFix = Gps(1.0, 2.0, 0.5, 3.0, 11)
+  private val GpsFix = Gps(1.0, 2.0, 0.5, Some(3.0), 11)
 
   private val defaultConfig = MetricsConfig(slopeHalfWindow = 4, mass = Mass(90.0), planformArea = Area(10.0))
 
@@ -139,6 +139,7 @@ class FlightMetricsCalculatorSpec extends AnyFreeSpec with Matchers with IOValue
       metric.verticalAccuracy shouldBe Some(2.0)
       metric.speedAccuracy shouldBe Some(0.5)
       metric.courseAccuracy shouldBe Some(3.0)
+      metric.courseAccuracyEstimate.get shouldBe Math.toDegrees(0.5 / Math.sqrt(1000.0)) +- 1e-9
       metric.satellites shouldBe Some(11)
       metric.sphericalErrorProbably.get shouldBe 0.5127 * 4.0 +- 1e-9
       metric.speedScoreAccuracy.get shouldBe Math.sqrt(2.0) * 2.0 / 3.0 +- 1e-9
@@ -154,6 +155,7 @@ class FlightMetricsCalculatorSpec extends AnyFreeSpec with Matchers with IOValue
       metric.verticalAccuracy shouldBe None
       metric.speedAccuracy shouldBe None
       metric.courseAccuracy shouldBe None
+      metric.courseAccuracyEstimate shouldBe None
       metric.satellites shouldBe None
       metric.sphericalErrorProbably shouldBe None
       metric.speedScoreAccuracy shouldBe None
@@ -173,6 +175,7 @@ class FlightMetricsCalculatorSpec extends AnyFreeSpec with Matchers with IOValue
         course = 0.0,
         courseRate = 0.0,
         courseAccuracy = Some(3.0),
+        courseAccuracyEstimate = Some(0.0),
         glideRatio = 0.0,
         liftCoefficient = 0.0,
         dragCoefficient = 0.0,
@@ -194,6 +197,22 @@ class FlightMetricsCalculatorSpec extends AnyFreeSpec with Matchers with IOValue
       )
 
       results.head shouldBe expected
+    }
+
+    "fall back to the derived estimate when the format provides no course accuracy" in {
+      val points = (0 until 9).map(index =>
+        pointAt(index, north = 30.0, vertical = 40.0, gps = Some(Gps(1.0, 2.0, 0.5, None, 11)))
+      )
+
+      val results = compute(points, defaultConfig)
+      val metric  = results(4)
+
+      val expectedEstimate = Math.toDegrees(0.5 / 50.0)
+
+      metric.courseAccuracy shouldBe Some(expectedEstimate)
+      metric.courseAccuracyEstimate shouldBe Some(expectedEstimate)
+      metric.speedAccuracy shouldBe Some(0.5)
+      metric.satellites shouldBe Some(11)
     }
 
   }
@@ -226,7 +245,7 @@ final private case class Gps(
   horizontalAccuracy: Double,
   verticalAccuracy: Double,
   speedAccuracy: Double,
-  courseAccuracy: Double,
+  courseAccuracy: Option[Double],
   satellites: Int,
 )
 
@@ -253,7 +272,7 @@ private object MetricPoint {
     def speedAccuracy(point: MetricPoint): Option[Double] =
       point.gps.map(_.speedAccuracy)
     def courseAccuracy(point: MetricPoint): Option[Double] =
-      point.gps.map(_.courseAccuracy)
+      point.gps.flatMap(_.courseAccuracy)
     def satellites(point: MetricPoint): Option[Int] =
       point.gps.map(_.satellites)
   }

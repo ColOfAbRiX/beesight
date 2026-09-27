@@ -25,13 +25,6 @@ import scala.concurrent.duration.*
  */
 class FlightMetricsBulkSpec extends AnyWordSpec with Matchers with IOValues with MetricsMatchers {
 
-  /**
-   * Minimum fraction of files whose metrics must match the export within tolerance.
-   *
-   * Blocked on: FlySight parity verification — raise to 1.0 once confirmed.
-   */
-  private val minSuccessRate = 0.0
-
   private val testFilesDir = TestFilesHandler.testFilesDir
 
   private val resultsFile = testFilesDir.resolve("metrics_results.csv")
@@ -64,7 +57,7 @@ class FlightMetricsBulkSpec extends AnyWordSpec with Matchers with IOValues with
       if fileResults.exists(_.nonEmpty) then
         info(s"Failing tests summary:\n${fileResults.filter(_.nonEmpty).map(_.mkString("\n")).mkString("\n\n")}")
 
-      successRate shouldBe >=(minSuccessRate)
+      successRate shouldBe >=(1.0)
     }
 
   }

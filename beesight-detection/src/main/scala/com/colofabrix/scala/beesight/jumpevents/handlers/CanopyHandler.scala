@@ -50,7 +50,7 @@ final private[handlers] class CanopyHandler private (config: CanopyConfig, freef
     isBelowCanopy && isAboveFreefall
 
   protected def findInflection(window: NonEmptyFilled[WindowEntry]): Option[Int] =
-    val discoveredInflection =  
+    val discoveredInflection =
       for {
         backWindow <- window.left
         inflection <- backWindow.findInflectionBy(_.smoothedSpeed.vertical)

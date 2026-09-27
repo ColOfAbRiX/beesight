@@ -15,9 +15,11 @@ import com.colofabrix.scala.beesight.utils.*
  */
 final class FlightMetricsCalculator private (config: MetricsConfig, groundElevation: Double) {
 
-  private val windowCapacity: Int = 2 * config.slopeHalfWindow + 1
+  private val windowCapacity: Int = 
+    2 * config.slopeHalfWindow + 1
 
-  private val aerodynamics: Aerodynamics = Aerodynamics(config)
+  private val aerodynamics: Aerodynamics = 
+    Aerodynamics(config)
 
   /** Streaming pipe: one FlightMetric per input point. */
   def compute[F[_], A: PointReader: GpsReader]: fs2.Pipe[F, A, FlightMetric] =
@@ -72,6 +74,12 @@ final class FlightMetricsCalculator private (config: MetricsConfig, groundElevat
     val sphericalErrorProbably = (horizontalAccuracy, verticalAccuracy).mapN(GpsMetrics.sphericalErrorProbable)
     val elevation              = center.altitude - groundElevation
 
+    val courseAccuracyEstimate =
+      center.speedAccuracy.map { accuracy =>
+        if totalSpeed > 0.0 then Math.toDegrees(accuracy / totalSpeed) 
+        else 0.0
+      }
+
     FlightMetric(
       time = center.time,
       altitude = elevation,
@@ -80,7 +88,8 @@ final class FlightMetricsCalculator private (config: MetricsConfig, groundElevat
       totalSpeed = totalSpeed,
       course = PerPointMetrics.course(speed),
       courseRate = WindowedMetrics.courseRate(window),
-      courseAccuracy = center.courseAccuracy,
+      courseAccuracy = center.courseAccuracy.orElse(courseAccuracyEstimate),
+      courseAccuracyEstimate = courseAccuracyEstimate,
       glideRatio = PerPointMetrics.glideRatio(speed),
       liftCoefficient = aerodynamics.liftCoefficient(diveAngle, totalSpeed, center.altitude),
       dragCoefficient = aerodynamics.dragCoefficient(diveAngle, totalSpeed, center.altitude),

@@ -18,7 +18,8 @@ import java.time.Instant
  * @param totalSpeed             3D speed magnitude (m/s)
  * @param course                 Direction of travel (deg, [0, 360); 0° = North, 90° = East)
  * @param courseRate             Least-squares slope of the course over the window, unwrapped across north (deg/s)
- * @param courseAccuracy         GPS course accuracy (deg), when the format provides it
+ * @param courseAccuracy         GPS course accuracy (deg), when the format provides it; falls back to [[courseAccuracyEstimate]]
+ * @param courseAccuracyEstimate Course accuracy derived from the speed accuracy
  * @param glideRatio             Horizontal distance covered per unit of descent; 0 when not descending
  * @param liftCoefficient        Lift coefficient from quasi-steady glide equilibrium; 0 when not moving
  * @param dragCoefficient        Drag coefficient from quasi-steady glide equilibrium; 0 when not moving
@@ -47,6 +48,7 @@ final case class FlightMetric(
   course: Double,
   courseRate: Double,
   courseAccuracy: Option[Double],
+  courseAccuracyEstimate: Option[Double],
   glideRatio: Double,
   liftCoefficient: Double,
   dragCoefficient: Double,

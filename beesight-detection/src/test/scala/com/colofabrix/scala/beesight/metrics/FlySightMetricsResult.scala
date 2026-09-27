@@ -31,7 +31,7 @@ final private[beesight] case class FlySightMetricsResult(
   dragCoefficient: Option[Double],
   course: Option[Double],                 // deg, in (-180, 180]
   courseRate: Option[Double],             // deg/s
-  courseAccuracy: Option[Double],         // deg
+  courseAccuracy: Option[Double],         // rad: dimensionless sAcc/|v|, despite the export's "(deg)" header
   accelerationForward: Option[Double],    // m/s²
   accelerationRight: Option[Double],      // m/s²
   accelerationDown: Option[Double],       // m/s²

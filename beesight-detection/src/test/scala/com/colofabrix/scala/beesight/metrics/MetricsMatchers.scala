@@ -23,8 +23,20 @@ trait MetricsMatchers {
   /** Field-level comparison: one failure message per field outside its tolerance. */
   def checkFlightMetric(obtained: FlightMetric, expected: FlySightMetricsResult): List[String] =
     List(
-      check("Elevation", "m", obtained.altitude, expected.elevation.map(_ * FtToM), lengthTolerance),
-      check("Vertical speed", "m/s", obtained.verticalSpeed, expected.verticalSpeed.map(_ * MphToMs), speedTolerance),
+      check(
+        "Elevation",
+        "m",
+        obtained.altitude,
+        expected.elevation.map(_ * FtToM),
+        lengthTolerance
+      ),
+      check(
+        "Vertical speed",
+        "m/s",
+        obtained.verticalSpeed,
+        expected.verticalSpeed.map(_ * MphToMs),
+        speedTolerance
+      ),
       check(
         "Horizontal speed",
         "m/s",
@@ -32,10 +44,34 @@ trait MetricsMatchers {
         expected.horizontalSpeed.map(_ * MphToMs),
         speedTolerance
       ),
-      check("Total speed", "m/s", obtained.totalSpeed, expected.totalSpeed.map(_ * MphToMs), speedTolerance),
-      check("Dive angle", "deg", obtained.diveAngle, expected.diveAngle, angleTolerance),
-      check("Dive rate", "deg/s", obtained.diveRate, expected.diveRate, angleTolerance),
-      check("Glide ratio", "", obtained.glideRatio, expected.glideRatio, ratioTolerance),
+      check(
+        "Total speed",
+        "m/s",
+        obtained.totalSpeed,
+        expected.totalSpeed.map(_ * MphToMs),
+        speedTolerance
+      ),
+      check(
+        "Dive angle",
+        "deg",
+        obtained.diveAngle,
+        expected.diveAngle,
+        angleTolerance
+      ),
+      check(
+        "Dive rate",
+        "deg/s",
+        obtained.diveRate,
+        expected.diveRate,
+        angleTolerance
+      ),
+      check(
+        "Glide ratio",
+        "",
+        obtained.glideRatio,
+        expected.glideRatio,
+        ratioTolerance
+      ),
       check(
         "Horizontal accuracy",
         "m",
@@ -50,15 +86,66 @@ trait MetricsMatchers {
         expected.verticalAccuracy.map(_ * FtToM),
         lengthTolerance
       ),
-      check("Speed accuracy", "m/s", obtained.speedAccuracy, expected.speedAccuracy.map(_ * MphToMs), speedTolerance),
-      check("Satellites", "", obtained.satellites.map(_.toDouble), expected.satellites.map(_.toDouble), 1e-9),
-      check("Total energy", "J/kg", obtained.totalEnergy, expected.totalEnergy, lengthTolerance),
-      check("Energy rate", "J/kg/s", obtained.energyRate, expected.energyRate, speedTolerance),
-      check("Lift coefficient", "", obtained.liftCoefficient, expected.liftCoefficient, coefficientTolerance),
-      check("Drag coefficient", "", obtained.dragCoefficient, expected.dragCoefficient, coefficientTolerance),
+      check(
+        "Speed accuracy",
+        "m/s",
+        obtained.speedAccuracy,
+        expected.speedAccuracy.map(_ * MphToMs),
+        speedTolerance
+      ),
+      check(
+        "Satellites",
+        "",
+        obtained.satellites.map(_.toDouble),
+        expected.satellites.map(_.toDouble),
+        1e-9
+      ),
+      check(
+        "Total energy",
+        "J/kg",
+        obtained.totalEnergy,
+        expected.totalEnergy,
+        lengthTolerance
+      ),
+      check(
+        "Energy rate",
+        "J/kg/s",
+        obtained.energyRate,
+        expected.energyRate,
+        speedTolerance
+      ),
+      check(
+        "Lift coefficient",
+        "",
+        obtained.liftCoefficient,
+        expected.liftCoefficient,
+        coefficientTolerance
+      ),
+      check(
+        "Drag coefficient",
+        "",
+        obtained.dragCoefficient,
+        expected.dragCoefficient,
+        coefficientTolerance
+      ),
       checkAngle("Course", "deg", obtained.course, expected.course, angleTolerance),
-      check("Course rate", "deg/s", obtained.courseRate, expected.courseRate, angleTolerance),
-      check("Course accuracy", "deg", obtained.courseAccuracy, expected.courseAccuracy, lengthTolerance),
+      check(
+        "Course rate",
+        "deg/s",
+        obtained.courseRate,
+        expected.courseRate,
+        angleTolerance
+      ),
+      // The export's "Course Accuracy (deg)" column is really the dimensionless ratio sAcc/|v| (≈ radians):
+      // convert it to degrees here, like the other display-unit conversions above. angleTolerance absorbs the
+      // export's 6-decimal rounding in rad space (toDegrees(5e-7) ≈ 2.9e-5 deg).
+      check(
+        "Course accuracy",
+        "deg",
+        obtained.courseAccuracyEstimate,
+        expected.courseAccuracy.map(Math.toDegrees),
+        angleTolerance
+      ),
       check(
         "Acceleration Forward",
         "m/s²",
@@ -66,8 +153,20 @@ trait MetricsMatchers {
         expected.accelerationForward,
         speedTolerance
       ),
-      check("Acceleration Right", "m/s²", obtained.accelerationCrossTrack, expected.accelerationRight, speedTolerance),
-      check("Acceleration Down", "m/s²", obtained.acceleration.vertical, expected.accelerationDown, speedTolerance),
+      check(
+        "Acceleration Right",
+        "m/s²",
+        obtained.accelerationCrossTrack,
+        expected.accelerationRight,
+        speedTolerance
+      ),
+      check(
+        "Acceleration Down",
+        "m/s²",
+        obtained.acceleration.vertical,
+        expected.accelerationDown,
+        speedTolerance
+      ),
       check(
         "Acceleration Magnitude",
         "m/s²",
@@ -82,7 +181,13 @@ trait MetricsMatchers {
         expected.sphericalErrorProbable,
         lengthTolerance
       ),
-      check("Speed score accuracy", "m/s", obtained.speedScoreAccuracy, expected.speedScoreAccuracy, speedTolerance),
+      check(
+        "Speed score accuracy",
+        "m/s",
+        obtained.speedScoreAccuracy,
+        expected.speedScoreAccuracy,
+        speedTolerance
+      ),
     ).flatten
 
   /** Matcher wrapper around [[checkFlightMetric]] for use in point-wise assertions. */
