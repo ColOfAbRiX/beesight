@@ -10,7 +10,7 @@ import org.scalatest.matchers.{ Matcher, MatchResult }
 trait MetricsMatchers {
 
   private val FtToM   = 0.3048
-  private val MphToMs = 0.44704
+  private val MphToMs = 1.0 / 2.23694
 
   /** Tolerances absorb the export's 6-decimal rounding; identical computations agree well below them. */
   private val lengthTolerance      = 1e-5 // m, after conversion
