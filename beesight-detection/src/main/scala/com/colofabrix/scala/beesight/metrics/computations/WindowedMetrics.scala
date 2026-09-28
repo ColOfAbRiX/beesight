@@ -1,9 +1,10 @@
-package com.colofabrix.scala.beesight.metrics
+package com.colofabrix.scala.beesight.metrics.computations
 
 import com.colofabrix.scala.beesight.math.*
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.readers.*
 import java.time.Duration
+import com.colofabrix.scala.beesight.metrics.computations.PerPointMetrics
 
 /**
  * Flight metrics computed over a clamped window of points, with x = seconds relative to the first point of the

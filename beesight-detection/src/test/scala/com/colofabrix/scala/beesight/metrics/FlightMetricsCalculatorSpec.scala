@@ -8,12 +8,15 @@ import com.colofabrix.scala.beesight.readers.*
 import java.time.Instant
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
+import com.colofabrix.scala.beesight.model.FlightMetric
 
 class FlightMetricsCalculatorSpec extends AnyFreeSpec with Matchers with IOValues {
 
-  private val GpsFix = Gps(1.0, 2.0, 0.5, Some(3.0), 11)
+  private val GpsFix = 
+    Gps(1.0, 2.0, 0.5, Some(3.0), 11)
 
-  private val defaultConfig = MetricsConfig(slopeHalfWindow = 4, mass = Mass(90.0), planformArea = Area(2.0))
+  private val defaultConfig = 
+    MetricsConfig(slopeHalfWindow = 4, mass = Mass(90.0), planformArea = Area(2.0))
 
   "FlightMetricsCalculator" - {
 

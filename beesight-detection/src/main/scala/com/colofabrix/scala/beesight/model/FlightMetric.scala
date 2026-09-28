@@ -1,15 +1,10 @@
-package com.colofabrix.scala.beesight.metrics
+package com.colofabrix.scala.beesight.model
 
 import com.colofabrix.scala.beesight.model.GeoVector
 import java.time.Instant
 
 /**
  * The flight metrics computed for a single data point
- * plot.
- *
- * The vertical component of speed and acceleration is positive downward, angles are in degrees with the course 
- * normalised to [0, 360), and the windowed rates are least-squares slopes over a clamped ±`slopeHalfWindow` window of 
- * points (see [[FlightMetricsCalculator]]).
  *
  * @param time                   Timestamp of the data point
  * @param altitude               Altitude above ground level (m); see [[MetricsGround]]

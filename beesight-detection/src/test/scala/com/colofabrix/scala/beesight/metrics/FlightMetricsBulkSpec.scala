@@ -6,6 +6,7 @@ import com.colofabrix.scala.beesight.IOValues
 import com.colofabrix.scala.beesight.TestFilesHandler
 import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.colofabrix.scala.beesight.jumpevents.JumpEventsDetector
+import com.colofabrix.scala.beesight.metrics.computations.*
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.readers.*
 import fs2.data.csv.*
@@ -18,16 +19,16 @@ import scala.concurrent.duration.*
 
 /**
  * Bulk check of the computed flight metrics against the golden metrics export.
- *
- * Each row of `metrics_results.csv` pairs a recording with its golden metrics file; the metrics computed by
- * [[FlightMetricsCalculator]] are compared field by field, after converting the export's display units
- * (see [[MetricsMatchers]]).
  */
 class FlightMetricsBulkSpec extends AnyWordSpec with Matchers with IOValues with MetricsMatchers {
 
-  private val testFilesDir = TestFilesHandler.testFilesDir
+  final private case class Comparison(failures: List[String], notes: List[String])
 
-  private val resultsFile = testFilesDir.resolve("metrics_results.csv")
+  private val testFilesDir =
+    TestFilesHandler.testFilesDir
+
+  private val resultsFile =
+    testFilesDir.resolve("metrics_results.csv")
 
   "FlightMetricsCalculator" should {
 
@@ -48,27 +49,31 @@ class FlightMetricsBulkSpec extends AnyWordSpec with Matchers with IOValues with
           .result(timeout = 5.minutes)
 
       val total       = fileResults.size
-      val failed      = fileResults.count(_.nonEmpty)
+      val failed      = fileResults.count(_.failures.nonEmpty)
       val successRate = 1.0 - (failed.toDouble / total.toDouble)
 
       info(f"Success rate is ${successRate * 100.0}%.1f%%")
       info(f"    Total number of files: $total")
       info(f"    Failed files:          $failed\n")
-      if fileResults.exists(_.nonEmpty) then
-        info(s"Failing tests summary:\n${fileResults.filter(_.nonEmpty).map(_.mkString("\n")).mkString("\n\n")}")
+      fileResults.filter(_.notes.nonEmpty).foreach { c =>
+        info(s"Golden comparison notes:\n${c.notes.mkString("\n")}")
+      }
+      if fileResults.exists(_.failures.nonEmpty) then
+        info(s"Failing tests summary:\n${fileResults.filter(_.failures.nonEmpty).map(_.failures.mkString("\n")).mkString("\n\n")}")
 
       successRate shouldBe >=(1.0)
     }
 
   }
 
-  private def validatePair(pair: MetricsValidationPair, idx: Int): IO[List[String]] =
+  private def validatePair(pair: MetricsValidationPair, idx: Int): IO[Comparison] =
     for
       obtained <- computeMetrics(testFilesDir.resolve(pair.inputFile), pair.groundElevationResidual)
       golden   <- TestFilesHandler.readCsv[FlySightMetricsResult](testFilesDir.resolve(pair.metricsFile)).compile.toList
     yield
-      val failures = compareWithGolden(obtained, golden)
-      if failures.isEmpty then Nil else s"[$idx] ${pair.inputFile}:" :: failures
+      val comparison = compareWithGolden(obtained, golden, DetectionConfig.default.metrics.slopeHalfWindow)
+      if comparison.failures.isEmpty then comparison
+      else comparison.copy(failures = s"[$idx] ${pair.inputFile}:" :: comparison.failures)
 
   private def computeMetrics(inputPath: Path, residual: Option[Double] = None): IO[List[FlightMetric]] =
     for
@@ -91,52 +96,72 @@ class FlightMetricsBulkSpec extends AnyWordSpec with Matchers with IOValues with
       .last
       .map(_.getOrElse(FlightEvents.empty))
 
-  /**
-   * Aligns the computed metrics with the golden rows by timestamp and summarises the mismatches per field: one line
-   * per field with the number of mismatching points and a sample message.
-   */
-  private def compareWithGolden(obtained: List[FlightMetric], golden: List[FlySightMetricsResult]): List[String] =
+  private def compareWithGolden(
+    obtained: List[FlightMetric],
+    golden: List[FlySightMetricsResult],
+    slopeHalfWindow: Int,
+  ): Comparison =
     val structural =
-      if obtained.isEmpty then List("  no input points were decoded")
-      else if golden.isEmpty then List("  no golden metrics rows were decoded")
-      else if obtained.size != golden.size then
-        List(s"  row count mismatch: ${obtained.size} computed, ${golden.size} golden")
-      else Nil
+      if obtained.isEmpty then Some(List("  no input points were decoded"))
+      else if golden.isEmpty then Some(List("  no golden metrics rows were decoded"))
+      else None
 
-    val goldenByTime = golden.groupMap(_.time)(identity)
+    if structural.isDefined then Comparison(structural.get, Nil)
+    else
+      val (leading, aligned) = obtained.span(_.time.isBefore(golden.head.time))
 
-    val mismatches = obtained.flatMap { metric =>
-      goldenByTime.get(metric.time) match
-        case None       => Nil
-        case Some(rows) =>
-          rows.headOption
-            .map(row => checkFlightMetric(metric, row))
-            .getOrElse(Nil)
-            .map(msg => fieldName(msg) -> msg)
-    }
+      val (quirkZone, comparable): (List[FlightMetric], List[FlightMetric]) =
+        if leading.isEmpty then (Nil, aligned)
+        else aligned.splitAt(slopeHalfWindow)
 
-    val missing = obtained.count(metric => !goldenByTime.contains(metric.time))
+      val goldenByTime  = golden.groupMap(_.time)(identity)
+      val obtainedTimes = obtained.map(_.time).toSet
 
-    val summary = mismatches
-      .groupMap(_._1)(_._2)
-      .toList
-      .sortBy(_._1)
-      .map {
-        case (field, messages) =>
-          s"  $field: ${messages.size}/${obtained.size} points mismatched; e.g.${messages.head}"
+      val missingComputed = golden.count(row => !obtainedTimes.contains(row.time))
+      val extraComputed   = comparable.count(metric => !goldenByTime.contains(metric.time))
+
+      val mismatches = comparable.flatMap { metric =>
+        goldenByTime.get(metric.time) match
+          case None       => Nil
+          case Some(rows) =>
+            rows.headOption.toList.flatMap { row =>
+              checkFlightMetric(metric, row).map(msg => fieldName(msg) -> msg)
+            }
       }
 
-    structural ++ Option.when(missing > 0)(s"  $missing computed metrics have no golden row").toList ++ summary
+      val summary = mismatches
+        .groupMap(_._1)(_._2)
+        .toList
+        .sortBy(_._1)
+        .map {
+          case (field, messages) =>
+            s"  $field: ${messages.size}/${comparable.size} points mismatched; e.g.${messages.head}"
+        }
+
+      val notes =
+        Option
+          .when(leading.nonEmpty) {
+            s"  ${leading.size} computed metrics precede the golden export (the Viewer skips the leading sample of recordings without a units row)"
+          }
+          .toList ++
+        Option
+          .when(quirkZone.nonEmpty) {
+            s"  ${quirkZone.size} golden head rows are computed by the Viewer over shortened windows and are not compared"
+          }
+          .toList
+
+      val failures =
+        Option.when(missingComputed > 0)(s"  $missingComputed golden metrics have no computed metric").toList ++
+        Option.when(extraComputed > 0)(s"  $extraComputed comparable computed metrics have no golden row").toList ++
+        summary
+
+      Comparison(failures, notes)
 
   private def fieldName(message: String): String =
     message.trim.takeWhile(_ != ':')
 
 }
 
-/**
- * A raw flight data point decoded from the test CSV files, usable as metrics input via its [[PointReader]] and
- * [[GpsReader]].
- */
 final private[beesight] case class GpsCsvPoint(
   time: Instant,
   altitude: Double,

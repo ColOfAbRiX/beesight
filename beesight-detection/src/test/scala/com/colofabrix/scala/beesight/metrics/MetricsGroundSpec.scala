@@ -1,6 +1,7 @@
 package com.colofabrix.scala.beesight.metrics
 
 import com.colofabrix.scala.beesight.config.{ Altitude, Area, Mass, MetricsConfig }
+import com.colofabrix.scala.beesight.metrics.computations.*
 import com.colofabrix.scala.beesight.model.EventPoint
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers

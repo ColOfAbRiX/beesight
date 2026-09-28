@@ -1,6 +1,7 @@
 package com.colofabrix.scala.beesight.metrics
 
 import com.colofabrix.scala.beesight.config.{ Area, Mass, MetricsConfig }
+import com.colofabrix.scala.beesight.metrics.computations.*
 import com.colofabrix.scala.beesight.model.GeoVector
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers

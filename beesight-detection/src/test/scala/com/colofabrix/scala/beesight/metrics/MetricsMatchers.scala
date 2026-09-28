@@ -2,7 +2,7 @@ package com.colofabrix.scala.beesight.metrics
 
 import com.colofabrix.scala.beesight.math.Heading
 import org.scalatest.matchers.{ Matcher, MatchResult }
-import com.colofabrix.scala.beesight.metrics.model.FlightMetric
+import com.colofabrix.scala.beesight.model.FlightMetric
 
 /**
  * Field-by-field comparison of a [[FlightMetric]] against the golden metrics export, converting the export's
@@ -137,9 +137,6 @@ trait MetricsMatchers {
         expected.courseRate,
         angleTolerance
       ),
-      // The export's "Course Accuracy (deg)" column is really the dimensionless ratio sAcc/|v| (≈ radians):
-      // convert it to degrees here, like the other display-unit conversions above. angleTolerance absorbs the
-      // export's 6-decimal rounding in rad space (toDegrees(5e-7) ≈ 2.9e-5 deg).
       check(
         "Course accuracy",
         "deg",

@@ -3,6 +3,7 @@ package com.colofabrix.scala.beesight.metrics
 import com.colofabrix.scala.beesight.model.GeoVector
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
+import com.colofabrix.scala.beesight.metrics.computations.PerPointMetrics
 
 class PerPointMetricsSpec extends AnyFreeSpec with Matchers {
 

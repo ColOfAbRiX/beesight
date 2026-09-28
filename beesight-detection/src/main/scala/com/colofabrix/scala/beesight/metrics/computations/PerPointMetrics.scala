@@ -1,6 +1,7 @@
-package com.colofabrix.scala.beesight.metrics
+package com.colofabrix.scala.beesight.metrics.computations
 
 import com.colofabrix.scala.beesight.math.Heading
+import com.colofabrix.scala.beesight.metrics.MetricsConstants
 import com.colofabrix.scala.beesight.model.GeoVector
 import java.lang.Math.*
 

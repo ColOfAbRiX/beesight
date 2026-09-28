@@ -2,6 +2,7 @@ package com.colofabrix.scala.beesight.metrics
 
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
+import com.colofabrix.scala.beesight.metrics.computations.GpsMetrics
 
 class GpsMetricsSpec extends AnyFreeSpec with Matchers {
 

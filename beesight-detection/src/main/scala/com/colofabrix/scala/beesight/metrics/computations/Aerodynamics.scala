@@ -1,4 +1,4 @@
-package com.colofabrix.scala.beesight.metrics
+package com.colofabrix.scala.beesight.metrics.computations
 
 import com.colofabrix.scala.beesight.config.MetricsConfig
 import com.colofabrix.scala.beesight.metrics.MetricsConstants.*

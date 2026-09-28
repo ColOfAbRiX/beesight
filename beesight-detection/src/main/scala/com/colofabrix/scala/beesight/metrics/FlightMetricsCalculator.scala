@@ -5,6 +5,7 @@ import com.colofabrix.scala.beesight.config.MetricsConfig
 import com.colofabrix.scala.beesight.metrics.FlightMetricsCalculator.MetricsState
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.readers.*
+import com.colofabrix.scala.beesight.metrics.computations.*
 import com.colofabrix.scala.beesight.utils.*
 
 /**

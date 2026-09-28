@@ -1,4 +1,4 @@
-package com.colofabrix.scala.beesight.metrics
+package com.colofabrix.scala.beesight.metrics.computations
 
 /**
  * GPS-quality metrics derived from the raw accuracy fields.
