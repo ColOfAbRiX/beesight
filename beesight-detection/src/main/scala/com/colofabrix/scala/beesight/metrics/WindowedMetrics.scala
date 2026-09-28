@@ -13,8 +13,8 @@ private[metrics] object WindowedMetrics {
 
   /** Component-wise least-squares slopes of the speed over the window (m/s²). */
   def acceleration[A: PointReader](window: Vector[A]): GeoVector =
-    val times  = relativeSeconds(window)
-    // FIXME: This can be done more efficiently with a foldLeft
+    val times = relativeSeconds(window)
+
     val norths = window.toArrayBy(_.speed.north)
     val easts  = window.toArrayBy(_.speed.east)
     val downs  = window.toArrayBy(_.speed.vertical)
@@ -28,7 +28,7 @@ private[metrics] object WindowedMetrics {
   /** Least-squares slope of the course over the window, unwrapped to a continuous signal (deg/s). */
   def courseRate[A: PointReader](window: Vector[A]): Double =
     val times  = relativeSeconds(window)
-    val angles = unwrap(window.toArrayBy(point => PerPointMetrics.course(point.speed)))
+    val angles = unwrap(window.toArrayBy(point => viewerHeading(point.speed)))
 
     times slopeAgainst angles
 
@@ -69,13 +69,29 @@ private[metrics] object WindowedMetrics {
       Duration.between(start, point.time).toMillis / 1000.0
     }
 
-  /** Cumulative sum of the angles with each delta wrapped to [-180, 180], making the sequence continuous. */
+  private def viewerHeading(speed: GeoVector): Double =
+    Math.atan2(speed.east, speed.north) / Math.PI * 180.0
+
   private def unwrap(angles: Array[Double]): Array[Double] =
     val out = new Array[Double](angles.length)
+
     if angles.length > 0 then
       out(0) = angles(0)
       for i <- 1 until angles.length do
-        out(i) = out(i - 1) + Heading.wrapSigned(angles(i) - angles(i - 1))
+        val delta = angles(i) - angles(i - 1)
+
+        val mapped =
+          if Math.abs(Math.abs(delta) - 180.0) < 1e-9 then
+            Math.signum(delta) * 180.0
+          else if delta > 180.0 then
+            delta - 360.0
+          else if delta < -180.0 then
+            delta + 360.0
+          else
+            delta
+
+        out(i) = out(i - 1) + mapped
+
     out
 
 }
