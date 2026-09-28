@@ -4,9 +4,9 @@ import fs2.data.csv.*
 import java.time.Instant
 
 /**
- * One row of the FlySight Viewer metrics export, used as the golden reference for the bulk comparison.
+ * One row of the golden metrics export, used as the reference for the bulk comparison.
  *
- * The Viewer exports its plotted values in display units: elevations and accuracies in feet, speeds in mph, angles in
+ * The export lists its plotted values in display units: elevations and accuracies in feet, speeds in mph, angles in
  * degrees with the course in (-180, 180]. The comparison converts them to the SI units used by [[FlightMetric]].
  *
  * The `Acceleration (m/s^2)` column (the slope of the total speed) has no counterpart in `FlightMetric` and is not
@@ -114,7 +114,7 @@ private[beesight] object FlySightMetricsResult {
 
 }
 
-/** One row of the index file pairing a recording with its FlySight-computed metrics file. */
+/** One row of the index file pairing a recording with its golden metrics file. */
 final private[beesight] case class MetricsValidationPair(
   inputFile: String,
   metricsFile: String,

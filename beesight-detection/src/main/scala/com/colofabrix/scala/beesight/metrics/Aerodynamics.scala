@@ -57,7 +57,7 @@ final private[metrics] class Aerodynamics private (config: MetricsConfig) {
 
       (liftCoefficient, dragCoefficient)
 
-  /** ISA troposphere barometric air density (kg/m³) at the given altitude (m), as the Viewer computes it. */
+  /** ISA troposphere barometric air density (kg/m³) at the given altitude (m). */
   private def airDensity(altitude: Double): Double =
     val exponent    = Gravity * MolarMassDryAir / UniversalGasConstant / TemperatureLapseRate
     val pressure    = SeaLevelPressure * pow(1.0 - TemperatureLapseRate * altitude / SeaLevelTemperature, exponent)

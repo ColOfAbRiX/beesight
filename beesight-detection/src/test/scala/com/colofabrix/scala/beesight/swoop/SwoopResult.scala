@@ -2,7 +2,7 @@ package com.colofabrix.scala.beesight.swoop
 
 import fs2.data.csv.*
 
-final private[beesight] case class GSwoopResult(
+final private[beesight] case class SwoopResult(
   filename: String,
   turnInitiationAltitude: Option[Double],
   rolloutStartAltitude: Option[Double],
@@ -37,10 +37,10 @@ final private[beesight] case class GSwoopResult(
 
 }
 
-private[beesight] object GSwoopResult {
+private[beesight] object SwoopResult {
 
-  given CsvRowDecoder[GSwoopResult, String] with
-    def apply(row: CsvRow[String]): DecoderResult[GSwoopResult] =
+  given CsvRowDecoder[SwoopResult, String] with
+    def apply(row: CsvRow[String]): DecoderResult[SwoopResult] =
       for
         filename                <- row.as[String]("filename")
         turnInitiationAltitude  <- optDouble(row, "turn_initiation_altitude")
@@ -57,7 +57,7 @@ private[beesight] object GSwoopResult {
         distanceToStop          <- optDouble(row, "distance_to_stop")
         touchdownEstimate       <- optDouble(row, "touchdown_estimate")
         expectedAngle           <- optDouble(row, "expected_angle")
-      yield GSwoopResult(
+      yield SwoopResult(
         filename = filename,
         turnInitiationAltitude = turnInitiationAltitude,
         rolloutStartAltitude = rolloutStartAltitude,

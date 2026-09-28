@@ -1,7 +1,7 @@
 package com.colofabrix.scala.beesight.metrics
 
 /**
- * GPS-quality metrics derived from the raw accuracy fields (FlySight Viewer formulas).
+ * GPS-quality metrics derived from the raw accuracy fields.
  */
 private[metrics] object GpsMetrics {
 

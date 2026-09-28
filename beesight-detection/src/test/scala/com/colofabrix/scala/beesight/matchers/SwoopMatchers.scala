@@ -5,7 +5,7 @@ import com.colofabrix.scala.beesight.swoop.*
 import org.scalatest.matchers.{ Matcher, MatchResult }
 
 /**
- * Custom ScalaTest matchers comparing [[SwoopData]] against gswoop-derived expected values.
+ * Custom ScalaTest matchers comparing [[SwoopData]] against the expected values from the reference recordings.
  */
 trait SwoopMatchers {
 
@@ -17,9 +17,9 @@ trait SwoopMatchers {
   private val MpsToKmh = 3.6
 
   /**
-   * Matches the swoop metrics computed from a recording against the expected gswoop values.
+   * Matches the swoop metrics computed from a recording against the expected values.
    */
-  def matchSwoop(expected: GSwoopResult): Matcher[Option[SwoopData]] =
+  def matchSwoop(expected: SwoopResult): Matcher[Option[SwoopData]] =
     (obtained: Option[SwoopData]) => {
       val failures =
         (obtained, expected) match {
@@ -43,7 +43,7 @@ trait SwoopMatchers {
   /**
    * Matches only the expected angle of rotation from the logbook.
    */
-  def matchSwoopAngle(expected: GSwoopResult): Matcher[Option[SwoopData]] =
+  def matchSwoopAngle(expected: SwoopResult): Matcher[Option[SwoopData]] =
     (obtained: Option[SwoopData]) => {
       val failures =
         (obtained, expected.expectedAngle) match {
@@ -68,7 +68,7 @@ trait SwoopMatchers {
       )
     }
 
-  private def checkFields(swoop: SwoopData, expected: GSwoopResult): List[String] =
+  private def checkFields(swoop: SwoopData, expected: SwoopResult): List[String] =
     List(
       check(
         "Turn initiation altitude",

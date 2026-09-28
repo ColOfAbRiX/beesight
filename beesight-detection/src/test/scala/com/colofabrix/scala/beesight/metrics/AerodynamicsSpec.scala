@@ -15,7 +15,7 @@ class AerodynamicsSpec extends AnyFreeSpec with Matchers {
   private val speed        = GeoVector(north = 0.0, east = 3.0, vertical = 4.0)
   private val altitude     = 500.0
 
-  /** Dynamic pressure of the fixture at the given altitude, from the Viewer's ISA barometric formulas. */
+  /** Dynamic pressure of the fixture at the given altitude, from the ISA barometric formulas. */
   private def dynamicPressure(at: Double): Double = {
     val pressure = 101325.0 * Math.pow(1.0 - 0.0065 * at / 288.15, 9.80665 * 0.0289644 / 8.31447 / 0.0065)
     val density  = pressure / (8.31447 / 0.0289644) / (288.15 - 0.0065 * at)

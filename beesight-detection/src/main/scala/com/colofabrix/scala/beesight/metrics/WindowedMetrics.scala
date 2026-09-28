@@ -7,7 +7,7 @@ import java.time.Duration
 
 /**
  * Flight metrics computed over a clamped window of points, with x = seconds relative to the first point of the
- * window, replicating FlySight's `getSlope`.
+ * window.
  */
 private[metrics] object WindowedMetrics {
 
@@ -28,7 +28,7 @@ private[metrics] object WindowedMetrics {
   /** Least-squares slope of the course over the window, unwrapped to a continuous signal (deg/s). */
   def courseRate[A: PointReader](window: Vector[A]): Double =
     val times  = relativeSeconds(window)
-    val angles = unwrap(window.toArrayBy(point => viewerHeading(point.speed)))
+    val angles = unwrap(window.toArrayBy(point => rawHeading(point.speed)))
 
     times slopeAgainst angles
 
@@ -69,7 +69,7 @@ private[metrics] object WindowedMetrics {
       Duration.between(start, point.time).toMillis / 1000.0
     }
 
-  private def viewerHeading(speed: GeoVector): Double =
+  private def rawHeading(speed: GeoVector): Double =
     Math.atan2(speed.east, speed.north) / Math.PI * 180.0
 
   private def unwrap(angles: Array[Double]): Array[Double] =

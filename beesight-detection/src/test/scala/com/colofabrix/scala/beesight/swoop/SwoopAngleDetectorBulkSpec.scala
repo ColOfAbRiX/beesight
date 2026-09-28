@@ -32,11 +32,11 @@ class SwoopAngleDetectorBulkSpec extends AnyWordSpec with Matchers with IOValues
     "match the logbook angle of rotation for a minimum share of the test recordings" in {
       val expectedValues =
         TestFilesHandler
-          .readCsv[GSwoopResult](resultsFile)
+          .readCsv[SwoopResult](resultsFile)
           .compile
           .toList
           .result()
-          //  The false-positive recordings carry gswoop's spurious angle in the CSV but the expected outcome is no
+          //  The false-positive recordings carry a spurious angle in the CSV but the expected outcome is no
           //  swoop at all (their row is otherwise empty): they are the bulk spec's concern, not the angle's.
           .filter(e => !e.isEmpty && e.expectedAngle.isDefined)
 

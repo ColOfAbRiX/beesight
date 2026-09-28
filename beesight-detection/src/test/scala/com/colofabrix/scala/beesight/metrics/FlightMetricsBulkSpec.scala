@@ -17,11 +17,11 @@ import org.scalatest.wordspec.AnyWordSpec
 import scala.concurrent.duration.*
 
 /**
- * Bulk check of the computed flight metrics against the FlySight Viewer metrics export.
+ * Bulk check of the computed flight metrics against the golden metrics export.
  *
- * Each row of `metrics_results.csv` pairs a recording with the metrics file that the FlySight Viewer exported for it;
- * the metrics computed by [[FlightMetricsCalculator]] are compared field by field, after converting the export's
- * display units (see [[MetricsMatchers]]).
+ * Each row of `metrics_results.csv` pairs a recording with its golden metrics file; the metrics computed by
+ * [[FlightMetricsCalculator]] are compared field by field, after converting the export's display units
+ * (see [[MetricsMatchers]]).
  */
 class FlightMetricsBulkSpec extends AnyWordSpec with Matchers with IOValues with MetricsMatchers {
 
@@ -31,7 +31,7 @@ class FlightMetricsBulkSpec extends AnyWordSpec with Matchers with IOValues with
 
   "FlightMetricsCalculator" should {
 
-    "match the FlySight Viewer metrics of the validation recordings" in {
+    "match the golden metrics of the validation recordings" in {
       val pairs =
         TestFilesHandler
           .readCsv[MetricsValidationPair](resultsFile)

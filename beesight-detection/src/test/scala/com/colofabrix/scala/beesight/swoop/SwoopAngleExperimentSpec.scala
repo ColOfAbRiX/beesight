@@ -32,7 +32,7 @@ class SwoopAngleExperimentSpec extends AnyWordSpec with IOValues {
 
     "sweep the carve reliable-speed floor against the logbook" in {
       val expectedValues =
-        TestFilesHandler.readCsv[GSwoopResult](resultsFile).compile.toList.result()
+        TestFilesHandler.readCsv[SwoopResult](resultsFile).compile.toList.result()
 
       val rows = expectedValues
         .parFlatTraverse { expected =>
@@ -60,7 +60,7 @@ class SwoopAngleExperimentSpec extends AnyWordSpec with IOValues {
   }
 
   /** One line per file: the expected angle, every floor variant's value, and the baseline carve window diagnostics. */
-  private def evaluateFile(filePath: java.nio.file.Path, expected: GSwoopResult): IO[Option[String]] =
+  private def evaluateFile(filePath: java.nio.file.Path, expected: SwoopResult): IO[Option[String]] =
     if expected.expectedAngle.isEmpty then IO.pure(None)
     else
       for {

@@ -23,10 +23,10 @@ class BulkSwoopDetectionSpec extends AnyWordSpec with Matchers with IOValues wit
 
   "SwoopDataDetector" should {
 
-    "match gswoop metrics for all test recordings" in {
+    "match the reference metrics for all test recordings" in {
       val expectedValues =
         TestFilesHandler
-          .readCsv[GSwoopResult](resultsFile)
+          .readCsv[SwoopResult](resultsFile)
           .compile
           .toList
           .result()

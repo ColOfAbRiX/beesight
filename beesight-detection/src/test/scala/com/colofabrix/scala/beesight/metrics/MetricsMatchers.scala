@@ -2,9 +2,10 @@ package com.colofabrix.scala.beesight.metrics
 
 import com.colofabrix.scala.beesight.math.Heading
 import org.scalatest.matchers.{ Matcher, MatchResult }
+import com.colofabrix.scala.beesight.metrics.model.FlightMetric
 
 /**
- * Field-by-field comparison of a [[FlightMetric]] against the FlySight Viewer metrics export, converting the export's
+ * Field-by-field comparison of a [[FlightMetric]] against the golden metrics export, converting the export's
  * display units (feet, mph) to SI and comparing the course through its wrapped angular difference.
  */
 trait MetricsMatchers {

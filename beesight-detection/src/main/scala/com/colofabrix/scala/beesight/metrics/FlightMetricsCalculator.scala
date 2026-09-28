@@ -8,10 +8,7 @@ import com.colofabrix.scala.beesight.readers.*
 import com.colofabrix.scala.beesight.utils.*
 
 /**
- * Computes per-point flight metrics replicating the FlySight Viewer main-plot curves.
- *
- * Every input point produces one [[FlightMetric]]. Windowed metrics use a least-squares slope over a clamped
- * ±`slopeHalfWindow` window (9 samples by default), replicating FlySight's `getSlope`.
+ * Computes per-point flight metrics.
  */
 final class FlightMetricsCalculator private (config: MetricsConfig, groundElevation: Double) {
 
