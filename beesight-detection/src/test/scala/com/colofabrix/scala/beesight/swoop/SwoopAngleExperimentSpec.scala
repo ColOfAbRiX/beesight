@@ -13,12 +13,11 @@ import org.scalatest.wordspec.AnyWordSpec
 import scala.concurrent.duration.*
 
 /**
- * Speed-floor sweep for the carve turn angle. Hypothesis: in the expected-0 recordings the rotation seen by the
- * detector is the turn into final, flown at low speed before the swoop - the swoop itself is straight and speed
- * builds only after the turn. If so, raising the reliable-speed floor should exclude the approach turn while
- * keeping the swoop's own rotation. Sweeps the floor from 4 to 15 m/s (tail and core rate fixed at 20 deg/s) and
- * reports, per recording, every variant's value plus the baseline carve window with the horizontal speed at its
- * start, at the dive point, at its end and over the whole window.
+ * Extension-rate sweep for the carve turn angle. The fast carve ends at the dive point but the rollout keeps
+ * rotating gently in the same direction; the expansion rate decides how much of that gentle tail belongs to the
+ * carve. Sweeps the expansion (tail) rate from 2 to 20 deg/s with the core rate fixed at 20 deg/s and the
+ * reliable-speed floor at 10 m/s, reporting per recording every variant's value plus the baseline window
+ * diagnostics.
  */
 class SwoopAngleExperimentSpec extends AnyWordSpec with IOValues {
 
@@ -26,11 +25,11 @@ class SwoopAngleExperimentSpec extends AnyWordSpec with IOValues {
   private val resultsFile  = Paths.get("src/test/resources/test_files/swoop_results.csv")
 
   private val tolerance = 30.0
-  private val floors    = List(4.0, 6.0, 8.0, 10.0, 12.0, 15.0)
+  private val floors    = List(20.0, 12.0, 8.0, 5.0, 2.0)
 
   "Swoop angle experiment" should {
 
-    "sweep the carve reliable-speed floor against the logbook" in {
+    "sweep the carve extension rate against the logbook" in {
       val expectedValues =
         TestFilesHandler.readCsv[SwoopResult](resultsFile).compile.toList.result()
 
@@ -47,8 +46,8 @@ class SwoopAngleExperimentSpec extends AnyWordSpec with IOValues {
       val outPath = java.nio.file.Paths.get("target", "swoop-angle-speed-floor.txt")
       java.nio.file.Files.createDirectories(outPath.getParent)
 
-      val header = "filename,expected," + floors.map(f => f"hs$f%.0f").mkString(",") +
-        ",start,end,dive,hsStart,hsDive,hsEnd,hsMin,hsMax"
+      val header = "filename,expected," + floors.map(f => f"tail$f%.0f").mkString(",") +
+        ",anchor,start,end,dive,hsStart,hsDive,hsEnd,hsMin,hsMax"
       val summary = summarize(rows)
 
       val content = header :: rows ::: List("", summary)
@@ -90,28 +89,33 @@ class SwoopAngleExperimentSpec extends AnyWordSpec with IOValues {
               val bottom = bottomOpt.getOrElse(stop)
 
               val results = floors.map(f =>
-                rateCarve(series, top, bottom, dive, coreRate = 20.0, tailRate = 20.0, minHs = f, gap = 5)
+                rateCarve(series, top, bottom, dive, coreRate = 20.0, tailRate = f, minHs = 10.0, gap = 5)
               )
               val base = results.head
+
+              //  Dive-anchored variant: no backward expansion - the approach turn into the dive is not part of
+              //  the swoop rotation the logbook counts  //
+              val anchor = rateCarve(series, dive, bottom, dive, coreRate = 20.0, tailRate = 20.0, minHs = 10.0, gap = 5)
 
               val hsMin = (base.start to base.end).map(series.horizontalSpeed).min
               val hsMax = (base.start to base.end).map(series.horizontalSpeed).max
 
-              results.map(r => f"${r.value}%.1f").mkString(",")
               val diag =
                 f"${base.start},${base.end},$dive,${series.horizontalSpeed(base.start)}%.1f,${series.horizontalSpeed(dive)}%.1f,${series.horizontalSpeed(base.end)}%.1f,$hsMin%.1f,$hsMax%.1f"
 
               val exp = expected.expectedAngle.getOrElse(Double.NaN)
-              Some(f"${expected.filename},$exp%.0f,${results.map(_.value).map(v => f"$v%.1f").mkString(",")},$diag")
+              Some(
+                f"${expected.filename},$exp%.0f,${results.map(_.value).map(v => f"$v%.1f").mkString(",")},${anchor.value}%.1f,$diag"
+              )
             }
           }
         }
       }
 
-  /** Pass-rate summary per floor variant, plus fixed/broken file lists relative to the 4 m/s baseline. */
+  /** Pass-rate summary per extension-rate variant, plus fixed/broken file lists relative to the 20 deg/s baseline. */
   private def summarize(rows: List[String]): String = {
     val parsed = rows.map(_.split(",").toList)
-    val names  = floors.map(f => f"hs$f%.0f")
+    val names  = floors.map(f => f"tail$f%.0f")
 
     def passes(col: Int): List[Boolean] =
       parsed.map(p => Math.abs(Math.abs(p(col).toDouble) - Math.abs(p(1).toDouble)) <= tolerance)
@@ -121,15 +125,28 @@ class SwoopAngleExperimentSpec extends AnyWordSpec with IOValues {
       f"$name%-6s: $n%3d / ${parsed.size}%3d  (${100.0 * n / parsed.size}%.1f%%)"
     }
 
+    //  The dive-anchored variant: last value column, before the diagnostics  //
+    val anchorCol = parsed.map(p => Math.abs(p(2 + floors.length).toDouble))
+    val anchorPasses = parsed.map { p =>
+      Math.abs(Math.abs(p(2 + floors.length).toDouble) - Math.abs(p(1).toDouble)) <= tolerance
+    }
+    val anchorLine =
+      f"anchor : ${anchorPasses.count(identity)}%3d / ${parsed.size}%3d  (${100.0 * anchorPasses.count(identity) / parsed.size}%.1f%%)"
+    val anchorDiffs = {
+      val fixed  = parsed.zip(anchorPasses).zip(passes(2)).collect { case ((p, f), b) if f && !b => p(0) }
+      val broken = parsed.zip(anchorPasses).zip(passes(2)).collect { case ((p, f), b) if !f && b => p(0) }
+      s"anchor vs tail20: fixes ${fixed.size} [${fixed.mkString(", ")}], breaks ${broken.size} [${broken.mkString(", ")}]"
+    }
+
     val base  = passes(2)
     val diffs = names.zipWithIndex.tail.map { (name, i) =>
       val flags  = passes(i + 2)
       val fixed  = parsed.zip(flags).zip(base).collect { case ((p, f), b) if f && !b => p(0) }
       val broken = parsed.zip(flags).zip(base).collect { case ((p, f), b) if !f && b => p(0) }
-      s"$name vs hs4: fixes ${fixed.size} [${fixed.mkString(", ")}], breaks ${broken.size} [${broken.mkString(", ")}]"
+      s"$name vs tail20: fixes ${fixed.size} [${fixed.mkString(", ")}], breaks ${broken.size} [${broken.mkString(", ")}]"
     }
 
-    (f"Total files: ${parsed.size}" :: counts ::: List("") ::: diffs).mkString("\n")
+    (f"Total files: ${parsed.size}" :: counts ::: List(anchorLine, anchorDiffs, "") ::: diffs).mkString("\n")
   }
 
   //  The validated carve formula, parameterised  //

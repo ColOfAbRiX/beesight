@@ -18,9 +18,6 @@ import scala.concurrent.duration.*
  */
 class SwoopAngleDetectorBulkSpec extends AnyWordSpec with Matchers with IOValues with SwoopMatchers {
 
-  /** Minimum fraction of angle files whose detected angle must match the logbook within tolerance. */
-  private val minSuccessRate = 1.0
-
   private val testFilesDir =
     Paths.get("src/test/resources/test_files")
 
@@ -38,7 +35,9 @@ class SwoopAngleDetectorBulkSpec extends AnyWordSpec with Matchers with IOValues
           .result()
           //  The false-positive recordings carry a spurious angle in the CSV but the expected outcome is no
           //  swoop at all (their row is otherwise empty): they are the bulk spec's concern, not the angle's.
-          .filter(e => !e.isEmpty && e.expectedAngle.isDefined)
+          .filter { e => 
+            !e.isEmpty && e.expectedAngle.isDefined
+          }
 
       val failures =
         expectedValues
@@ -73,7 +72,7 @@ class SwoopAngleDetectorBulkSpec extends AnyWordSpec with Matchers with IOValues
         info(s"Failing tests summary:\n${failures.mkString("\n\n")}")
       }
 
-      successRate shouldBe >=(minSuccessRate)
+      successRate shouldBe >= (1.0)
     }
 
   }

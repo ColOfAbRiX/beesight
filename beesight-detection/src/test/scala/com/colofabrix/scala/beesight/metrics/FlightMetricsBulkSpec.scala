@@ -2,13 +2,12 @@ package com.colofabrix.scala.beesight.metrics
 
 import cats.effect.IO
 import cats.syntax.all.given
-import com.colofabrix.scala.beesight.IOValues
-import com.colofabrix.scala.beesight.TestFilesHandler
 import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.colofabrix.scala.beesight.jumpevents.JumpEventsDetector
 import com.colofabrix.scala.beesight.metrics.computations.*
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.readers.*
+import com.colofabrix.scala.beesight.{ IOValues, TestFilesHandler }
 import fs2.data.csv.*
 import java.nio.file.Path
 import java.time.format.DateTimeFormatter

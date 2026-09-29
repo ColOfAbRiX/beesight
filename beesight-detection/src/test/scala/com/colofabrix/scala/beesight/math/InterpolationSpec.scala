@@ -1,7 +1,6 @@
 package com.colofabrix.scala.beesight.math
 
 import com.colofabrix.scala.beesight.model.*
-import com.colofabrix.scala.beesight.readers.*
 import java.time.Instant
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
@@ -219,7 +218,6 @@ class InterpolationSpec extends AnyFreeSpec with Matchers {
       }
 
     }
-
 
   }
 

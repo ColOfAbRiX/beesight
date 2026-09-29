@@ -83,12 +83,12 @@ private[beesight] object GenericPoint {
 
     def apply(row: CsvRow[String]): DecoderResult[GenericPoint] =
       for
-        time    <- timeField.decode(row)
-        hMSL    <- hMSLField.decode(row)
-        velN    <- velNField.decode(row)
-        velE    <- velEField.decode(row)
-        velD    <- velDField.decode(row)
-        numSV   <- numSVField.decode(row)
+        time  <- timeField.decode(row)
+        hMSL  <- hMSLField.decode(row)
+        velN  <- velNField.decode(row)
+        velE  <- velEField.decode(row)
+        velD  <- velDField.decode(row)
+        numSV <- numSVField.decode(row)
       yield GenericPoint(
         time = time,
         hMSL = hMSL,

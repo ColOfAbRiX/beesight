@@ -1,5 +1,6 @@
 package com.colofabrix.scala.beesight.swoop
 
+import com.colofabrix.scala.beesight.config.SwoopConfig
 import com.colofabrix.scala.beesight.math.Heading
 import com.colofabrix.scala.beesight.swoop.model.PointSeries
 import java.time.Duration
@@ -21,7 +22,7 @@ private[swoop] object SwoopCascade {
     (0 until series.length - 1)
       .find { i =>
         val aboveOrAt = agl(i) >= SwoopConstants.patternEntryAltitude
-        val below      = agl(i + 1) < SwoopConstants.patternEntryAltitude
+        val below     = agl(i + 1) < SwoopConstants.patternEntryAltitude
         aboveOrAt && below
       }
       .map(_ + 1)
@@ -247,7 +248,7 @@ private[swoop] object SwoopCascade {
       else
         val stillDescending = series.altitude(j) < minAltitude
         minAltitude = series.altitude(j)
-        
+
         val previous = k
         k = j
 
@@ -277,10 +278,10 @@ private[swoop] object SwoopCascade {
       else {
         k = j
         if series.altitude(j) > targetAltitude then
-          val altDelta    = series.altitude(j + 1) - series.altitude(j)
-          val fraction    = (targetAltitude - series.altitude(j)) / altDelta
-          val timeDelta   = series.timeMillis(j + 1) - series.timeMillis(j)
-          val crossing    = series.timeMillis(j) + fraction * timeDelta
+          val altDelta  = series.altitude(j + 1) - series.altitude(j)
+          val fraction  = (targetAltitude - series.altitude(j)) / altDelta
+          val timeDelta = series.timeMillis(j + 1) - series.timeMillis(j)
+          val crossing  = series.timeMillis(j) + fraction * timeDelta
           cross = Some((j, crossing))
           walking = false
       }

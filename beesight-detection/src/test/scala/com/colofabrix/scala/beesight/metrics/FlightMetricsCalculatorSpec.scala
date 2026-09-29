@@ -3,19 +3,18 @@ package com.colofabrix.scala.beesight.metrics
 import cats.effect.IO
 import com.colofabrix.scala.beesight.IOValues
 import com.colofabrix.scala.beesight.config.{ Area, Mass, MetricsConfig }
-import com.colofabrix.scala.beesight.model.*
+import com.colofabrix.scala.beesight.model.{ FlightMetric, * }
 import com.colofabrix.scala.beesight.readers.*
 import java.time.Instant
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
-import com.colofabrix.scala.beesight.model.FlightMetric
 
 class FlightMetricsCalculatorSpec extends AnyFreeSpec with Matchers with IOValues {
 
-  private val GpsFix = 
+  private val GpsFix =
     Gps(1.0, 2.0, 0.5, Some(3.0), 11)
 
-  private val defaultConfig = 
+  private val defaultConfig =
     MetricsConfig(slopeHalfWindow = 4, mass = Mass(90.0), planformArea = Area(2.0))
 
   "FlightMetricsCalculator" - {
@@ -67,16 +66,16 @@ class FlightMetricsCalculatorSpec extends AnyFreeSpec with Matchers with IOValue
       val totalSpeed   = Math.sqrt(1000.0)
 
       // The windowed acceleration is zero, so only gravity remains on the vertical component
-      val accelD      = 0.0 - 9.80665
-      val proj        = accelD * 10.0 / totalSpeed
-      val dragNorth   = proj * 30.0 / totalSpeed
-      val dragDown    = proj * 10.0 / totalSpeed
-      val accelDrag   = Math.sqrt(dragNorth * dragNorth + dragDown * dragDown)
-      val liftNorth   = 0.0 - dragNorth
-      val liftDown    = accelD - dragDown
-      val accelLift   = Math.sqrt(liftNorth * liftNorth + liftDown * liftDown)
-      val pressure    = 101325.0 * Math.pow(1.0 - 0.0065 * 980.0 / 288.15, 9.80665 * 0.0289644 / 8.31447 / 0.0065)
-      val airDensity  = pressure / (8.31447 / 0.0289644) / (288.15 - 0.0065 * 980.0)
+      val accelD          = 0.0 - 9.80665
+      val proj            = accelD * 10.0 / totalSpeed
+      val dragNorth       = proj * 30.0 / totalSpeed
+      val dragDown        = proj * 10.0 / totalSpeed
+      val accelDrag       = Math.sqrt(dragNorth * dragNorth + dragDown * dragDown)
+      val liftNorth       = 0.0 - dragNorth
+      val liftDown        = accelD - dragDown
+      val accelLift       = Math.sqrt(liftNorth * liftNorth + liftDown * liftDown)
+      val pressure        = 101325.0 * Math.pow(1.0 - 0.0065 * 980.0 / 288.15, 9.80665 * 0.0289644 / 8.31447 / 0.0065)
+      val airDensity      = pressure / (8.31447 / 0.0289644) / (288.15 - 0.0065 * 980.0)
       val dynamicPressure = airDensity * totalSpeed * totalSpeed / 2.0
 
       metric.liftCoefficient shouldBe (mass * accelLift / dynamicPressure / planformArea) +- 1e-9

@@ -41,7 +41,7 @@ final private[metrics] class Aerodynamics private (config: MetricsConfig) {
       val accelCorrected = acceleration - GravityVector
 
       // Component of the gravity-corrected acceleration along the flight path: deceleration due to drag
-      val proj      = (accelCorrected dot speed) / vel
+      val proj = (accelCorrected dot speed) / vel
 
       // Drag
       val drag      = speed * proj / vel

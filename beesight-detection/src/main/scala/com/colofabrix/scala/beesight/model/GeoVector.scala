@@ -87,7 +87,7 @@ object GeoVector {
     /** 3D magnitude (Euclidean norm) of the vector. */
     def magnitude: Double =
       sqrt(self.east * self.east + self.north * self.north + self.vertical * self.vertical)
-      
+
   }
 
   /**

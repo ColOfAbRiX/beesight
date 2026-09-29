@@ -1,8 +1,8 @@
 package com.colofabrix.scala.beesight.metrics
 
 import com.colofabrix.scala.beesight.math.Heading
-import org.scalatest.matchers.{ Matcher, MatchResult }
 import com.colofabrix.scala.beesight.model.FlightMetric
+import org.scalatest.matchers.{ Matcher, MatchResult }
 
 /**
  * Field-by-field comparison of a [[FlightMetric]] against the golden metrics export, converting the export's
@@ -14,11 +14,11 @@ trait MetricsMatchers {
   private val MphToMs = 1.0 / 2.23694
 
   /** Tolerances absorb the export's 6-decimal rounding; identical computations agree well below them. */
-  private val lengthTolerance      = 1e-5 // m, after conversion
-  private val speedTolerance       = 1e-5 // m/s, after conversion
-  private val angleTolerance       = 1e-4 // deg
-  private val ratioTolerance       = 1e-4
-  private val energyTolerance      = 1e-5 // J/kg and J/kg/s
+  private val lengthTolerance = 1e-5 // m, after conversion
+  private val speedTolerance  = 1e-5 // m/s, after conversion
+  private val angleTolerance  = 1e-4 // deg
+  private val ratioTolerance  = 1e-4
+  // J/kg and J/kg/s
   private val coefficientTolerance = 1e-3
 
   /** Field-level comparison: one failure message per field outside its tolerance. */

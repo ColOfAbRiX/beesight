@@ -20,18 +20,18 @@ class SwoopAngleDebugSpec extends AnyWordSpec with IOValues {
 
   private val testFilesDir = Paths.get("src/test/resources/test_files")
 
-  /** Representative failing files: under-reports, over-reports, and the dedicated angles/ samples. */
+  /** Representative failing files: real turns the carve under-reports by 30-50 degrees. */
   private val files = List(
-    //  group 05: expected 0, rotation detected - hypothesis: the turn into final before the dive  //
-    "csv_files/jump_841.zip",  // expected   0, carve20 -161.3, carve hs 6.3-22.6
-    "csv_files/jump_1358.zip", // expected   0, carve20  -52.4, carve hs 15.6-18.7
-    "csv_files/jump_1377.zip", // expected   0, carve20  -57.5, carve hs 19.5-21.2
-    "csv_files/jump_1382.zip", // expected   0, carve20   77.6, carve hs 16.5-18.5
-    "csv_files/jump_1417.zip", // expected   0, carve20  -67.8, carve hs 19.6-22.6
+    "csv_files/jump_962.zip",  // expected  90, detected  33.4
+    "csv_files/jump_963.zip",  // expected  90, detected  44.1
+    "csv_files/jump_965.zip",  // expected  90, detected  59.0
+    "csv_files/jump_967.zip",  // expected  90, detected  49.1
+    "csv_files/jump_968.zip",  // expected  90, detected  48.7
+    "csv_files/jump_1418.zip", // expected  90, detected  58.6
+    "csv_files/jump_1445.zip", // expected  90, detected  43.2
+    "csv_files/jump_1857.zip", // expected 135, detected  88.1
     //  passing carves for contrast  //
-    "csv_files/jump_1155.zip", // expected  90, carve20   86.4
-    "csv_files/jump_1163.zip", // expected  90, carve20  107.4
-    "csv_files/jump_1423.zip", // expected  90, carve20   99.3
+    "csv_files/jump_1155.zip", // expected  90, detected  86.4
   )
 
   "Swoop angle debug" should {
@@ -63,14 +63,24 @@ class SwoopAngleDebugSpec extends AnyWordSpec with IOValues {
       val patternEntry = SwoopCascade.findPatternEntry(series, ground)
       val dive         = SwoopCascade.findDivePoint(series, patternEntry.getOrElse(0), ground)
       val topOfTurn    = dive.map(d =>
-        SwoopCascade.findTopOfTurn(series, d, patternEntry.getOrElse(0), DetectionConfig.default.swoop.pullThreshold.value)
+        SwoopCascade.findTopOfTurn(
+          series,
+          d,
+          patternEntry.getOrElse(0),
+          DetectionConfig.default.swoop.pullThreshold.value
+        )
       )
       val stop    = dive.flatMap(d => SwoopCascade.findStop(series, d))
       val rollout = for {
         d <- dive
         t <- topOfTurn
         s <- stop
-      } yield SwoopCascade.findRolloutStart(series, t, s, DetectionConfig.default.swoop.rolloutWindow.value).getOrElse(-1)
+      } yield SwoopCascade.findRolloutStart(
+        series,
+        t,
+        s,
+        DetectionConfig.default.swoop.rolloutWindow.value
+      ).getOrElse(-1)
       val bottom = for {
         r <- rollout
         s <- stop

@@ -59,7 +59,8 @@ class SwoopMetricsSpec extends AnyFreeSpec with Matchers {
         vertical = SwoopMetrics.MaxSpeed(5.0, 2),
         horizontal = SwoopMetrics.MaxSpeed(1.0, 4),
       )
-      SwoopMetrics.maxSpeeds(midTie, diveIdx = 1, topOfTurn = 2, rolloutIdx = 4, stopIdx = 8) shouldBe SwoopMetrics.MaxSpeeds(
+      SwoopMetrics.maxSpeeds(midTie, diveIdx = 1, topOfTurn = 2, rolloutIdx = 4, stopIdx = 8) shouldBe
+      SwoopMetrics.MaxSpeeds(
         total = SwoopMetrics.MaxSpeed(Math.sqrt(26.0), 3),
         vertical = SwoopMetrics.MaxSpeed(5.0, 3),
         horizontal = SwoopMetrics.MaxSpeed(1.0, 4),
@@ -69,7 +70,8 @@ class SwoopMetricsSpec extends AnyFreeSpec with Matchers {
     "skips non-positive speeds when scanning" in {
       val series = speedSeries(Vector(1, 1, -5, 1, -1, 2, 1, 1, 1, 1), Vector.fill(10)(1.0))
 
-      SwoopMetrics.maxSpeeds(series, diveIdx = 1, topOfTurn = 2, rolloutIdx = 4, stopIdx = 8) shouldBe SwoopMetrics.MaxSpeeds(
+      SwoopMetrics.maxSpeeds(series, diveIdx = 1, topOfTurn = 2, rolloutIdx = 4, stopIdx = 8) shouldBe
+      SwoopMetrics.MaxSpeeds(
         total = SwoopMetrics.MaxSpeed(Math.sqrt(26.0), 2),
         vertical = SwoopMetrics.MaxSpeed(2.0, 5),
         horizontal = SwoopMetrics.MaxSpeed(1.0, 4),
@@ -219,11 +221,11 @@ class SwoopMetricsSpec extends AnyFreeSpec with Matchers {
       dtMillis = 1000.0
     )
 
-  /** A series of points at 100 ms spacing flying the given headings at a constant speed. */
+  /** A series of points at 100 ms spacing flying the given headings at a constant speed above the reliable floor. */
   private def turnSeries(
     headings: Vector[Double],
     vertical: Double,
-    horizontal: Double = 10.0,
+    horizontal: Double = 12.0,
     dtMillis: Double = 100.0
   ): PointSeries =
     seriesOf(

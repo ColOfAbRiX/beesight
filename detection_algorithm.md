@@ -278,54 +278,38 @@ argmax locks onto the strongest manoeuvre even when the swoop is weaker. Neither
 
 ### The Detection Algorithm
 
-The swoop detector combines the reference event semantics with an **episode validation** step that the reference
-implementation lacks. It operates on the canopy-to-landing segment (indices from the `Canopy` event to the
-`Landing` event) and works on **raw (despiked but unsmoothed) speeds** — the reference implementation applies no
-smoothing, and median smoothing was observed to flatten the true peak (21.58 → 21.16 m/s) and shift event indices
-by up to 5 samples.
+The swoop detector follows the reference event semantics. It operates on the canopy-to-landing segment
+(indices from the `Canopy` event to the `Landing` event) and works on **raw (despiked but unsmoothed)
+speeds** — the reference implementation applies no smoothing, and median smoothing was observed to flatten
+the true peak (21.58 → 21.16 m/s) and shift event indices by up to 5 samples.
 
 ```
-  ╭────────────────────╮   reject   ╭──────────────────────╮
-  │ Candidate peaks    │ ─────────▸ │ next candidate       │
-  │ (local vz maxima,  │            ╰──────────────────────╯
-  │  vz ≥ minSwoop,    │                 │ accept
-  │  AGL ≤ maxSwoopAlt)│                 ▼
-  ╰────────────────────╯        ╭──────────────────────╮
-        ▲                       │  Dive point          │
-        │  all rejected         │  (swoop bottom)      │
-        └───────────────────────┴──────────────────────┘
-                                │  │  │
-              ┌─────────────────┘  │  └──────────────────┐
-              ▼                    ▼                     ▼
-     ╭─────────────────╮  ╭─────────────────╮   ╭──────────────────╮
-     │ turn initiation │  │ rollout start   │   │ finished rollout │
-     │ (backward walk) │  │ (100ft walk)    │   │ (vz < 1.25 m/s)  │
-     ╰─────────────────╯  ╰─────────────────╯   ╰──────────────────╯
+                                 ╭──────────────────────╮
+                                 │  Dive point          │
+                                 │  (global argmax vz   │
+         all rejected            │   below the cap)     │
+        ┌───────────────────────►│                      │
+        │                        ╰──────────────────────╯
+  ╭────────────────────╮                   │  │  │
+  │ no argmax below    │     ┌─────────────┘  │  └──────────────────┐
+  │ the cap, or no     │     ▼                ▼                     ▼
+  │ positive descent   │ ╭─────────────────╮ ╭─────────────────╮ ╭──────────────────╮
+  ╰────────────────────╯ │ turn initiation │ │ rollout start   │ │ finished rollout │
+                         │ (backward walk) │ │ (100ft walk)    │ │ (vz < 1.25 m/s)  │
+                         ╰─────────────────╯ ╰─────────────────╯ ╰──────────────────╯
 ```
 
-**Step 1 — Candidate peaks.** Find all local vz maxima in the segment where:
+**Step 1 — Dive point.** The **global argmax** of vz below the altitude cap (`diveAltitudeCap`, ≈ 300 m /
+1000 ft — the reference implementation's cap, which excludes high-altitude manoeuvres from consideration),
+searched from the pattern entry forward. When no point below the cap has a positive descent, no swoop is
+reported at all.
 
-- `vz ≥ minSwoopVerticalSpeed` (5.0 m/s) — fast enough to be a dive, not a cruise wobble;
-- `AGL ≤ maxSwoopHeight` (≈ 300 m / 1000 ft) — the reference implementation's altitude cap on the dive-point
-  search, which excludes high-altitude manoeuvres from consideration.
+A swoop-gate experiment (candidate peaks + episode validation with a height floor and a continuity check)
+was evaluated over the whole corpus and **discarded**: it rejected more real swoops than it repaired. The
+known weakness of the argmax anchor — a manoeuvre stronger than the swoop breaking the downstream windows —
+remains open, and any future fix must be validated against the reference recordings before wiring.
 
-**Step 2 — Episode validation (the manoeuvre filter).** Candidates are examined from last to first.
-A candidate is the **dive point** only if the flight from the peak to landing is a *continuous descent
-episode*, verified by two checks:
-
-1. **Meaningful height** — the peak must sit at least `minSwoopDescent` (30 m) above the ground. This
-   rejects flare-level speed bumps near touchdown, which are too low to be a dive.
-2. **No sustained recovery** — walking forward from the peak, once vz has dropped below
-   `recoveryFraction` (0.5) of the peak speed, it must never rise back above that level for 3 or more
-   consecutive samples. A manoeuvre peak is followed by a recovery: the pilot levels off, cruises for
-   several seconds, and then dives again — the renewed dive rises well above half the manoeuvre peak and
-   disqualifies it. The real swoop, by definition, ends at the ground and never re-dives.
-
-This is the piece the reference implementation is missing: it anchors the dive point on the **global argmax**
-below the altitude cap, so a manoeuvre stronger than the swoop breaks its `top_of_turn` and max-speed windows.
-Episode validation rejects such manoeuvres by construction, regardless of their magnitude.
-
-**Step 3 — Derive the remaining events** (reference event semantics):
+**Step 2 — Derive the remaining events** (reference event semantics):
 
 - **Turn initiation** — from the dive point, walk backward to the first point below the pull threshold
   (25 mph ≈ 11.2 m/s; falling back to the minimum-descent point if the threshold is never crossed), then
@@ -354,12 +338,9 @@ drop-zone elevation (≈ 35 m in the reference data), which exceeds the test tol
 
 | Parameter | Default | Role |
 |---|---|---|
-| `minSwoopVerticalSpeed` | 5.0 m/s | Validation gate on the dive-point candidate |
-| `maxSwoopHeight` | 300 m AGL | Search-window cap for candidate peaks (the reference 1000 ft cap) |
+| `pullThreshold` | 11.176 m/s | Descent rate below which the dive is considered over (turn-initiation walk) |
+| `rolloutWindow` | 30.48 m | Height above the stop altitude where the rollout search starts |
+| `carveRateThreshold` | 20 deg/s | Smoothed turn rate above which a sample belongs to the carve |
+| `carveReliableSpeed` | 10 m/s | Minimum horizontal speed for the GPS heading to be trusted in the rotation computation |
+| `carveGapSamples` | 5 | Maximum run of below-threshold samples tolerated inside the carve |
 | `minHorizontalSpeed` | 2.0 m/s | Below this, heading is too noisy for rotation computation |
-| `minSwoopDescent` | 30 m | Episode validation: minimum descent from dive point to ground; rejects flare-level bumps |
-| `recoveryFraction` | 0.5 | Episode validation: fraction of the peak vz above which a sustained (≥ 3 samples) re-ascent marks a manoeuvre recovery |
-
-Note that no `minSwoopHeight`-style *minimum* altitude is required: the phase structure (dive → rollout
-→ flare → landing) falls out of the event derivation, and a hardcoded minimum height would be fragile
-across dropzones with different ground elevations.

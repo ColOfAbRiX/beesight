@@ -59,7 +59,7 @@ private[swoop] object SwoopConstants {
   val carveRateThreshold = 20.0 // deg/s
 
   /** Carve: minimum horizontal speed for the GPS heading to be reliable. */
-  val carveReliableSpeed = 4.0 // ~9mph
+  val carveReliableSpeed = 10.0 // ~22mph
 
   /** Carve: maximum run of below-threshold samples tolerated inside the carve. */
   val carveGapSamples = 5

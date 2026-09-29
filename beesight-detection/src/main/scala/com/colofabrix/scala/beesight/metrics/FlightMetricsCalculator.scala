@@ -3,9 +3,9 @@ package com.colofabrix.scala.beesight.metrics
 import cats.syntax.all.*
 import com.colofabrix.scala.beesight.config.MetricsConfig
 import com.colofabrix.scala.beesight.metrics.FlightMetricsCalculator.MetricsState
+import com.colofabrix.scala.beesight.metrics.computations.*
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.readers.*
-import com.colofabrix.scala.beesight.metrics.computations.*
 import com.colofabrix.scala.beesight.utils.*
 
 /**
@@ -13,10 +13,10 @@ import com.colofabrix.scala.beesight.utils.*
  */
 final class FlightMetricsCalculator private (config: MetricsConfig, groundElevation: Double) {
 
-  private val windowCapacity: Int = 
+  private val windowCapacity: Int =
     2 * config.slopeHalfWindow + 1
 
-  private val aerodynamics: Aerodynamics = 
+  private val aerodynamics: Aerodynamics =
     Aerodynamics(config)
 
   /** Streaming pipe: one FlightMetric per input point. */
@@ -74,7 +74,7 @@ final class FlightMetricsCalculator private (config: MetricsConfig, groundElevat
 
     val courseAccuracyEstimate =
       center.speedAccuracy.map { accuracy =>
-        if totalSpeed > 0.0 then Math.toDegrees(accuracy / totalSpeed) 
+        if totalSpeed > 0.0 then Math.toDegrees(accuracy / totalSpeed)
         else 0.0
       }
 
