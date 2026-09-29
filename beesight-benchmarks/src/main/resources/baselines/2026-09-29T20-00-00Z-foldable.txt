@@ -1,0 +1,28 @@
+# Beesight Benchmark Baseline (JMH microbenchmarks)
+# benchmark: com.colofabrix.scala.beesight.bench.FoldableBenchmark
+# timestamp: 2026-09-29T20:00:00Z
+# jvm: OpenJDK 64-Bit Server VM 25.0.3+9-LTS
+# jmh: 1.37
+# config: -i 3 -wi 2 -f 1 -t 1 (see bench command for full runs)
+# description: Baseline of Foldable[NonEmptyFilled] (foldableNonEmptyFilled) before optimisation.
+#   The Foldable instance materialises an intermediate Vector per fold; direct_foldLeft/foldNewest
+#   iterate the circular buffer with zero allocation. Differences below quantify the Vector cost.
+# benchmark,params,score_ns_per_op,error_units
+FoldableBenchmark.direct_foldLeft,5,37.234,182.376
+FoldableBenchmark.direct_foldLeft,10,63.825,327.436
+FoldableBenchmark.direct_foldLeft,100,504.363,4066.251
+FoldableBenchmark.foldNewest,5,38.090,214.306
+FoldableBenchmark.foldNewest,10,36.124,44.008
+FoldableBenchmark.foldNewest,100,312.096,134.840
+FoldableBenchmark.foldable_foldLeft,5,89.544,769.753
+FoldableBenchmark.foldable_foldLeft,10,161.300,1074.354
+FoldableBenchmark.foldable_foldLeft,100,1786.592,10924.169
+FoldableBenchmark.foldable_foldRight,5,316.212,1269.995
+FoldableBenchmark.foldable_foldRight,10,592.408,3002.893
+FoldableBenchmark.foldable_foldRight,100,6761.872,45159.515
+FoldableBenchmark.median_overArray,5,203.384,947.977
+FoldableBenchmark.median_overArray,10,384.135,2345.389
+FoldableBenchmark.median_overArray,100,3533.746,15014.828
+FoldableBenchmark.toArrayBy_foldable,5,174.287,886.910
+FoldableBenchmark.toArrayBy_foldable,10,295.174,1707.905
+FoldableBenchmark.toArrayBy_foldable,100,2711.175,14249.641
