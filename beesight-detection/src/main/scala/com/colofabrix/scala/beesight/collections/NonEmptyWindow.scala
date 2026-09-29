@@ -350,7 +350,7 @@ private[beesight] object NonEmptyWindow {
 
   given foldableNonEmptyFilled: cats.Foldable[NonEmptyFilled] with {
     def foldLeft[A, B](fa: NonEmptyFilled[A], b: B)(f: (B, A) => B): B =
-      fa.toVector.foldLeft(b)(f)
+      fa.foldLeft(b)(f)
 
     def foldRight[A, B](fa: NonEmptyFilled[A], lb: cats.Eval[B])(f: (A, cats.Eval[B]) => cats.Eval[B]): cats.Eval[B] =
       fa.toVector.foldRight(lb)(f)
