@@ -2,7 +2,7 @@ package com.colofabrix.scala.beesight.metrics
 
 import cats.effect.IO
 import cats.syntax.all.given
-import com.colofabrix.scala.beesight.config.DetectionConfig
+import com.colofabrix.scala.beesight.config.{ Altitude, DetectionConfig }
 import com.colofabrix.scala.beesight.jumpevents.JumpEventsDetector
 import com.colofabrix.scala.beesight.metrics.computations.*
 import com.colofabrix.scala.beesight.model.*
@@ -79,7 +79,7 @@ class FlightMetricsBulkSpec extends AnyWordSpec with Matchers with IOValues with
       events         <- detectEvents(inputPath)
       config          = DetectionConfig.default.metrics
       detectedGround  = MetricsGround.detect(events.landing, config)
-      groundElevation = detectedGround + residual.getOrElse(0.0)
+      groundElevation = Altitude(detectedGround + residual.getOrElse(0.0))
       metrics        <- TestFilesHandler
                    .readCsv[GpsCsvPoint](inputPath)
                    .through(FlightMetricsCalculator(config, groundElevation).compute[IO, GpsCsvPoint])

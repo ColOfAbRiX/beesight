@@ -6,6 +6,7 @@ import com.colofabrix.scala.beesight.model.EventPoint
 /**
  * Ground elevation resolution for metrics computation.
  */
+// FIXME: This is not used anywhere. I think we should start using it
 final private[metrics] class MetricsGround private (config: MetricsConfig) {
 
   /**

@@ -1,7 +1,8 @@
-package com.colofabrix.scala.beesight.swoop
+package com.colofabrix.scala.beesight.swoop.computations
 
 import com.colofabrix.scala.beesight.math.*
 import com.colofabrix.scala.beesight.model.EventPoint
+import com.colofabrix.scala.beesight.swoop.SwoopConstants
 import com.colofabrix.scala.beesight.swoop.model.PointSeries
 import java.time.Duration
 
@@ -10,6 +11,7 @@ import java.time.Duration
  */
 private[swoop] object SwoopGround {
 
+  // FIXME: This should be configurable via reference.conf
   private val groundWindow =
     Duration.ofSeconds(10)
 

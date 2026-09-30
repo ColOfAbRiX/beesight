@@ -7,6 +7,7 @@ import com.colofabrix.scala.beesight.TestFilesHandler.given
 import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.colofabrix.scala.beesight.jumpevents.JumpEventsDetector
 import com.colofabrix.scala.beesight.model.*
+import com.colofabrix.scala.beesight.swoop.computations.{ SwoopCascade, SwoopGround, SwoopMetrics }
 import com.colofabrix.scala.beesight.swoop.model.*
 import java.nio.file.Paths
 import org.scalatest.wordspec.AnyWordSpec

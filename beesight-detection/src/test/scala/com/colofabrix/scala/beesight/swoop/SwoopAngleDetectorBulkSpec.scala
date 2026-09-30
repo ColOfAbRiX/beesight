@@ -35,7 +35,7 @@ class SwoopAngleDetectorBulkSpec extends AnyWordSpec with Matchers with IOValues
           .result()
           //  The false-positive recordings carry a spurious angle in the CSV but the expected outcome is no
           //  swoop at all (their row is otherwise empty): they are the bulk spec's concern, not the angle's.
-          .filter { e => 
+          .filter { e =>
             !e.isEmpty && e.expectedAngle.isDefined
           }
 
@@ -72,7 +72,7 @@ class SwoopAngleDetectorBulkSpec extends AnyWordSpec with Matchers with IOValues
         info(s"Failing tests summary:\n${failures.mkString("\n\n")}")
       }
 
-      successRate shouldBe >= (1.0)
+      successRate shouldBe >=(1.0)
     }
 
   }

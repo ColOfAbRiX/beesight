@@ -1,6 +1,7 @@
 package com.colofabrix.scala.beesight.swoop
 
 import com.colofabrix.scala.beesight.model.{ GeoVector, IndexedPoint }
+import com.colofabrix.scala.beesight.swoop.computations.SwoopMetrics
 import com.colofabrix.scala.beesight.swoop.model.PointSeries
 import java.time.Instant
 import org.scalatest.freespec.AnyFreeSpec

@@ -1,7 +1,7 @@
 package com.colofabrix.scala.beesight.metrics
 
 import cats.syntax.all.*
-import com.colofabrix.scala.beesight.config.MetricsConfig
+import com.colofabrix.scala.beesight.config.{ Altitude, MetricsConfig }
 import com.colofabrix.scala.beesight.metrics.FlightMetricsCalculator.MetricsState
 import com.colofabrix.scala.beesight.metrics.computations.*
 import com.colofabrix.scala.beesight.model.*
@@ -11,7 +11,7 @@ import com.colofabrix.scala.beesight.utils.*
 /**
  * Computes per-point flight metrics.
  */
-final class FlightMetricsCalculator private (config: MetricsConfig, groundElevation: Double) {
+final class FlightMetricsCalculator private (config: MetricsConfig, groundElevation: Option[Altitude]) {
 
   private val windowCapacity: Int =
     2 * config.slopeHalfWindow + 1
@@ -19,7 +19,14 @@ final class FlightMetricsCalculator private (config: MetricsConfig, groundElevat
   private val aerodynamics: Aerodynamics =
     Aerodynamics(config)
 
-  /** Streaming pipe: one FlightMetric per input point. */
+  private val _groundElevation: Double =
+    groundElevation
+      .map(_.value)
+      .getOrElse(0.0)
+
+  /**
+   * Streaming pipe: one FlightMetric per input point.
+   */
   def compute[F[_], A: PointReader: GpsReader]: fs2.Pipe[F, A, FlightMetric] =
     _.statefulMapEmits(initState, drainState)(advance)
 
@@ -71,7 +78,7 @@ final class FlightMetricsCalculator private (config: MetricsConfig, groundElevat
     val totalSpeed   = speed.magnitude
 
     val sphericalErrorProbably = (horizontalAccuracy, verticalAccuracy).mapN(GpsMetrics.sphericalErrorProbable)
-    val elevation              = center.altitude - groundElevation
+    val elevation              = center.altitude - _groundElevation
 
     val courseAccuracyEstimate =
       center.speedAccuracy.map { accuracy =>
@@ -119,7 +126,10 @@ object FlightMetricsCalculator {
     count: Long
   )
 
-  def apply(config: MetricsConfig, groundElevation: Double = 0.0): FlightMetricsCalculator =
-    new FlightMetricsCalculator(config, groundElevation)
+  def apply(config: MetricsConfig): FlightMetricsCalculator =
+    new FlightMetricsCalculator(config, None)
+
+  def apply(config: MetricsConfig, groundElevation: Altitude): FlightMetricsCalculator =
+    new FlightMetricsCalculator(config, groundElevation.some)
 
 }

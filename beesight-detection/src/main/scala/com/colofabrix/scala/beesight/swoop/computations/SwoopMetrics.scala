@@ -1,5 +1,6 @@
-package com.colofabrix.scala.beesight.swoop
+package com.colofabrix.scala.beesight.swoop.computations
 
+import com.colofabrix.scala.beesight.swoop.SwoopConstants
 import com.colofabrix.scala.beesight.swoop.model.PointSeries
 
 /**

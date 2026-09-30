@@ -7,6 +7,7 @@ import com.colofabrix.scala.beesight.TestFilesHandler.given
 import com.colofabrix.scala.beesight.config.DetectionConfig
 import com.colofabrix.scala.beesight.jumpevents.JumpEventsDetector
 import com.colofabrix.scala.beesight.model.*
+import com.colofabrix.scala.beesight.swoop.computations.{ SwoopCascade, SwoopGround }
 import com.colofabrix.scala.beesight.swoop.model.*
 import java.nio.file.Paths
 import org.scalatest.wordspec.AnyWordSpec
@@ -126,12 +127,13 @@ class SwoopAngleExperimentSpec extends AnyWordSpec with IOValues {
     }
 
     //  The dive-anchored variant: last value column, before the diagnostics  //
-    val anchorCol = parsed.map(p => Math.abs(p(2 + floors.length).toDouble))
+    parsed.map(p => Math.abs(p(2 + floors.length).toDouble))
     val anchorPasses = parsed.map { p =>
       Math.abs(Math.abs(p(2 + floors.length).toDouble) - Math.abs(p(1).toDouble)) <= tolerance
     }
     val anchorLine =
-      f"anchor : ${anchorPasses.count(identity)}%3d / ${parsed.size}%3d  (${100.0 * anchorPasses.count(identity) / parsed.size}%.1f%%)"
+      f"anchor : ${anchorPasses.count(identity)}%3d / ${parsed.size}%3d  (${100.0 * anchorPasses.count(identity) /
+        parsed.size}%.1f%%)"
     val anchorDiffs = {
       val fixed  = parsed.zip(anchorPasses).zip(passes(2)).collect { case ((p, f), b) if f && !b => p(0) }
       val broken = parsed.zip(anchorPasses).zip(passes(2)).collect { case ((p, f), b) if !f && b => p(0) }
