@@ -2,8 +2,10 @@ package com.colofabrix.scala.beesight.metrics
 
 import com.colofabrix.scala.beesight.config.{ Altitude, Area, Mass, MetricsConfig }
 import com.colofabrix.scala.beesight.metrics.computations.*
-import com.colofabrix.scala.beesight.model.EventPoint
+import com.colofabrix.scala.beesight.model.{ EventPoint, GeoVector }
 import org.scalatest.freespec.AnyFreeSpec
+
+import java.time.Instant
 import org.scalatest.matchers.should.Matchers
 
 class MetricsGroundSpec extends AnyFreeSpec with Matchers {
@@ -13,7 +15,7 @@ class MetricsGroundSpec extends AnyFreeSpec with Matchers {
   "MetricsGround.detect" - {
 
     "uses the landing event altitude when landing is provided" in {
-      val landing = EventPoint(index = 10L, altitude = 35.0)
+      val landing = EventPoint(index = 10L, altitude = 35.0, Instant.EPOCH, GeoVector.zero)
 
       val ground = MetricsGround.detect(Some(landing), defaultConfig)
 
@@ -35,7 +37,7 @@ class MetricsGroundSpec extends AnyFreeSpec with Matchers {
     }
 
     "landing takes priority over config groundElevation" in {
-      val landing = EventPoint(index = 5L, altitude = 35.0)
+      val landing = EventPoint(index = 5L, altitude = 35.0, Instant.EPOCH, GeoVector.zero)
       val config  = defaultConfig.copy(groundElevation = Some(Altitude(42.0)))
 
       val ground = MetricsGround.detect(Some(landing), config)

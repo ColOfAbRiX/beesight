@@ -196,8 +196,8 @@ final private[beesight] class ChartGenerator private (config: Config) {
 
   private def formatStage(point: Option[EventPoint]): String =
     point match {
-      case Some(EventPoint(idx, alt)) => f"Point $idx at altitude $alt%.2fm"
-      case None                       => "Not detected"
+      case Some(ep) => f"Point ${ep.index} at altitude ${ep.altitude}%.2fm"
+      case None     => "Not detected"
     }
 
   final private case class PhaseTransition(

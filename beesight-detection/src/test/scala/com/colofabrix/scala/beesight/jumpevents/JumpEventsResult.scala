@@ -2,6 +2,7 @@ package com.colofabrix.scala.beesight.jumpevents
 
 import com.colofabrix.scala.beesight.model.*
 import fs2.data.csv.*
+import java.time.Instant
 
 final private[beesight] case class JumpEventsResult(
   filename: String,
@@ -42,10 +43,10 @@ private[beesight] object JumpEventsResult {
         tag      <- optString(row, "tag")
       yield JumpEventsResult(
         filename = filename,
-        takeoff = takeoff.map(EventPoint(_, 0.0)),
-        freefall = freefall.map(EventPoint(_, 0.0)),
-        canopy = canopy.map(EventPoint(_, 0.0)),
-        landing = landing.map(EventPoint(_, 0.0)),
+        takeoff = takeoff.map(EventPoint(_, 0.0, Instant.EPOCH, GeoVector.zero)),
+        freefall = freefall.map(EventPoint(_, 0.0, Instant.EPOCH, GeoVector.zero)),
+        canopy = canopy.map(EventPoint(_, 0.0, Instant.EPOCH, GeoVector.zero)),
+        landing = landing.map(EventPoint(_, 0.0, Instant.EPOCH, GeoVector.zero)),
         tag = tag,
       )
 

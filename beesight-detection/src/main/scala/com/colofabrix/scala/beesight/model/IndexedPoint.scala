@@ -24,6 +24,15 @@ private[beesight] object IndexedPoint {
   def stream[F[_], A: PointReader]: fs2.Pipe[F, A, IndexedPoint] =
     _.zipWithIndex.map(fromZip)
 
+  extension (self: IndexedPoint)
+    def toEventPoint: EventPoint =
+      EventPoint(
+        index = self.idx,
+        altitude = self.altitude,
+        time = self.time,
+        speed = self.speed,
+      )
+
   given PointReader[IndexedPoint] with {
     def time(point: IndexedPoint): Instant    = point.time
     def altitude(point: IndexedPoint): Double = point.altitude

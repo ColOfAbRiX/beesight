@@ -6,6 +6,8 @@ import com.colofabrix.scala.beesight.config.*
 import com.colofabrix.scala.beesight.config.DataCutterConfig.given
 import com.colofabrix.scala.beesight.model.*
 import org.scalatest.freespec.AnyFreeSpec
+
+import java.time.Instant
 import org.scalatest.matchers.should.Matchers
 
 class DataCutterSpec extends AnyFreeSpec with Matchers {
@@ -556,7 +558,7 @@ class DataCutterSpec extends AnyFreeSpec with Matchers {
     )
 
   private def eventAt(idx: Long): EventPoint =
-    EventPoint(index = idx, altitude = 1000.0)
+    EventPoint(index = idx, altitude = 1000.0, Instant.EPOCH, GeoVector.zero)
 
   private def annotatedStream(
     n: Int,

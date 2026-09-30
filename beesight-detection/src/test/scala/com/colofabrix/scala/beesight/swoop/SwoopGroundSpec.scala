@@ -53,7 +53,7 @@ class SwoopGroundSpec extends AnyFreeSpec with Matchers {
 
     "uses the median altitude from the landing point window when landing is provided" in {
       val series  = groundSeries
-      val landing = EventPoint(index = 10L, altitude = 100.0)
+      val landing = EventPoint(index = 10L, altitude = 100.0, Instant.EPOCH, GeoVector.zero)
 
       val ground = SwoopGround.detect(series, Some(landing))
 

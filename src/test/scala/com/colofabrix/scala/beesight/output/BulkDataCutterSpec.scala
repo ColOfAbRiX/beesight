@@ -7,6 +7,7 @@ import com.colofabrix.scala.beesight.config.*
 import com.colofabrix.scala.beesight.model.*
 import java.io.File
 import java.nio.file.Paths
+import java.time.Instant
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
@@ -75,10 +76,10 @@ class BulkDataCutterSpec extends AnyWordSpec with Matchers {
     }
 
   private def buildAnnotatedStream(row: TestRow): Vector[(FlightEvents, Int)] =
-    val takeoffEvent  = row.takeoff.map(i => EventPoint(index = i.toLong, altitude = 0.0))
-    val freefallEvent = row.freefall.map(i => EventPoint(index = i.toLong, altitude = 0.0))
-    val canopyEvent   = row.canopy.map(i => EventPoint(index = i.toLong, altitude = 0.0))
-    val landingEvent  = row.landing.map(i => EventPoint(index = i.toLong, altitude = 0.0))
+    val takeoffEvent  = row.takeoff.map(i => EventPoint(index = i.toLong, altitude = 0.0, Instant.EPOCH, GeoVector.zero))
+    val freefallEvent = row.freefall.map(i => EventPoint(index = i.toLong, altitude = 0.0, Instant.EPOCH, GeoVector.zero))
+    val canopyEvent   = row.canopy.map(i => EventPoint(index = i.toLong, altitude = 0.0, Instant.EPOCH, GeoVector.zero))
+    val landingEvent  = row.landing.map(i => EventPoint(index = i.toLong, altitude = 0.0, Instant.EPOCH, GeoVector.zero))
 
     (0 until row.rowsCount).map { i =>
       (

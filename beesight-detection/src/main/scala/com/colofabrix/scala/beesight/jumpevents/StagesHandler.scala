@@ -104,8 +104,10 @@ final private[jumpevents] class StagesHandler private (config: JumpEventsConfig)
 
             val nextToProcess =
               afterDetection.map { data =>
-                val eventPoint     = EventPoint(detectedPoint.idx, detectedPoint.altitude)
-                val detectedEvents = data.detectedEvents.setEventPoint(state.eventType, eventPoint)
+                val detectedEvents =
+                  data
+                    .detectedEvents
+                    .setEventPoint(state.eventType, detectedPoint.toEventPoint)
 
                 WindowEntry(
                   point = data.point,

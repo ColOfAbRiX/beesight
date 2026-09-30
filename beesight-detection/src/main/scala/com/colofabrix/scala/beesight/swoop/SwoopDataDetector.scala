@@ -85,10 +85,10 @@ final class SwoopDataDetector private (config: SwoopConfig) {
       SwoopMetrics.turnDegrees(series, topOfTurn, Math.min(bottomIdx, last), diveIdx)
 
     val turnInitiation =
-      EventPoint(series(topOfTurn).idx, agl(topOfTurn))
+      EventPoint(series(topOfTurn).idx, agl(topOfTurn), series.time(topOfTurn), series(topOfTurn).speed)
 
     val rolloutStart =
-      EventPoint(series(rolloutIdx).idx, agl(rolloutIdx))
+      EventPoint(series(rolloutIdx).idx, agl(rolloutIdx), series.time(rolloutIdx), series(rolloutIdx).speed)
 
     val maxVerticalSpeed =
       SpeedAtAltitude(
