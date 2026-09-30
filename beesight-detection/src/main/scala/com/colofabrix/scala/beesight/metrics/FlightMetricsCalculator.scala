@@ -60,15 +60,16 @@ final class FlightMetricsCalculator private (config: MetricsConfig, groundElevat
   //  Metric assembly  //
 
   private def metric[A: PointReader: GpsReader](centerIndex: Int, window: Vector[A]): FlightMetric =
-    val center    = window(centerIndex)
-    val speed     = center.speed
-    val diveAngle = PerPointMetrics.diveAngle(speed)
+    val center = window(centerIndex)
+    val speed  = center.speed
 
-    val horizontalAccuracy     = center.horizontalAccuracy
-    val verticalAccuracy       = center.verticalAccuracy
-    val acceleration           = WindowedMetrics.acceleration(window)
-    val totalSpeed             = speed.magnitude
-    val totalSpeedRate         = WindowedMetrics.totalSpeedRate(window)
+    val horizontalAccuracy = center.horizontalAccuracy
+    val verticalAccuracy   = center.verticalAccuracy
+
+    val wmCalculator = WindowedMetrics(window)
+    val acceleration = wmCalculator.acceleration
+    val totalSpeed   = speed.magnitude
+
     val sphericalErrorProbably = (horizontalAccuracy, verticalAccuracy).mapN(GpsMetrics.sphericalErrorProbable)
     val elevation              = center.altitude - groundElevation
 
@@ -85,15 +86,15 @@ final class FlightMetricsCalculator private (config: MetricsConfig, groundElevat
       horizontalSpeed = speed.horizontal,
       totalSpeed = totalSpeed,
       course = PerPointMetrics.course(speed),
-      courseRate = WindowedMetrics.courseRate(window),
+      courseRate = wmCalculator.courseRate,
       courseAccuracy = center.courseAccuracy.orElse(courseAccuracyEstimate),
       courseAccuracyEstimate = courseAccuracyEstimate,
       glideRatio = PerPointMetrics.glideRatio(speed),
       liftCoefficient = aerodynamics.liftCoefficient(acceleration, speed, center.altitude),
       dragCoefficient = aerodynamics.dragCoefficient(acceleration, speed, center.altitude),
-      diveAngle = diveAngle,
-      diveRate = WindowedMetrics.diveRate(window),
-      turnRate = WindowedMetrics.turnRate(centerIndex, window),
+      diveAngle = PerPointMetrics.diveAngle(speed),
+      diveRate = wmCalculator.diveRate,
+      turnRate = wmCalculator.turnRate(centerIndex),
       speedAccuracy = center.speedAccuracy,
       horizontalAccuracy = horizontalAccuracy,
       verticalAccuracy = verticalAccuracy,
@@ -103,7 +104,7 @@ final class FlightMetricsCalculator private (config: MetricsConfig, groundElevat
       accelerationAlongTrack = PerPointMetrics.accelerationAlongTrack(acceleration, speed),
       accelerationCrossTrack = PerPointMetrics.accelerationCrossTrack(acceleration, speed),
       totalEnergy = PerPointMetrics.totalEnergy(elevation, totalSpeed),
-      energyRate = totalSpeed * totalSpeedRate - MetricsConstants.Gravity * speed.vertical,
+      energyRate = totalSpeed * wmCalculator.totalSpeedRate - MetricsConstants.Gravity * speed.vertical,
       sphericalErrorProbably = sphericalErrorProbably,
       speedScoreAccuracy = verticalAccuracy.map(GpsMetrics.speedScoreAccuracy),
     )
