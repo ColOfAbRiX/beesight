@@ -11,4 +11,5 @@ private[beesight] enum FileFormat {
   case FlySight
   case Airlog
   case Dekunu
+  case Generic
 }

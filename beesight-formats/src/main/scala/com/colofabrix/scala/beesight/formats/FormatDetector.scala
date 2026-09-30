@@ -7,6 +7,14 @@ import com.colofabrix.scala.beesight.*
  */
 private[beesight] object FormatDetector {
 
+  private val allFormatColumns =
+    List(
+      FileFormat.FlySight -> FlysightPoint.requiredColumns,
+      FileFormat.Airlog   -> AirlogPoint.requiredColumns,
+      FileFormat.Dekunu   -> DekunuPoint.requiredColumns,
+      FileFormat.Generic  -> GenericPoint.requiredColumns
+    )
+
   def detect(headerLine: String): Option[FileFormat] =
     val headers =
       headerLine
@@ -17,13 +25,18 @@ private[beesight] object FormatDetector {
     detect(headers)
 
   def detect(headers: Set[String]): Option[FileFormat] =
-    if FlysightPoint.requiredColumns.subsetOf(headers) then
-      Some(FileFormat.FlySight)
-    else if AirlogPoint.requiredColumns.subsetOf(headers) then
-      Some(FileFormat.Airlog)
-    else if DekunuPoint.requiredColumns.subsetOf(headers) then
-      Some(FileFormat.Dekunu)
-    else
-      None
+    allFormatColumns
+      .filter {
+        // This is used to ensure at compile time that we don't miss any new format
+        case (FileFormat.FlySight, _) => true
+        case (FileFormat.Airlog, _)   => true
+        case (FileFormat.Dekunu, _)   => true
+        case (FileFormat.Generic, _)  => true
+      }
+      .map { (format, columns) => (format, columns.size, headers.intersect(columns).size) }
+      .filter { (_, required, present) => present >= required }
+      .sortBy { (_, _, present) => present }
+      .lastOption
+      .map(_._1)
 
 }

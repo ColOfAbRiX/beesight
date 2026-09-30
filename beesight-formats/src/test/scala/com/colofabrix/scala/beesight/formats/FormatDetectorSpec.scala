@@ -6,6 +6,8 @@ import org.scalatest.matchers.should.Matchers
 
 class FormatDetectorSpec extends AnyFreeSpec with Matchers {
 
+  // FIXME: Add tests for GenericPoint
+
   private val flysightColumns = FlysightPoint.requiredColumns
   private val airlogColumns   = AirlogPoint.requiredColumns
   private val dekunuColumns   = DekunuPoint.requiredColumns
@@ -104,14 +106,22 @@ class FormatDetectorSpec extends AnyFreeSpec with Matchers {
 
   "breakage scenarios" - {
 
-    "should pick FlySight when the header satisfies multiple formats (documented precedence)" in {
+    "should pick the format with the most matching fields when the header satisfies multiple formats" in {
+      // Airlog requires 18 columns, FlySight 13: on a header containing both, Airlog matches more fields and wins
       val ambiguous = flysightColumns ++ airlogColumns
-      FormatDetector.detect(headerOf(ambiguous)) shouldBe Some(FileFormat.FlySight)
+      FormatDetector.detect(headerOf(ambiguous)) shouldBe Some(FileFormat.Airlog)
     }
 
-    "should fail on a UTF-8 BOM-prefixed header (KNOWN ISSUE)" in {
+    "should prefer the format matching more fields over a subset format (FIXME example)" in {
+      // A FlySight header also satisfies Generic's 6 required columns, but FlySight matches 13 and wins
+      FormatDetector.detect(headerOf(flysightColumns)) shouldBe Some(FileFormat.FlySight)
+    }
+
+    "should detect a BOM-prefixed FlySight header as Generic" in {
+      // The BOM corrupts only the first column ("date"), so FlySight no longer matches, while all of
+      // Generic's required columns (time, hMSL, velN, velE, velD, numSV) are still present
       val bomHeader = "\uFEFF" + headerOf(flysightColumns)
-      FormatDetector.detect(bomHeader) shouldBe None
+      FormatDetector.detect(bomHeader) shouldBe Some(FileFormat.Generic)
     }
 
     "should fail on quoted headers (KNOWN ISSUE)" in {
