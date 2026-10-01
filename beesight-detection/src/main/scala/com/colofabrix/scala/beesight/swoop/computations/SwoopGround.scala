@@ -1,5 +1,6 @@
 package com.colofabrix.scala.beesight.swoop.computations
 
+import com.colofabrix.scala.beesight.config.SwoopConfig
 import com.colofabrix.scala.beesight.math.*
 import com.colofabrix.scala.beesight.model.EventPoint
 import com.colofabrix.scala.beesight.swoop.SwoopConstants
@@ -9,11 +10,10 @@ import java.time.Duration
 /**
  * Ground altitude estimation for swoop reporting: all reported altitudes are above ground level (AGL).
  */
-private[swoop] object SwoopGround {
+private[swoop] final class SwoopGround private (config: SwoopConfig) {
 
-  // FIXME: This should be configurable via reference.conf
-  private val groundWindow =
-    Duration.ofSeconds(10)
+  val groundWindow: Duration =
+    config.groundWindow
 
   /**
    * Ground altitude.
@@ -49,5 +49,12 @@ private[swoop] object SwoopGround {
       .takeWhile(!_.time.isAfter(startTime.plus(duration)))
       .toArrayBy(_.altitude)
       .median
+
+}
+
+private[swoop] object SwoopGround {
+  
+  def apply(config: SwoopConfig): SwoopGround =
+    new SwoopGround(config)
 
 }

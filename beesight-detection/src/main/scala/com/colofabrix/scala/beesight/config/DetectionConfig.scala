@@ -1,6 +1,7 @@
 package com.colofabrix.scala.beesight.config
 
 import io.github.iltotore.iron.*
+import java.time.Duration
 
 /**
  * Top-level configuration for the flight stage detection algorithm.
@@ -67,6 +68,7 @@ object DetectionConfig {
       swoop = SwoopConfig(
         pullThreshold = Speed(11.176),
         rolloutWindow = Altitude(30.48),
+        groundWindow = Duration.ofSeconds(10),
       ),
       metrics = MetricsConfig(
         slopeHalfWindow = 4,

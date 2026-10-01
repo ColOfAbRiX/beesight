@@ -5,6 +5,7 @@ import cats.syntax.functor.*
 import com.colofabrix.scala.beesight.config.{ DetectionConfig, SwoopConfig }
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.readers.PointReader
+import com.colofabrix.scala.beesight.readers.time
 import com.colofabrix.scala.beesight.swoop.computations.{ SwoopCascade, SwoopGround, SwoopMetrics }
 import com.colofabrix.scala.beesight.swoop.model.*
 import java.time.Duration
@@ -30,6 +31,9 @@ import java.time.Duration
  */
 final class SwoopDataDetector private (config: SwoopConfig) {
 
+  private val groundDetector = 
+    SwoopGround(config)
+
   /**
    * Detects swoop metrics from the flight data stream.
    */
@@ -42,21 +46,21 @@ final class SwoopDataDetector private (config: SwoopConfig) {
       .toVector
       .map(computeSwoopMetrics(_, events))
 
-  // FIXME: Take only points after a specified amount of time after landing
-  private def cutStream[F[_], A](events: FlightEvents): fs2.Pipe[F, A, A] =
+  private def cutStream[F[_], A: PointReader](events: FlightEvents): fs2.Pipe[F, A, A] =
     stream =>
-      stream
-        .drop {
-          events
-            .canopy
-            .map(_.index)
-            .getOrElse(0)
-        }
+      events.landing match {
+        case Some(landing) =>
+          val afterLandingTime = landing.time.plus(groundDetector.groundWindow)
+          stream.dropWhile(_.time.isBefore(afterLandingTime))
+        case None =>
+          val canopyIdx = events.canopy.map(_.index).getOrElse(0L)
+          stream.drop(canopyIdx)
+      }
 
   private def computeSwoopMetrics(dataPoints: Vector[IndexedPoint], events: FlightEvents): Option[SwoopData] =
     for
       series       <- Option.unless(dataPoints.length < 2)(PointSeries(dataPoints))
-      ground        = SwoopGround.detect(series, events.landing)
+      ground        = groundDetector.detect(series, events.landing)
       patternEntry <- SwoopCascade.findPatternEntry(series, ground)
       dive         <- SwoopCascade.findDivePoint(series, patternEntry, ground)
       topOfTurn     = SwoopCascade.findTopOfTurn(series, dive, patternEntry, config.pullThreshold.value)

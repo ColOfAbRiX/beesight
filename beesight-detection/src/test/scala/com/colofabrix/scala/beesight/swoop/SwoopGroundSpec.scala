@@ -1,13 +1,20 @@
 package com.colofabrix.scala.beesight.swoop
 
+import com.colofabrix.scala.beesight.config.{ Altitude, Speed, SwoopConfig }
 import com.colofabrix.scala.beesight.model.{ EventPoint, GeoVector, IndexedPoint }
 import com.colofabrix.scala.beesight.swoop.computations.SwoopGround
 import com.colofabrix.scala.beesight.swoop.model.PointSeries
-import java.time.Instant
+import java.time.{ Duration, Instant }
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
 class SwoopGroundSpec extends AnyFreeSpec with Matchers {
+
+  private val config = SwoopConfig(
+    pullThreshold = Speed(11.176),
+    rolloutWindow = Altitude(30.48),
+    groundWindow = Duration.ofSeconds(10),
+  )
 
   //  Helpers  //
 
@@ -55,7 +62,7 @@ class SwoopGroundSpec extends AnyFreeSpec with Matchers {
       val series  = groundSeries
       val landing = EventPoint(index = 10L, altitude = 100.0, Instant.EPOCH, GeoVector.zero)
 
-      val ground = SwoopGround.detect(series, Some(landing))
+      val ground = SwoopGround(config).detect(series, Some(landing))
 
       // The 10-second window starting at index 10 covers indices 10-12 (all alt=100)
       ground shouldBe 100.0 +- 1e-9
@@ -64,7 +71,7 @@ class SwoopGroundSpec extends AnyFreeSpec with Matchers {
     "falls back to the last slow point when no landing event is provided" in {
       val series = groundSeries
 
-      val ground = SwoopGround.detect(series, None)
+      val ground = SwoopGround(config).detect(series, None)
 
       // All points have horizontal speed 10 > groundSlowSpeed (4.4704), so no slow point is found.
       // Falls back to last altitude = 100.
@@ -77,7 +84,7 @@ class SwoopGroundSpec extends AnyFreeSpec with Matchers {
         point(0.0, 20.0, 5.0, 900.0, 1000L),
       ))
 
-      val ground = SwoopGround.detect(series, None)
+      val ground = SwoopGround(config).detect(series, None)
 
       ground shouldBe 900.0 +- 1e-9
     }

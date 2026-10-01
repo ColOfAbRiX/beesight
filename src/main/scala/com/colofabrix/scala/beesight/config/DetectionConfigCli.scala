@@ -5,6 +5,7 @@ import com.monovore.decline.Opts
 import com.typesafe.config.ConfigFactory
 import io.github.iltotore.iron.*
 import java.nio.file.Paths
+import java.time.Duration
 import pureconfig.*
 import scala.io.Source
 
@@ -68,6 +69,9 @@ object DetectionConfigCli {
 
   given ConfigReader[Speed] =
     ConfigReader[Double].map(Speed(_))
+
+  given ConfigReader[Duration] =
+    ConfigReader[Long].map(Duration.ofSeconds)
 
   given ConfigReader[Altitude] =
     ConfigReader[Double].map(Altitude(_))

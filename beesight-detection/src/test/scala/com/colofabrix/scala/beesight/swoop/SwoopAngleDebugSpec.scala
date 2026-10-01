@@ -60,7 +60,7 @@ class SwoopAngleDebugSpec extends AnyWordSpec with IOValues {
     } yield {
       val series = PointSeries(points.zipWithIndex.map { case (p, i) => IndexedPoint.fromZip(p, i.toLong) })
 
-      val ground       = SwoopGround.detect(series, events.landing)
+      val ground       = SwoopGround(DetectionConfig.default.swoop).detect(series, events.landing)
       val patternEntry = SwoopCascade.findPatternEntry(series, ground)
       val dive         = SwoopCascade.findDivePoint(series, patternEntry.getOrElse(0), ground)
       val topOfTurn    = dive.map(d =>
