@@ -13,7 +13,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import scala.concurrent.duration.*
 
-class BulkSwoopDetectionSpec extends AnyWordSpec with Matchers with IOValues with SwoopMatchers {
+class SwoopDataDetectorBulkSpec extends AnyWordSpec with Matchers with IOValues with SwoopMatchers {
 
   private val testFilesDir =
     Paths.get("src/test/resources/test_files")

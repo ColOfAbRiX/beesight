@@ -81,19 +81,27 @@ private[swoop] object SwoopMetrics {
    * which accumulates heading noise at low horizontal speeds, is cancelled by post-turn S-turns inside the window,
    * and counts slow non-swoop rotations such as the landing pattern as turn degrees.
    */
-  def turnDegrees(series: PointSeries, topOfTurn: Int, bottomIdx: Int, diveIdx: Int): Double = {
+  def turnDegrees(series: PointSeries, topOfTurn: Int, endIdx: Int, diveIdx: Int): Double = {
     val n = series.length
+
+    // FIXME: Make this function more FP-like avoiding var
+    // FIXME: Move the inner function outside (or in their own object, if appropriate)
 
     /** Per-sample turn rate in deg/s, defined only where both samples carry a reliable heading. */
     def rate(i: Int): Option[Double] =
-      if i <= 0 || i >= n then None
+      if i <= 0 || i >= n then 
+        None
       else {
         val dtSec = (series.timeMillis(i) - series.timeMillis(i - 1)) / 1000.0
-        if dtSec <= 0 then None
+        if dtSec <= 0 then 
+          None
+          // FIXME: Create two vals for this condition
         else if series.horizontalSpeed(i) < SwoopConstants.carveReliableSpeed ||
           series.horizontalSpeed(i - 1) < SwoopConstants.carveReliableSpeed
-        then None
-        else Some(wrapDegrees(series.heading(i) - series.heading(i - 1)) / dtSec)
+        then 
+          None
+        else 
+          Some(wrapDegrees(series.heading(i) - series.heading(i - 1)) / dtSec)
       }
 
     /** Turn rate smoothed over a +/-2 sample window. */
@@ -107,29 +115,35 @@ private[swoop] object SwoopMetrics {
       .find(i => series.horizontalSpeed(i) >= SwoopConstants.carveReliableSpeed)
       .getOrElse((diveIdx - SwoopConstants.carveDirectionSamples) max topOfTurn)
 
-    val fwdRef = (diveIdx + SwoopConstants.carveDirectionSamples to bottomIdx)
+    val fwdRef = (diveIdx + SwoopConstants.carveDirectionSamples to endIdx)
       .find(i => series.horizontalSpeed(i) >= SwoopConstants.carveReliableSpeed)
-      .getOrElse((diveIdx + SwoopConstants.carveDirectionSamples) min bottomIdx)
+      .getOrElse((diveIdx + SwoopConstants.carveDirectionSamples) min endIdx)
 
     val aroundNet = wrapDegrees(series.heading(fwdRef) - series.heading(backRef))
-    if Math.abs(aroundNet) < SwoopConstants.carveMinDirectionChange then return 0.0
+
+    if Math.abs(aroundNet) < SwoopConstants.carveMinDirectionChange then 
+      return 0.0
+
     val dir = if aroundNet > 0 then 1 else -1
 
     //  Expand forward from the dive point while the rotation persists  //
+
+    // FIXME: Can we do without var?
     var end    = diveIdx
     var misses = 0
     var i      = diveIdx + 1
-    while i <= bottomIdx do
+    while i <= endIdx do
       smoothRate(i) match
         case Some(r) if r * dir > SwoopConstants.carveRateThreshold =>
           end = i
           misses = 0
         case _ =>
           misses += 1
-          if misses > SwoopConstants.carveGapSamples then { end = i - misses; i = bottomIdx + 1 }
+          if misses > SwoopConstants.carveGapSamples then { end = i - misses; i = endIdx + 1 }
       i += 1
 
     //  Expand backward from the dive point while the rotation persists  //
+
     var start = diveIdx
     misses = 0
     i = diveIdx
@@ -147,7 +161,9 @@ private[swoop] object SwoopMetrics {
     val hasCore = (start to end).exists { k =>
       smoothRate(k).exists(r => r * dir > SwoopConstants.carveRateThreshold)
     }
-    if !hasCore then return 0.0
+
+    if !hasCore then 
+      return 0.0
 
     //  The turn angle: the signed sum of the per-sample deltas over the carve  //
     var total = 0.0

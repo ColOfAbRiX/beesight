@@ -95,20 +95,25 @@ class SwoopAngleDebugSpec extends AnyWordSpec with IOValues {
         d <- dive
         t <- topOfTurn
         b <- bottom
-      } yield SwoopMetrics.turnDegrees(series, t, b, d)
+      } yield SwoopMetrics.turnDegrees(series, t, stop.getOrElse(b), d)
 
       val summary = List(
         f"turnDegrees=${turnDegrees.getOrElse("n/a")}",
         f"events: landing=${events.landing.isDefined} canopy=${events.canopy.isDefined}"
       )
 
-      //  Per-sample dump over the turn window (with a little margin)  //
-      val from = topOfTurn.getOrElse(0) - 3 max 0
-      val to   = (bottom.getOrElse(series.length - 1) + 3) min (series.length - 1)
+      //  Per-sample dump: 10s before topOfTurn through 40s after stop, to cover the full rollout and landing  //
+      val from = topOfTurn.getOrElse(0) - 50 max 0
+      val to   = (stop.getOrElse(bottom.getOrElse(series.length - 1)) + 200) min (series.length - 1)
       val agl  = (i: Int) => series.altitude(i) - ground
 
       def wrap(raw: Double): Double =
         if raw > 180.0 then raw - 360.0 else if raw < -180.0 then raw + 360.0 else raw
+
+      def clock(millis: Double): String = {
+        val t = java.time.Instant.ofEpochMilli(millis.toLong).atZone(java.time.ZoneOffset.UTC)
+        f"${t.getHour}%02d:${t.getMinute}%02d:${t.getSecond}%02d"
+      }
 
       val rows = (from to to).map { i =>
         val rawDelta  = if i == 0 then 0.0 else wrap(series.heading(i) - series.heading(i - 1))
@@ -116,7 +121,10 @@ class SwoopAngleDebugSpec extends AnyWordSpec with IOValues {
           val h = series.horizontalSpeed(i)
           val v = series.verticalSpeed(i)
           if h == 0.0 then (if v < 0 then -90.0 else 90.0) else Math.toDegrees(Math.atan(v / h))
-        f"  i=$i%5d  t=${(series.timeMillis(i) - series.timeMillis(from)) / 1000.0}%7.2f  agl=${agl(i)}%7.1f  vz=${series.verticalSpeed(i)}%7.2f  hs=${series.horizontalSpeed(i)}%6.2f  hdg=${series.heading(i)}%6.1f  dHdg=$rawDelta%7.1f  diveAng=$diveAngle%6.1f"
+        val hs = series.horizontalSpeed(i)
+        val vz = series.verticalSpeed(i)
+        val total = Math.sqrt(hs * hs + vz * vz)
+        f"  i=$i%5d  t=${(series.timeMillis(i) - series.timeMillis(from)) / 1000.0}%7.2f  clock=${clock(series.timeMillis(i))}  msl=${series.altitude(i)}%7.1f  agl=${agl(i)}%7.1f  vz=$vz%7.2f  hs=$hs%6.2f  total=$total%6.2f  hdg=${series.heading(i)}%6.1f  dHdg=$rawDelta%7.1f  diveAng=$diveAngle%6.1f"
       }
 
       header ++ summary ++ rows

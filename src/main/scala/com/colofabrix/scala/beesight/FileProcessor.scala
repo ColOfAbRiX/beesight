@@ -25,6 +25,7 @@ private[beesight] object FileProcessor {
         case FileFormat.FlySight => processFileAs[FlysightPoint](inputFile)
         case FileFormat.Airlog   => processFileAs[AirlogPoint](inputFile)
         case FileFormat.Dekunu   => processFileAs[DekunuPoint](inputFile)
+        case FileFormat.Generic  => processFileAs[GenericPoint](inputFile)
       }
       .handleErrorWith { error =>
         s"ERROR processing $inputFile: ${error.getMessage}"

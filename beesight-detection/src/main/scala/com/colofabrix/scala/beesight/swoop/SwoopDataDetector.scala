@@ -31,7 +31,7 @@ import java.time.Duration
  */
 final class SwoopDataDetector private (config: SwoopConfig) {
 
-  private val groundDetector = 
+  private val groundDetector =
     SwoopGround(config)
 
   /**
@@ -51,10 +51,11 @@ final class SwoopDataDetector private (config: SwoopConfig) {
       events.landing match {
         case Some(landing) =>
           val afterLandingTime = landing.time.plus(groundDetector.groundWindow)
-          stream.dropWhile(_.time.isBefore(afterLandingTime))
+          stream
+            .drop(events.canopy.map(_.index).getOrElse(0L))
+            .takeWhile(_.time.isBefore(afterLandingTime))
         case None =>
-          val canopyIdx = events.canopy.map(_.index).getOrElse(0L)
-          stream.drop(canopyIdx)
+          stream.drop(events.canopy.map(_.index).getOrElse(0L))
       }
 
   private def computeSwoopMetrics(dataPoints: Vector[IndexedPoint], events: FlightEvents): Option[SwoopData] =
@@ -66,8 +67,8 @@ final class SwoopDataDetector private (config: SwoopConfig) {
       topOfTurn     = SwoopCascade.findTopOfTurn(series, dive, patternEntry, config.pullThreshold.value)
       stop         <- SwoopCascade.findStop(series, dive)
       rollout      <- SwoopCascade.findRolloutStart(series, topOfTurn, stop, config.rolloutWindow.value)
-      bottom        = SwoopCascade.findBottomOfTurn(series, rollout, stop) if events.canopy.isDefined
-      result        = buildSwoopData(series, dive, topOfTurn, rollout, bottom, stop, ground)
+      swoopData     = buildSwoopData(series, dive, topOfTurn, rollout, stop, ground)
+      result       <- Option.when(events.canopy.isDefined)(swoopData)
     yield result
 
   private def buildSwoopData(
@@ -75,7 +76,6 @@ final class SwoopDataDetector private (config: SwoopConfig) {
     diveIdx: Int,
     topOfTurn: Int,
     rolloutIdx: Int,
-    bottomIdx: Int,
     stopIdx: Int,
     ground: Double
   ): SwoopData =
@@ -86,7 +86,7 @@ final class SwoopDataDetector private (config: SwoopConfig) {
       SwoopMetrics.maxSpeeds(series, diveIdx, topOfTurn, rolloutIdx, stopIdx)
 
     val degreesOfRotation =
-      SwoopMetrics.turnDegrees(series, topOfTurn, Math.min(bottomIdx, last), diveIdx)
+      SwoopMetrics.turnDegrees(series, topOfTurn, Math.min(stopIdx, last), diveIdx)
 
     val turnInitiation =
       EventPoint(series(topOfTurn).idx, agl(topOfTurn), series.time(topOfTurn), series(topOfTurn).speed)
