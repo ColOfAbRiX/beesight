@@ -5,6 +5,8 @@ package com.colofabrix.scala.beesight.swoop
  */
 private[swoop] object SwoopConstants {
 
+  // FIXME: All of these should be configurable values in reference.conf
+
   //  Altitudes  //
 
   /** Pattern entry: first crossing below this AGL altitude. */

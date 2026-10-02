@@ -5,7 +5,6 @@ import cats.syntax.functor.*
 import com.colofabrix.scala.beesight.config.{ DetectionConfig, SwoopConfig }
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.readers.PointReader
-import com.colofabrix.scala.beesight.readers.time
 import com.colofabrix.scala.beesight.swoop.computations.{ SwoopCascade, SwoopGround, SwoopMetrics }
 import com.colofabrix.scala.beesight.swoop.model.*
 import java.time.Duration
@@ -39,24 +38,11 @@ final class SwoopDataDetector private (config: SwoopConfig) {
    */
   def detect[F[_]: Concurrent, A: PointReader](events: FlightEvents, stream: fs2.Stream[F, A]): F[Option[SwoopData]] =
     stream
-      .through(cutStream(events))
       .zipWithIndex
       .map(IndexedPoint.fromZip)
       .compile
       .toVector
       .map(computeSwoopMetrics(_, events))
-
-  private def cutStream[F[_], A: PointReader](events: FlightEvents): fs2.Pipe[F, A, A] =
-    stream =>
-      events.landing match {
-        case Some(landing) =>
-          val afterLandingTime = landing.time.plus(groundDetector.groundWindow)
-          stream
-            .drop(events.canopy.map(_.index).getOrElse(0L))
-            .takeWhile(_.time.isBefore(afterLandingTime))
-        case None =>
-          stream.drop(events.canopy.map(_.index).getOrElse(0L))
-      }
 
   private def computeSwoopMetrics(dataPoints: Vector[IndexedPoint], events: FlightEvents): Option[SwoopData] =
     for

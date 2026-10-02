@@ -13,6 +13,9 @@ import scala.annotation.tailrec
  */
 private[swoop] object SwoopCascade {
 
+  // FIXME: Make this file more FP by removing all the vars and keeping performance in mind
+  // FIXME: Evaluate and discuss with the user if this file should be brokwn down in smaller files
+
   //  Pattern Entry  //
 
   /** The first crossing below the pattern-entry altitude above the detected ground. */
