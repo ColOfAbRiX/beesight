@@ -4,7 +4,7 @@ import cats.effect.IO
 import cats.syntax.all.given
 import com.colofabrix.scala.beesight.*
 import com.colofabrix.scala.beesight.TestFilesHandler.given
-import com.colofabrix.scala.beesight.config.DetectionConfig
+import com.colofabrix.scala.beesight.config.BeesightConfig
 import com.colofabrix.scala.beesight.jumpevents.JumpEventsDetector
 import com.colofabrix.scala.beesight.matchers.SwoopMatchers
 import com.colofabrix.scala.beesight.model.*
@@ -80,14 +80,14 @@ class SwoopAngleDetectorBulkSpec extends AnyWordSpec with Matchers with IOValues
   private def detectSwoop(filePath: java.nio.file.Path): IO[Option[SwoopData]] =
     for {
       events  <- detectEvents(filePath)
-      detector = SwoopDataDetector(DetectionConfig.default)
+      detector = SwoopDataDetector(BeesightConfig.default)
       swoop   <- detector.detect(events, TestFilesHandler.readCsv[CsvPoint](filePath))
     } yield swoop
 
   private def detectEvents(filePath: java.nio.file.Path): IO[FlightEvents] =
     TestFilesHandler
       .readCsv[CsvPoint](filePath)
-      .through(JumpEventsDetector(DetectionConfig.default.jumpevents).detect)
+      .through(JumpEventsDetector(BeesightConfig.default.jumpevents).detect)
       .compile
       .last
       .map(_.getOrElse(FlightEvents.empty))

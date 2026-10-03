@@ -4,10 +4,10 @@ import cats.effect.IO
 import cats.syntax.all.given
 import com.colofabrix.scala.beesight.*
 import com.colofabrix.scala.beesight.TestFilesHandler.given
-import com.colofabrix.scala.beesight.config.DetectionConfig
+import com.colofabrix.scala.beesight.config.BeesightConfig
 import com.colofabrix.scala.beesight.jumpevents.JumpEventsDetector
 import com.colofabrix.scala.beesight.model.*
-import com.colofabrix.scala.beesight.swoop.computations.{ SwoopCascade, SwoopGround, SwoopMetrics }
+import com.colofabrix.scala.beesight.swoop.computations.*
 import com.colofabrix.scala.beesight.swoop.model.*
 import java.nio.file.Paths
 import org.scalatest.wordspec.AnyWordSpec
@@ -20,6 +20,7 @@ import scala.concurrent.duration.*
 class SwoopAngleDebugSpec extends AnyWordSpec with IOValues {
 
   private val testFilesDir = Paths.get("src/test/resources/test_files")
+  private val config       = BeesightConfig.default.swoop
 
   /** Representative failing files: over-count files broken by the carve tail, plus under-reported contrasts. */
   private val files = List(
@@ -57,42 +58,30 @@ class SwoopAngleDebugSpec extends AnyWordSpec with IOValues {
     } yield {
       val series = PointSeries(points.zipWithIndex.map { case (p, i) => IndexedPoint.fromZip(p, i.toLong) })
 
-      val ground       = SwoopGround(DetectionConfig.default.swoop).detect(series, events.landing)
-      val patternEntry = SwoopCascade.findPatternEntry(series, ground)
-      val dive         = SwoopCascade.findDivePoint(series, patternEntry.getOrElse(0), ground)
-      val topOfTurn    = dive.map(d =>
-        SwoopCascade.findTopOfTurn(
-          series,
-          d,
-          patternEntry.getOrElse(0),
-          DetectionConfig.default.swoop.pullThreshold.value
-        )
-      )
-      val stop    = dive.flatMap(d => SwoopCascade.findStop(series, d))
-      val rollout = for {
+      val ground       = SwoopGround(config).detect(series, events.landing)
+      val patternEntry = SwoopPatternEntry.find(series, ground, config)
+      val dive         = SwoopDivePoint.find(series, patternEntry.getOrElse(0), ground, config)
+      val topOfTurn    = dive.map(d => SwoopTopOfTurn.find(series, d, patternEntry.getOrElse(0), config))
+      val stop         = dive.flatMap(d => SwoopStop.find(series, d, config))
+      val rollout      = for {
         d <- dive
         t <- topOfTurn
         s <- stop
-      } yield SwoopCascade.findRolloutStart(
-        series,
-        t,
-        s,
-        DetectionConfig.default.swoop.rolloutWindow.value
-      ).getOrElse(-1)
+      } yield SwoopRolloutStart.find(series, t, s, config).getOrElse(-1)
       val bottom = for {
         r <- rollout
         s <- stop
-      } yield SwoopCascade.findBottomOfTurn(series, r, s)
+      } yield SwoopBottomOfTurn.find(series, r, s, config)
 
       val header = List(
-        f"ground=$ground%.1f  patternEntry=$patternEntry  dive=$dive  topOfTurn=$topOfTurn  rollout=$rollout  bottom=$bottom  stop=$stop"
+        f"ground=${ground.value}%.1f  patternEntry=$patternEntry  dive=$dive  topOfTurn=$topOfTurn  rollout=$rollout  bottom=$bottom  stop=$stop"
       )
 
       val turnDegrees = for {
         d <- dive
         t <- topOfTurn
         b <- bottom
-      } yield SwoopMetrics.turnDegrees(series, t, stop.getOrElse(b), d)
+      } yield SwoopMetrics.turnDegrees(series, t, stop.getOrElse(b), d, config)
 
       val summary = List(
         f"turnDegrees=${turnDegrees.getOrElse("n/a")}",
@@ -102,7 +91,7 @@ class SwoopAngleDebugSpec extends AnyWordSpec with IOValues {
       //  Per-sample dump: 10s before topOfTurn through 40s after stop, to cover the full rollout and landing  //
       val from = topOfTurn.getOrElse(0) - 50 max 0
       val to   = (stop.getOrElse(bottom.getOrElse(series.length - 1)) + 200) min (series.length - 1)
-      val agl  = (i: Int) => series.altitude(i) - ground
+      val agl  = (i: Int) => series.altitude(i) - ground.value
 
       def wrap(raw: Double): Double =
         if raw > 180.0 then raw - 360.0 else if raw < -180.0 then raw + 360.0 else raw
@@ -118,8 +107,8 @@ class SwoopAngleDebugSpec extends AnyWordSpec with IOValues {
           val h = series.horizontalSpeed(i)
           val v = series.verticalSpeed(i)
           if h == 0.0 then (if v < 0 then -90.0 else 90.0) else Math.toDegrees(Math.atan(v / h))
-        val hs = series.horizontalSpeed(i)
-        val vz = series.verticalSpeed(i)
+        val hs    = series.horizontalSpeed(i)
+        val vz    = series.verticalSpeed(i)
         val total = Math.sqrt(hs * hs + vz * vz)
         f"  i=$i%5d  t=${(series.timeMillis(i) - series.timeMillis(from)) / 1000.0}%7.2f  clock=${clock(series.timeMillis(i))}  msl=${series.altitude(i)}%7.1f  agl=${agl(i)}%7.1f  vz=$vz%7.2f  hs=$hs%6.2f  total=$total%6.2f  hdg=${series.heading(i)}%6.1f  dHdg=$rawDelta%7.1f  diveAng=$diveAngle%6.1f"
       }
@@ -130,7 +119,7 @@ class SwoopAngleDebugSpec extends AnyWordSpec with IOValues {
   private def detectEvents(filePath: java.nio.file.Path): IO[FlightEvents] =
     TestFilesHandler
       .readCsv[CsvPoint](filePath)
-      .through(JumpEventsDetector(DetectionConfig.default.jumpevents).detect)
+      .through(JumpEventsDetector(BeesightConfig.default.jumpevents).detect)
       .compile
       .last
       .map(_.getOrElse(FlightEvents.empty))

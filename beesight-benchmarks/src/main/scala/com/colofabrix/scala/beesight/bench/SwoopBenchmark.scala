@@ -5,7 +5,7 @@ import cats.effect.unsafe.implicits.global
 import cats.syntax.all.given
 import com.colofabrix.scala.beesight.{ CsvPoint, TestFilesHandler }
 import com.colofabrix.scala.beesight.TestFilesHandler.given
-import com.colofabrix.scala.beesight.config.DetectionConfig
+import com.colofabrix.scala.beesight.config.BeesightConfig
 import com.colofabrix.scala.beesight.jumpevents.JumpEventsDetector
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.swoop.SwoopDataDetector
@@ -53,10 +53,10 @@ object SwoopBenchmark {
     println(s"Warmup: $WarmupPasses full passes, Measurement: $MeasurePasses passes")
     println()
 
-    val config          = DetectionConfig.default
-    val eventsDetector  = JumpEventsDetector(config.jumpevents)
-    val swoopDetector   = SwoopDataDetector(config)
-    val zipFiles        = collectZipFiles()
+    val config         = BeesightConfig.default
+    val eventsDetector = JumpEventsDetector(config.jumpevents)
+    val swoopDetector  = SwoopDataDetector(config)
+    val zipFiles       = collectZipFiles()
 
     if zipFiles.isEmpty then
       println("No jump files found — nothing to benchmark.")
@@ -197,7 +197,10 @@ object SwoopBenchmark {
     val start = System.nanoTime()
     val _     =
       detector
-        .detect(events.getOrElse(filePath.getFileName.toString, FlightEvents.empty), TestFilesHandler.readCsv[CsvPoint](filePath))
+        .detect(
+          events.getOrElse(filePath.getFileName.toString, FlightEvents.empty),
+          TestFilesHandler.readCsv[CsvPoint](filePath)
+        )
         .unsafeRunSync()
     val elapsed = System.nanoTime() - start
     elapsed / 1_000_000

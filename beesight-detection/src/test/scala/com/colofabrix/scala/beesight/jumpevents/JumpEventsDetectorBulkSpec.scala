@@ -4,7 +4,7 @@ import cats.effect.IO
 import cats.syntax.all.given
 import com.colofabrix.scala.beesight.*
 import com.colofabrix.scala.beesight.TestFilesHandler.given
-import com.colofabrix.scala.beesight.config.DetectionConfig
+import com.colofabrix.scala.beesight.config.BeesightConfig
 import com.colofabrix.scala.beesight.matchers.JumpEventMatchers
 import com.colofabrix.scala.beesight.model.*
 import java.nio.file.Paths
@@ -117,7 +117,7 @@ class JumpEventsDetectorBulkSpec extends AnyWordSpec with Matchers with IOValues
   private def detectLastEvents(filePath: java.nio.file.Path): IO[FlightEvents] =
     TestFilesHandler
       .readCsv[CsvPoint](filePath)
-      .through(JumpEventsDetector(DetectionConfig.default.jumpevents).detect)
+      .through(JumpEventsDetector(BeesightConfig.default.jumpevents).detect)
       .compile
       .last
       .map {

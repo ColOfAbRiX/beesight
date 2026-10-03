@@ -10,26 +10,26 @@ import pureconfig.*
 import scala.io.Source
 
 /**
- * CLI option definitions, HOCON parsing, and pureconfig loading for DetectionConfig.
+ * CLI option definitions, HOCON parsing, and pureconfig loading for BeesightConfig.
  *
  * This lives in the CLI module because it couples the detection configuration data structure to command-line parsing
  * and configuration-loading concerns (decline options, HOCON overrides, and reference.conf defaults), which are not
  * intrinsic to the detection engine.
  */
-object DetectionConfigCli {
+object BeesightConfigCli {
 
   /**
    * Default detection configuration loaded from `reference.conf`.
    */
-  val default: DetectionConfig =
+  val default: BeesightConfig =
     ConfigSource
       .default
-      .loadOrThrow[DetectionConfig]
+      .loadOrThrow[BeesightConfig]
 
-  lazy val declineOpts: Opts[DetectionConfig] =
+  lazy val declineOpts: Opts[BeesightConfig] =
     detectionConfigPath orElse detectionConfigString orElse Opts(default)
 
-  private lazy val detectionConfigPath: Opts[DetectionConfig] =
+  private lazy val detectionConfigPath: Opts[BeesightConfig] =
     Opts
       .option[String](
         long = "detection-config-path",
@@ -39,7 +39,7 @@ object DetectionConfigCli {
         fromString(Source.fromFile(Paths.get(path).toFile).mkString)
       }
 
-  private lazy val detectionConfigString: Opts[DetectionConfig] =
+  private lazy val detectionConfigString: Opts[BeesightConfig] =
     Opts
       .option[String](
         long = "detection-config-string",
@@ -47,14 +47,14 @@ object DetectionConfigCli {
       )
       .mapValidated(fromString)
 
-  private def fromString(configString: String): ValidatedNel[String, DetectionConfig] =
+  private def fromString(configString: String): ValidatedNel[String, BeesightConfig] =
     val overrides = ConfigFactory.parseString(configString)
     val defaults  = ConfigFactory.defaultReference()
     val merged    = overrides.withFallback(defaults).resolve()
 
     ConfigSource
       .fromConfig(merged)
-      .load[DetectionConfig]
+      .load[BeesightConfig]
       .left
       .map(_.prettyPrint())
       .fold(
@@ -85,7 +85,13 @@ object DetectionConfigCli {
   given ConfigReader[Area] =
     ConfigReader[Double].map(Area(_))
 
-  given ConfigReader[DetectionConfig] =
+  given ConfigReader[Angle] =
+    ConfigReader[Double].map(Angle(_))
+
+  given ConfigReader[TurnRate] =
+    ConfigReader[Double].map(TurnRate(_))
+
+  given ConfigReader[BeesightConfig] =
     ConfigReader.derived
 
   given ConfigReader[JumpEventsConfig] =
@@ -104,6 +110,24 @@ object DetectionConfigCli {
     ConfigReader.derived
 
   given ConfigReader[SwoopConfig] =
+    ConfigReader.derived
+
+  given ConfigReader[SwoopAltitudesConfig] =
+    ConfigReader.derived
+
+  given ConfigReader[SwoopSpeedsConfig] =
+    ConfigReader.derived
+
+  given ConfigReader[SwoopAnglesConfig] =
+    ConfigReader.derived
+
+  given ConfigReader[SwoopCarveConfig] =
+    ConfigReader.derived
+
+  given ConfigReader[SwoopGroundConfig] =
+    ConfigReader.derived
+
+  given ConfigReader[SwoopStreamConfig] =
     ConfigReader.derived
 
   given ConfigReader[MetricsConfig] =

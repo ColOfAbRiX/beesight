@@ -2,7 +2,7 @@ package com.colofabrix.scala.beesight.metrics
 
 import cats.effect.IO
 import cats.syntax.all.given
-import com.colofabrix.scala.beesight.config.{ Altitude, DetectionConfig }
+import com.colofabrix.scala.beesight.config.{ Altitude, BeesightConfig }
 import com.colofabrix.scala.beesight.jumpevents.JumpEventsDetector
 import com.colofabrix.scala.beesight.metrics.computations.*
 import com.colofabrix.scala.beesight.model.*
@@ -70,14 +70,14 @@ class FlightMetricsBulkSpec extends AnyWordSpec with Matchers with IOValues with
       obtained <- computeMetrics(testFilesDir.resolve(pair.inputFile), pair.groundElevationResidual)
       golden   <- TestFilesHandler.readCsv[FlySightMetricsResult](testFilesDir.resolve(pair.metricsFile)).compile.toList
     yield
-      val comparison = compareWithGolden(obtained, golden, DetectionConfig.default.metrics.slopeHalfWindow)
+      val comparison = compareWithGolden(obtained, golden, BeesightConfig.default.metrics.slopeHalfWindow)
       if comparison.failures.isEmpty then comparison
       else comparison.copy(failures = s"[$idx] ${pair.inputFile}:" :: comparison.failures)
 
   private def computeMetrics(inputPath: Path, residual: Option[Double] = None): IO[List[FlightMetric]] =
     for
       events         <- detectEvents(inputPath)
-      config          = DetectionConfig.default.metrics
+      config          = BeesightConfig.default.metrics
       detectedGround  = MetricsGround.detect(events.landing, config)
       groundElevation = Altitude(detectedGround + residual.getOrElse(0.0))
       metrics        <- TestFilesHandler
@@ -90,7 +90,7 @@ class FlightMetricsBulkSpec extends AnyWordSpec with Matchers with IOValues with
   private def detectEvents(inputPath: Path): IO[FlightEvents] =
     TestFilesHandler
       .readCsv[GpsCsvPoint](inputPath)
-      .through(JumpEventsDetector(DetectionConfig.default.jumpevents).detect)
+      .through(JumpEventsDetector(BeesightConfig.default.jumpevents).detect)
       .compile
       .last
       .map(_.getOrElse(FlightEvents.empty))

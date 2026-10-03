@@ -1,5 +1,6 @@
 package com.colofabrix.scala.beesight.swoop
 
+import com.colofabrix.scala.beesight.config.BeesightConfig
 import com.colofabrix.scala.beesight.model.{ GeoVector, IndexedPoint }
 import com.colofabrix.scala.beesight.swoop.computations.SwoopMetrics
 import com.colofabrix.scala.beesight.swoop.model.PointSeries
@@ -11,6 +12,8 @@ import org.scalatest.matchers.should.Matchers
  * Unit tests for [[SwoopMetrics]].
  */
 class SwoopMetricsSpec extends AnyFreeSpec with Matchers {
+
+  private val config = BeesightConfig.default.swoop
 
   //  maxSpeeds  //
 
@@ -144,14 +147,14 @@ class SwoopMetricsSpec extends AnyFreeSpec with Matchers {
       //  so the delta from top of turn into the following sample is never part of the turn angle.
       val series = turnSeries(Vector(0, 10, 20, 30, 40, 50), vertical = 5.0)
 
-      SwoopMetrics.turnDegrees(series, topOfTurn = 0, endIdx = 5, diveIdx = 3) shouldBe 40.0 +- 1e-9
-      SwoopMetrics.turnDegrees(series, topOfTurn = 2, endIdx = 4, diveIdx = 3) shouldBe 10.0 +- 1e-9
+      SwoopMetrics.turnDegrees(series, topOfTurn = 0, endIdx = 5, diveIdx = 3, config) shouldBe 40.0 +- 1e-9
+      SwoopMetrics.turnDegrees(series, topOfTurn = 2, endIdx = 4, diveIdx = 3, config) shouldBe 10.0 +- 1e-9
     }
 
     "is negative for left turns" in {
       val series = turnSeries(Vector(50, 40, 30, 20, 10, 0), vertical = 5.0)
 
-      SwoopMetrics.turnDegrees(series, topOfTurn = 0, endIdx = 5, diveIdx = 3) shouldBe -40.0 +- 1e-9
+      SwoopMetrics.turnDegrees(series, topOfTurn = 0, endIdx = 5, diveIdx = 3, config) shouldBe -40.0 +- 1e-9
     }
 
     "wraps heading deltas across north" in {
@@ -159,29 +162,29 @@ class SwoopMetricsSpec extends AnyFreeSpec with Matchers {
       val right = turnSeries(Vector(350, 10, 30), vertical = 5.0)
       val left  = turnSeries(Vector(10, 350, 330), vertical = 5.0)
 
-      SwoopMetrics.turnDegrees(right, topOfTurn = 0, endIdx = 2, diveIdx = 1) shouldBe 20.0 +- 1e-9
-      SwoopMetrics.turnDegrees(left, topOfTurn = 0, endIdx = 2, diveIdx = 1) shouldBe -20.0 +- 1e-9
+      SwoopMetrics.turnDegrees(right, topOfTurn = 0, endIdx = 2, diveIdx = 1, config) shouldBe 20.0 +- 1e-9
+      SwoopMetrics.turnDegrees(left, topOfTurn = 0, endIdx = 2, diveIdx = 1, config) shouldBe -20.0 +- 1e-9
     }
 
     "returns zero when the window contains no samples" in {
       val series = turnSeries(Vector(0, 10, 20, 30), vertical = 5.0)
 
-      SwoopMetrics.turnDegrees(series, topOfTurn = 3, endIdx = 3, diveIdx = 3) shouldBe 0.0 +- 1e-9
-      SwoopMetrics.turnDegrees(series, topOfTurn = 0, endIdx = 0, diveIdx = 0) shouldBe 0.0 +- 1e-9
-      SwoopMetrics.turnDegrees(series, topOfTurn = 3, endIdx = 1, diveIdx = 2) shouldBe 0.0 +- 1e-9
+      SwoopMetrics.turnDegrees(series, topOfTurn = 3, endIdx = 3, diveIdx = 3, config) shouldBe 0.0 +- 1e-9
+      SwoopMetrics.turnDegrees(series, topOfTurn = 0, endIdx = 0, diveIdx = 0, config) shouldBe 0.0 +- 1e-9
+      SwoopMetrics.turnDegrees(series, topOfTurn = 3, endIdx = 1, diveIdx = 2, config) shouldBe 0.0 +- 1e-9
     }
 
     "returns zero when there is no rotation" in {
       val series = turnSeries(Vector.fill(6)(0.0), vertical = 5.0)
 
-      SwoopMetrics.turnDegrees(series, topOfTurn = 0, endIdx = 5, diveIdx = 3) shouldBe 0.0 +- 1e-9
+      SwoopMetrics.turnDegrees(series, topOfTurn = 0, endIdx = 5, diveIdx = 3, config) shouldBe 0.0 +- 1e-9
     }
 
     "returns zero for a slow rotation below the carve threshold" in {
       //  1.5 deg/sample at 100 ms spacing = 15 deg/s: a landing-pattern turn, not a carve.
       val series = turnSeries(Vector(0, 1.5, 3.0, 4.5, 6.0, 7.5), vertical = 5.0)
 
-      SwoopMetrics.turnDegrees(series, topOfTurn = 0, endIdx = 5, diveIdx = 3) shouldBe 0.0 +- 1e-9
+      SwoopMetrics.turnDegrees(series, topOfTurn = 0, endIdx = 5, diveIdx = 3, config) shouldBe 0.0 +- 1e-9
     }
 
     "returns zero when the heading is unreliable at low horizontal speed" in {
@@ -193,14 +196,14 @@ class SwoopMetricsSpec extends AnyFreeSpec with Matchers {
         dtMillis = 100.0
       )
 
-      SwoopMetrics.turnDegrees(series, topOfTurn = 0, endIdx = 5, diveIdx = 3) shouldBe 0.0 +- 1e-9
+      SwoopMetrics.turnDegrees(series, topOfTurn = 0, endIdx = 5, diveIdx = 3, config) shouldBe 0.0 +- 1e-9
     }
 
     "excludes the counter-rotation preceding the carve" in {
       //  A right-hand drift into the dive followed by the left carve: only the carve is the turn.
       val series = turnSeries(Vector(0, 10, 20, 30, 20, 10, 0, 350, 340, 330), vertical = 5.0)
 
-      SwoopMetrics.turnDegrees(series, topOfTurn = 0, endIdx = 9, diveIdx = 3) shouldBe -60.0 +- 1e-9
+      SwoopMetrics.turnDegrees(series, topOfTurn = 0, endIdx = 9, diveIdx = 3, config) shouldBe -60.0 +- 1e-9
     }
 
     "excludes a post-carve S-turn from the turn angle" in {
@@ -208,7 +211,7 @@ class SwoopMetricsSpec extends AnyFreeSpec with Matchers {
       //  S-turn contributes nothing to the turn angle.
       val series = turnSeries(Vector(0, 340, 320, 300, 280, 260, 270, 280, 290, 300), vertical = 5.0)
 
-      SwoopMetrics.turnDegrees(series, topOfTurn = 0, endIdx = 9, diveIdx = 4) shouldBe -80.0 +- 1e-9
+      SwoopMetrics.turnDegrees(series, topOfTurn = 0, endIdx = 9, diveIdx = 4, config) shouldBe -80.0 +- 1e-9
     }
 
   }

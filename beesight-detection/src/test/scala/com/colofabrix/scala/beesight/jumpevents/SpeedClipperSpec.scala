@@ -415,11 +415,11 @@ class SpeedClipperSpec extends AnyFreeSpec with Matchers with IOValues {
   }
 
   private def buildConfig(
-    preprocessWindowSize: Int = DetectionConfig.default.jumpevents.preprocessWindowSize.value,
-    accelerationClip: Double = DetectionConfig.default.jumpevents.accelerationClip.value,
-  ): DetectionConfig =
-    DetectionConfig.default.copy(
-      jumpevents = DetectionConfig.default.jumpevents.copy(
+    preprocessWindowSize: Int = BeesightConfig.default.jumpevents.preprocessWindowSize.value,
+    accelerationClip: Double = BeesightConfig.default.jumpevents.accelerationClip.value,
+  ): BeesightConfig =
+    BeesightConfig.default.copy(
+      jumpevents = BeesightConfig.default.jumpevents.copy(
         preprocessWindowSize = WindowSize(preprocessWindowSize.refineUnsafe),
         accelerationClip = Speed(accelerationClip),
       ),
@@ -441,7 +441,7 @@ class SpeedClipperSpec extends AnyFreeSpec with Matchers with IOValues {
 
   private def runPreprocess(
     points: List[IndexedPoint],
-    config: DetectionConfig = DetectionConfig.default,
+    config: BeesightConfig = BeesightConfig.default,
   ): List[IndexedPoint] =
     Stream
       .emits[IO, IndexedPoint](points)

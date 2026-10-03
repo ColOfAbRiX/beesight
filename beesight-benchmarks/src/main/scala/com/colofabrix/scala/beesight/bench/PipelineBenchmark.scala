@@ -2,7 +2,7 @@ package com.colofabrix.scala.beesight.detection.bench
 
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
-import com.colofabrix.scala.beesight.config.DetectionConfig
+import com.colofabrix.scala.beesight.config.BeesightConfig
 import com.colofabrix.scala.beesight.jumpevents.JumpEventsDetector
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.readers.*
@@ -73,7 +73,7 @@ object PipelineBenchmark {
     println(s"Warmup: $WarmupPasses full passes, Measurement: $MeasurePasses passes")
     println()
 
-    val config   = DetectionConfig.default
+    val config   = BeesightConfig.default
     val detector = JumpEventsDetector(config.jumpevents)
     val zipFiles = collectZipFiles()
 

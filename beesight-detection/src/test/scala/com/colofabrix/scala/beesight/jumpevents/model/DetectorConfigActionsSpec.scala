@@ -8,7 +8,7 @@ import org.scalatest.matchers.should.Matchers
 
 class DetectorConfigActionsSpec extends AnyFreeSpec with Matchers {
 
-  private val config = DetectionConfig.default
+  private val config = BeesightConfig.default
 
   "JumpEventsConfigActions" - {
 

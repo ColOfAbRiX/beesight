@@ -1,13 +1,16 @@
 package com.colofabrix.scala.beesight.swoop
 
+import com.colofabrix.scala.beesight.config.{ Altitude, BeesightConfig }
 import com.colofabrix.scala.beesight.model.{ GeoVector, IndexedPoint }
-import com.colofabrix.scala.beesight.swoop.computations.SwoopCascade
+import com.colofabrix.scala.beesight.swoop.computations.{ SwoopBottomOfTurn, SwoopDivePoint, SwoopPatternEntry, SwoopRolloutStart, SwoopStop }
 import com.colofabrix.scala.beesight.swoop.model.PointSeries
 import java.time.Instant
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
-class SwoopCascadeSpec extends AnyFreeSpec with Matchers {
+class SwoopStagesSpec extends AnyFreeSpec with Matchers {
+
+  private val config = BeesightConfig.default.swoop
 
   //  Helpers  //
 
@@ -33,7 +36,7 @@ class SwoopCascadeSpec extends AnyFreeSpec with Matchers {
 
   //  findPatternEntry  //
 
-  "SwoopCascade.findPatternEntry" - {
+  "SwoopPatternEntry.find" - {
 
     "finds the first crossing below the pattern entry altitude above ground" in {
       //  ground=0: patternEntryAltitude=762. AGL=alt-ground=alt.
@@ -44,7 +47,7 @@ class SwoopCascadeSpec extends AnyFreeSpec with Matchers {
         point(0.0, 10.0, 5.0, 700.0, 2000L),
       ))
 
-      SwoopCascade.findPatternEntry(series, ground = 0.0) shouldBe Some(1)
+      SwoopPatternEntry.find(series, ground = Altitude(0.0), config) shouldBe Some(1)
     }
 
     "returns None when never crosses below" in {
@@ -54,7 +57,7 @@ class SwoopCascadeSpec extends AnyFreeSpec with Matchers {
         point(0.0, 10.0, 5.0, 780.0, 2000L),
       ))
 
-      SwoopCascade.findPatternEntry(series, ground = 0.0) shouldBe None
+      SwoopPatternEntry.find(series, ground = Altitude(0.0), config) shouldBe None
     }
 
     "accounts for ground offset" in {
@@ -64,14 +67,14 @@ class SwoopCascadeSpec extends AnyFreeSpec with Matchers {
         point(0.0, 10.0, 5.0, 850.0, 1000L), // AGL=750 < 762 → crossing at index 1
       ))
 
-      SwoopCascade.findPatternEntry(series, ground = 100.0) shouldBe Some(1)
+      SwoopPatternEntry.find(series, ground = Altitude(100.0), config) shouldBe Some(1)
     }
 
   }
 
   //  findDivePoint  //
 
-  "SwoopCascade.findDivePoint" - {
+  "SwoopDivePoint.find" - {
 
     "finds the first point achieving the maximum descent rate below the altitude cap" in {
       //  ground=0: diveAltitudeCap=304.8. AGL=alt.
@@ -82,7 +85,7 @@ class SwoopCascadeSpec extends AnyFreeSpec with Matchers {
         point(0.0, 10.0, 10.0, 200.0, 2000L),
       ))
 
-      SwoopCascade.findDivePoint(series, patternEntry = 0, ground = 0.0) shouldBe Some(1)
+      SwoopDivePoint.find(series, patternEntry = 0, ground = Altitude(0.0), config) shouldBe Some(1)
     }
 
     "returns None when all points are above the altitude cap" in {
@@ -91,7 +94,7 @@ class SwoopCascadeSpec extends AnyFreeSpec with Matchers {
         point(0.0, 10.0, 30.0, 400.0, 1000L), // AGL=400 > 304.8
       ))
 
-      SwoopCascade.findDivePoint(series, patternEntry = 0, ground = 0.0) shouldBe None
+      SwoopDivePoint.find(series, patternEntry = 0, ground = Altitude(0.0), config) shouldBe None
     }
 
     "returns None when no point has positive descent" in {
@@ -100,7 +103,7 @@ class SwoopCascadeSpec extends AnyFreeSpec with Matchers {
         point(0.0, 10.0, 0.0, 150.0, 1000L),
       ))
 
-      SwoopCascade.findDivePoint(series, patternEntry = 0, ground = 0.0) shouldBe None
+      SwoopDivePoint.find(series, patternEntry = 0, ground = Altitude(0.0), config) shouldBe None
     }
 
     "only considers points after patternEntry" in {
@@ -112,14 +115,14 @@ class SwoopCascadeSpec extends AnyFreeSpec with Matchers {
         point(0.0, 10.0, 20.0, 200.0, 3000L), // index 3: max descent after patternEntry
       ))
 
-      SwoopCascade.findDivePoint(series, patternEntry = 2, ground = 0.0) shouldBe Some(3)
+      SwoopDivePoint.find(series, patternEntry = 2, ground = Altitude(0.0), config) shouldBe Some(3)
     }
 
   }
 
   //  findStop  //
 
-  "SwoopCascade.findStop" - {
+  "SwoopStop.find" - {
 
     "finds the stop point after the heading fix" in {
       //  heading fix: first point where verticalSpeed < 4.4704 AND horizontalSpeed < 8.9408
@@ -132,7 +135,7 @@ class SwoopCascadeSpec extends AnyFreeSpec with Matchers {
         point(0.0, 0.5, 2.0, 80.0, 4000L),    // h=0.5 < 0.89 → stop
       ))
 
-      SwoopCascade.findStop(series, diveIdx = 0) shouldBe Some(4)
+      SwoopStop.find(series, diveIdx = 0, config) shouldBe Some(4)
     }
 
     "returns None when heading fix never occurs" in {
@@ -141,7 +144,7 @@ class SwoopCascadeSpec extends AnyFreeSpec with Matchers {
         point(0.0, 20.0, 30.0, 150.0, 1000L),
       ))
 
-      SwoopCascade.findStop(series, diveIdx = 0) shouldBe None
+      SwoopStop.find(series, diveIdx = 0, config) shouldBe None
     }
 
     "detects stop when heading deviates from swoop heading" in {
@@ -152,14 +155,14 @@ class SwoopCascadeSpec extends AnyFreeSpec with Matchers {
         point(100.0, 5.0, 2.0, 80.0, 4000L), // heading deviates 100° > 45° → stop
       ))
 
-      SwoopCascade.findStop(series, diveIdx = 0) shouldBe Some(3)
+      SwoopStop.find(series, diveIdx = 0, config) shouldBe Some(3)
     }
 
   }
 
   //  findRolloutStart  //
 
-  "SwoopCascade.findRolloutStart" - {
+  "SwoopRolloutStart.find" - {
 
     "finds the maximum descent rate point within the rollout window above stop altitude" in {
       //  rolloutWindow=30.48. Walk forward from topOfTurn while alt-stop.alt >= 30.48.
@@ -174,28 +177,32 @@ class SwoopCascadeSpec extends AnyFreeSpec with Matchers {
         point(0.0, 10.0, 2.0, 30.0, 6000L), // stop
       ))
 
-      SwoopCascade.findRolloutStart(series, topOfTurn = 0, stopIdx = 6, rolloutWindow = 30.48) shouldBe Some(2)
+      SwoopRolloutStart.find(series, topOfTurn = 0, stopIdx = 6, config) shouldBe Some(2)
     }
 
     "returns None when walk reaches topOfTurn without finding rollout" in {
-      //  All points are within the rollout window, so startIdx walks all the way to stopIdx.
-      //  Walking backward from stopIdx: vz decreases going backward (2, 10, 20, 25, 15, 5) → never ascending.
-      //  Actually: from startIdx walking backward: vz increases → ascending → keep walking.
-      //  When prev < topOfTurn → failed.
+      //  All points are within the rollout window, so startIdx stays at topOfTurn.
+      //  Walking backward from topOfTurn: prev < topOfTurn → failed.
       val series = PointSeries(Vector(
         point(0.0, 10.0, 10.0, 100.0, 0L), // topOfTurn=0, within rollout window
         point(0.0, 10.0, 20.0, 80.0, 1000L),
         point(0.0, 10.0, 5.0, 60.0, 2000L),
       ))
 
-      SwoopCascade.findRolloutStart(series, topOfTurn = 0, stopIdx = 2, rolloutWindow = 1000.0) shouldBe None
+      SwoopRolloutStart.find(
+        series,
+        topOfTurn = 0,
+        stopIdx = 2,
+        config.copy(altitudes = config.altitudes.copy(rolloutWindow = Altitude(1000.0)))
+      ) shouldBe
+      None
     }
 
   }
 
   //  findBottomOfTurn  //
 
-  "SwoopCascade.findBottomOfTurn" - {
+  "SwoopBottomOfTurn.find" - {
 
     "finds the bottom of turn using the altitude crossing" in {
       //  bottomCandidateWalk: walk forward while altitude decreases or descent is fast.
@@ -211,7 +218,7 @@ class SwoopCascadeSpec extends AnyFreeSpec with Matchers {
         point(0.0, 10.0, 2.0, 85.0, 6000L), // stop
       ))
 
-      val result = SwoopCascade.findBottomOfTurn(series, rolloutIdx = 0, stopIdx = 6)
+      val result = SwoopBottomOfTurn.find(series, rolloutIdx = 0, stopIdx = 6, config)
       result should be >= 0
     }
 
@@ -222,7 +229,7 @@ class SwoopCascadeSpec extends AnyFreeSpec with Matchers {
         point(0.0, 10.0, 2.0, 100.0, 2000L),
       ))
 
-      val result = SwoopCascade.findBottomOfTurn(series, rolloutIdx = 0, stopIdx = 2)
+      val result = SwoopBottomOfTurn.find(series, rolloutIdx = 0, stopIdx = 2, config)
       result shouldBe 1
     }
 

@@ -172,3 +172,45 @@ object Area {
     Show[Double].contramap[Area](_.value)
 
 }
+
+/**
+ * An angle value in degrees.
+ */
+opaque type Angle = Double
+
+object Angle {
+
+  def apply(value: Double): Angle =
+    value
+
+  extension (self: Angle)
+    def value: Double = self
+
+  given Ordering[Angle] =
+    Ordering.by(_.value)
+
+  given Show[Angle] =
+    Show[Double].contramap[Angle](_.value)
+
+}
+
+/**
+ * A turn rate value in degrees per second.
+ */
+opaque type TurnRate = Double
+
+object TurnRate {
+
+  def apply(value: Double): TurnRate =
+    value
+
+  extension (self: TurnRate)
+    def value: Double = self
+
+  given Ordering[TurnRate] =
+    Ordering.by(_.value)
+
+  given Show[TurnRate] =
+    Show[Double].contramap[TurnRate](_.value)
+
+}

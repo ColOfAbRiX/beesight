@@ -1,6 +1,6 @@
 package com.colofabrix.scala.beesight.swoop.computations
 
-import com.colofabrix.scala.beesight.swoop.SwoopConstants
+import com.colofabrix.scala.beesight.config.SwoopConfig
 import com.colofabrix.scala.beesight.swoop.model.PointSeries
 
 /**
@@ -85,26 +85,24 @@ private[swoop] object SwoopMetrics {
    * which accumulates heading noise at low horizontal speeds, is cancelled by post-turn S-turns inside the window,
    * and counts slow non-swoop rotations such as the landing pattern as turn degrees.
    */
-  def turnDegrees(series: PointSeries, topOfTurn: Int, endIdx: Int, diveIdx: Int): Double = {
+  def turnDegrees(series: PointSeries, topOfTurn: Int, endIdx: Int, diveIdx: Int, config: SwoopConfig): Double = {
     val n = series.length
-
-    // FIXME: Make this function more FP-like avoiding var
-    // FIXME: Move the inner function outside (or in their own object, if appropriate)
 
     /** Per-sample turn rate in deg/s, defined only where both samples carry a reliable heading. */
     def rate(i: Int): Option[Double] =
-      if i <= 0 || i >= n then 
+      if i <= 0 || i >= n then
         None
       else {
         val dtSec = (series.timeMillis(i) - series.timeMillis(i - 1)) / 1000.0
-        if dtSec <= 0 then 
+
+        val speed     = series.horizontalSpeed(i)
+        val speedPrev = series.horizontalSpeed(i - 1)
+
+        if dtSec <= 0 then
           None
-          // FIXME: Create two vals for this condition
-        else if series.horizontalSpeed(i) < SwoopConstants.carveReliableSpeed ||
-          series.horizontalSpeed(i - 1) < SwoopConstants.carveReliableSpeed
-        then 
+        else if speed < config.carve.reliableSpeed.value || speedPrev < config.carve.reliableSpeed.value then
           None
-        else 
+        else
           Some(wrapDegrees(series.heading(i) - series.heading(i - 1)) / dtSec)
       }
 
@@ -115,24 +113,23 @@ private[swoop] object SwoopMetrics {
       else Some(values.sum / values.size)
 
     //  Dominant direction: the net heading change over +/-2 s of reliable samples around the dive point  //
-    val backRef = (diveIdx - SwoopConstants.carveDirectionSamples to topOfTurn by -1)
-      .find(i => series.horizontalSpeed(i) >= SwoopConstants.carveReliableSpeed)
-      .getOrElse((diveIdx - SwoopConstants.carveDirectionSamples) max topOfTurn)
+    val backRef = (diveIdx - config.carve.directionSamples.value to topOfTurn by -1)
+      .find(i => series.horizontalSpeed(i) >= config.carve.reliableSpeed.value)
+      .getOrElse((diveIdx - config.carve.directionSamples.value) max topOfTurn)
 
-    val fwdRef = (diveIdx + SwoopConstants.carveDirectionSamples to endIdx)
-      .find(i => series.horizontalSpeed(i) >= SwoopConstants.carveReliableSpeed)
-      .getOrElse((diveIdx + SwoopConstants.carveDirectionSamples) min endIdx)
+    val fwdRef = (diveIdx + config.carve.directionSamples.value to endIdx)
+      .find(i => series.horizontalSpeed(i) >= config.carve.reliableSpeed.value)
+      .getOrElse((diveIdx + config.carve.directionSamples.value) min endIdx)
 
     val aroundNet = wrapDegrees(series.heading(fwdRef) - series.heading(backRef))
 
-    if Math.abs(aroundNet) < SwoopConstants.carveMinDirectionChange then 
+    if Math.abs(aroundNet) < config.carve.minDirectionChange.value then
       return 0.0
 
     val dir = if aroundNet > 0 then 1 else -1
 
     //  Expand forward from the dive point while the rotation persists: fast core first, then the decaying tail  //
 
-    // FIXME: Can we do without var?
     var end      = diveIdx
     var endBase  = diveIdx
     var misses   = 0
@@ -146,17 +143,17 @@ private[swoop] object SwoopMetrics {
     def baselineMiss(): Unit =
       if !baseDone then
         missesB += 1
-        if missesB > SwoopConstants.carveGapSamples then baseDone = true
+        if missesB > config.carve.gapSamples.value then baseDone = true
 
-    while i <= endIdx do
+    while i <= endIdx do {
       smoothRate(i) match
-        case Some(r) if r * dir > SwoopConstants.carveRateThreshold =>
+        case Some(r) if r * dir > config.carve.rateThreshold.value =>
           end = i
           core = true
           misses = 0
           exitRun = 0
           if !baseDone then { endBase = i; missesB = 0 }
-        case Some(r) if core && r * dir > SwoopConstants.carveExitRateThreshold =>
+        case Some(r) if core && r * dir > config.carve.exitRateThreshold.value =>
           misses = 0
           baselineMiss()
           exitRun += 1
@@ -165,29 +162,33 @@ private[swoop] object SwoopMetrics {
           misses += 1
           exitRun = 0
           baselineMiss()
-          if misses > SwoopConstants.carveGapSamples then { end = i - misses; i = endIdx + 1 }
+          if misses > config.carve.gapSamples.value then { end = i - misses; i = endIdx + 1 }
       i += 1
+    }
+
     val hasCore = core
 
     //  Expand backward from the dive point while the rotation persists  //
 
     var start     = diveIdx
     var startBase = diveIdx
-    misses        = 0
-    missesB       = 0
-    core          = false
-    baseDone      = false
-    exitRun       = 0
-    i             = diveIdx
-    while i > topOfTurn + 1 do
+
+    misses = 0
+    missesB = 0
+    core = false
+    baseDone = false
+    exitRun = 0
+    i = diveIdx
+
+    while i > topOfTurn + 1 do {
       smoothRate(i) match
-        case Some(r) if r * dir > SwoopConstants.carveRateThreshold =>
+        case Some(r) if r * dir > config.carve.rateThreshold.value =>
           start = i - 1
           core = true
           misses = 0
           exitRun = 0
           if !baseDone then { startBase = i - 1; missesB = 0 }
-        case Some(r) if core && r * dir > SwoopConstants.carveExitRateThreshold =>
+        case Some(r) if core && r * dir > config.carve.exitRateThreshold.value =>
           misses = 0
           baselineMiss()
           exitRun += 1
@@ -196,8 +197,9 @@ private[swoop] object SwoopMetrics {
           misses += 1
           exitRun = 0
           baselineMiss()
-          if misses > SwoopConstants.carveGapSamples then { start = i + misses - 1; i = 0 }
+          if misses > config.carve.gapSamples.value then { start = i + misses - 1; i = 0 }
       i -= 1
+    }
 
     //  A carve must contain a sample rotating faster than the entry threshold, else it is not a carve  //
     if !(hasCore || core) then
@@ -208,9 +210,11 @@ private[swoop] object SwoopMetrics {
     for i <- start + 1 to end do total += wrapDegrees(series.heading(i) - series.heading(i - 1))
 
     //  An expansion past the physical turn size is absorbing drift outside the turn: report the plain carve  //
-    if Math.abs(total) > SwoopConstants.carveMaxTurnDegrees then
+    if Math.abs(total) > config.carve.maxTurnDegrees.value then
       total = 0.0
-      for i <- startBase + 1 to endBase do total += wrapDegrees(series.heading(i) - series.heading(i - 1))
+      for i <- startBase + 1 to endBase do 
+        total += wrapDegrees(series.heading(i) - series.heading(i - 1))
+
     total
   }
 

@@ -2,10 +2,10 @@ package com.colofabrix.scala.beesight.swoop
 
 import cats.effect.kernel.Concurrent
 import cats.syntax.functor.*
-import com.colofabrix.scala.beesight.config.{ DetectionConfig, SwoopConfig }
+import com.colofabrix.scala.beesight.config.{ Altitude, BeesightConfig, SwoopConfig }
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.readers.*
-import com.colofabrix.scala.beesight.swoop.computations.{ SwoopCascade, SwoopGround, SwoopMetrics }
+import com.colofabrix.scala.beesight.swoop.computations.*
 import com.colofabrix.scala.beesight.swoop.model.*
 import java.time.Duration
 
@@ -34,15 +34,6 @@ final class SwoopDataDetector private (config: SwoopConfig) {
     SwoopGround(config)
 
   /**
-   * Head cut margin before the freefall event: the pattern entry is the first crossing below the pattern-entry
-   * altitude, which happens after exit but can precede the freefall detection on low exits, so the cut retains a
-   * window before it.
-   */
-  // FIXME: Make this a configuration parameter
-  private val beforeCanopyMargin: Duration =
-    Duration.ofSeconds(10)
-
-  /**
    * Detects swoop metrics from the flight data stream.
    */
   def detect[F[_]: Concurrent, A: PointReader](events: FlightEvents, stream: fs2.Stream[F, A]): F[Option[SwoopData]] =
@@ -57,19 +48,25 @@ final class SwoopDataDetector private (config: SwoopConfig) {
   private def cutStream[F[_], A: PointReader](events: FlightEvents): fs2.Pipe[F, (A, Long), (A, Long)] =
     stream =>
       val cutStart =
-        events.freefall.map(fall => fall.time.minus(beforeCanopyMargin))
+        events
+          .freefall
+          .map { fall =>
+            fall.time.minus(config.stream.beforeCanopyMargin)
+          }
 
-      stream.dropWhile { case (point, _) => cutStart.exists(point.time.isBefore) }
+      stream.dropWhile {
+        case (point, _) => cutStart.exists(point.time.isBefore)
+      }
 
   private def computeSwoopMetrics(dataPoints: Vector[IndexedPoint], events: FlightEvents): Option[SwoopData] =
     for
       series       <- Option.unless(dataPoints.length < 2)(PointSeries(dataPoints))
       ground        = groundDetector.detect(series, events.landing)
-      patternEntry <- SwoopCascade.findPatternEntry(series, ground)
-      dive         <- SwoopCascade.findDivePoint(series, patternEntry, ground)
-      topOfTurn     = SwoopCascade.findTopOfTurn(series, dive, patternEntry, config.pullThreshold.value)
-      stop         <- SwoopCascade.findStop(series, dive)
-      rollout      <- SwoopCascade.findRolloutStart(series, topOfTurn, stop, config.rolloutWindow.value)
+      patternEntry <- SwoopPatternEntry.find(series, ground, config)
+      dive         <- SwoopDivePoint.find(series, patternEntry, ground, config)
+      topOfTurn     = SwoopTopOfTurn.find(series, dive, patternEntry, config)
+      stop         <- SwoopStop.find(series, dive, config)
+      rollout      <- SwoopRolloutStart.find(series, topOfTurn, stop, config)
       swoopData     = buildSwoopData(series, dive, topOfTurn, rollout, stop, ground)
       result       <- Option.when(events.canopy.isDefined)(swoopData)
     yield result
@@ -80,16 +77,16 @@ final class SwoopDataDetector private (config: SwoopConfig) {
     topOfTurn: Int,
     rolloutIdx: Int,
     stopIdx: Int,
-    ground: Double
+    ground: Altitude
   ): SwoopData =
-    val agl  = (j: Int) => series.altitude(j) - ground
+    val agl  = (j: Int) => series.altitude(j) - ground.value
     val last = series.length - 1
 
     val maxSpeeds =
       SwoopMetrics.maxSpeeds(series, diveIdx, topOfTurn, rolloutIdx, stopIdx)
 
     val degreesOfRotation =
-      SwoopMetrics.turnDegrees(series, topOfTurn, Math.min(stopIdx, last), diveIdx)
+      SwoopMetrics.turnDegrees(series, topOfTurn, Math.min(stopIdx, last), diveIdx, config)
 
     val turnInitiation =
       EventPoint(series(topOfTurn).idx, agl(topOfTurn), series.time(topOfTurn), series(topOfTurn).speed)
@@ -139,7 +136,7 @@ final class SwoopDataDetector private (config: SwoopConfig) {
 
 object SwoopDataDetector {
 
-  def apply(config: DetectionConfig): SwoopDataDetector =
+  def apply(config: BeesightConfig): SwoopDataDetector =
     new SwoopDataDetector(config.swoop)
 
 }

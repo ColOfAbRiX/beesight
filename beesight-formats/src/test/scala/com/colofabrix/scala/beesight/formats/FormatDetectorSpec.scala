@@ -1,16 +1,15 @@
 package com.colofabrix.scala.beesight.formats
 
-import com.colofabrix.scala.beesight.formats.{ AirlogPoint, DekunuPoint, FileFormat, FlysightPoint, FormatDetector }
+import com.colofabrix.scala.beesight.formats.{ AirlogPoint, DekunuPoint, FileFormat, FlysightPoint, FormatDetector, GenericPoint }
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
 class FormatDetectorSpec extends AnyFreeSpec with Matchers {
 
-  // FIXME: Add tests for GenericPoint
-
   private val flysightColumns = FlysightPoint.requiredColumns
   private val airlogColumns   = AirlogPoint.requiredColumns
   private val dekunuColumns   = DekunuPoint.requiredColumns
+  private val genericColumns  = GenericPoint.requiredColumns
 
   private def headerOf(columns: Set[String]): String =
     columns.mkString(",")
@@ -69,6 +68,18 @@ class FormatDetectorSpec extends AnyFreeSpec with Matchers {
 
   }
 
+  "detecting a Generic file" - {
+
+    "should detect a Generic header with all required columns" in {
+      FormatDetector.detect(headerOf(genericColumns)) shouldBe Some(FileFormat.Generic)
+    }
+
+    "should detect a Generic header with extra unknown columns" in {
+      FormatDetector.detect(headerOf(genericColumns + "extraColumn")) shouldBe Some(FileFormat.Generic)
+    }
+
+  }
+
   //  Rejection  //
 
   "rejecting non-matching files" - {
@@ -85,6 +96,11 @@ class FormatDetectorSpec extends AnyFreeSpec with Matchers {
 
     "should reject a header missing one required Dekunu column" in {
       val broken = dekunuColumns - "gpsTime"
+      FormatDetector.detect(headerOf(broken)) shouldBe None
+    }
+
+    "should reject a header missing one required Generic column" in {
+      val broken = genericColumns - "velN"
       FormatDetector.detect(headerOf(broken)) shouldBe None
     }
 
@@ -112,7 +128,7 @@ class FormatDetectorSpec extends AnyFreeSpec with Matchers {
       FormatDetector.detect(headerOf(ambiguous)) shouldBe Some(FileFormat.Airlog)
     }
 
-    "should prefer the format matching more fields over a subset format (FIXME example)" in {
+    "should prefer the format matching more fields over a subset format" in {
       // A FlySight header also satisfies Generic's 6 required columns, but FlySight matches 13 and wins
       FormatDetector.detect(headerOf(flysightColumns)) shouldBe Some(FileFormat.FlySight)
     }

@@ -1,9 +1,8 @@
 package com.colofabrix.scala.beesight.swoop.computations
 
-import com.colofabrix.scala.beesight.config.SwoopConfig
+import com.colofabrix.scala.beesight.config.{ Altitude, SwoopConfig }
 import com.colofabrix.scala.beesight.math.*
 import com.colofabrix.scala.beesight.model.EventPoint
-import com.colofabrix.scala.beesight.swoop.SwoopConstants
 import com.colofabrix.scala.beesight.swoop.model.PointSeries
 import java.time.Duration
 
@@ -13,7 +12,7 @@ import java.time.Duration
 final private[swoop] class SwoopGround private (config: SwoopConfig) {
 
   val groundWindow: Duration =
-    config.groundWindow
+    config.ground.window
 
   /**
    * Ground altitude.
@@ -21,23 +20,23 @@ final private[swoop] class SwoopGround private (config: SwoopConfig) {
    * Primary calculation: the median altitude over the window of points starting at the detected landing point,
    * located by its time within the series. Fallback (no landing event): the last slow point's forward window.
    */
-  def detect(series: PointSeries, landing: Option[EventPoint]): Double =
+  def detect(series: PointSeries, landing: Option[EventPoint]): Altitude =
     landing
       .flatMap { l =>
         val start = series.points.indexWhere(!_.time.isBefore(l.time))
-        if start >= 0 then Some(medianAltitude(series, start, groundWindow)) else None
+        if start >= 0 then Some(Altitude(medianAltitude(series, start, groundWindow))) else None
       }
       .orElse {
         (series.length - 1 to 0 by -1)
           .find { i =>
-            series.totalSpeed(i) < SwoopConstants.groundSlowSpeed
+            series.totalSpeed(i) < config.ground.slowSpeed.value
           }
           .map { slowIdx =>
-            medianAltitude(series, slowIdx, groundWindow)
+            Altitude(medianAltitude(series, slowIdx, groundWindow))
           }
       }
       .getOrElse {
-        series.altitude(series.length - 1)
+        Altitude(series.altitude(series.length - 1))
       }
 
   private def medianAltitude(series: PointSeries, fromIndex: Int, duration: Duration): Double =

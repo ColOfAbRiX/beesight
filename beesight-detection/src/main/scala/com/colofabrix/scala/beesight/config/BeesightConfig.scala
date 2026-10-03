@@ -7,25 +7,25 @@ import java.time.Duration
  * Top-level configuration for the flight stage detection algorithm.
  *
  * This is a pure data structure intrinsic to the detection engine. It carries no configuration-loading or CLI concerns;
- * those live in the CLI module (see `DetectionConfigCli`).
+ * those live in the CLI module (see `BeesightConfigCli`).
  *
  * @param jumpevents Settings for the jump-events detection algorithm
  * @param swoop Thresholds and settings for swoop metrics computation
  * @param metrics Settings for the per-point flight metrics computation
  */
-final case class DetectionConfig(
+final case class BeesightConfig(
   jumpevents: JumpEventsConfig,
   swoop: SwoopConfig,
   metrics: MetricsConfig,
 )
 
-object DetectionConfig {
+object BeesightConfig {
 
   /**
    * Default detection configuration, hardcoded as a pure value so the library has no configuration-loading dependency.
    */
-  val default: DetectionConfig =
-    DetectionConfig(
+  val default: BeesightConfig =
+    BeesightConfig(
       jumpevents = JumpEventsConfig(
         preprocessWindowSize = WindowSize(20),
         accelerationClip = Speed(20.0),
@@ -66,9 +66,43 @@ object DetectionConfig {
         ),
       ),
       swoop = SwoopConfig(
-        pullThreshold = Speed(11.176),
-        rolloutWindow = Altitude(30.48),
-        groundWindow = Duration.ofSeconds(10),
+        altitudes = SwoopAltitudesConfig(
+          patternEntryAltitude = Altitude(762.0),
+          diveAltitudeCap = Altitude(304.8),
+          maxAltitudeGain = Altitude(152.4),
+          bottomAltitudeOffset = Altitude(1.0),
+          rolloutWindow = Altitude(30.48),
+        ),
+        speeds = SwoopSpeedsConfig(
+          pullThreshold = Speed(11.176),
+          steepeningEntry = Speed(6.7056),
+          steepeningAccumulator = Speed(6.7056),
+          stopDescentThreshold = Speed(4.4704),
+          stopHorizontalThreshold = Speed(8.9408),
+          stopEndHorizontal = Speed(0.89408),
+          bottomDescentThreshold = Speed(4.4704),
+          bottomVzCross = Speed(1.25),
+        ),
+        angles = SwoopAnglesConfig(
+          stopHeadingDeviation = Angle(45.0),
+          maxTurnRate = TurnRate(30.0),
+        ),
+        carve = SwoopCarveConfig(
+          rateThreshold = TurnRate(20.0),
+          exitRateThreshold = TurnRate(5.0),
+          maxTurnDegrees = Angle(110.0),
+          reliableSpeed = Speed(10.0),
+          gapSamples = WindowSize(5),
+          directionSamples = WindowSize(10),
+          minDirectionChange = Angle(5.0),
+        ),
+        ground = SwoopGroundConfig(
+          window = Duration.ofSeconds(10),
+          slowSpeed = Speed(4.4704),
+        ),
+        stream = SwoopStreamConfig(
+          beforeCanopyMargin = Duration.ofSeconds(10),
+        ),
       ),
       metrics = MetricsConfig(
         slopeHalfWindow = 4,
