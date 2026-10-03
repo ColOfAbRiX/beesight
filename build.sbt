@@ -130,3 +130,15 @@ addCommandAlias(
   "benchCompare",
   "beesightBenchmarks/runMain com.colofabrix.scala.beesight.detection.bench.PipelineBenchmark --compare"
 )
+addCommandAlias(
+  "benchSwoop",
+  "beesightBenchmarks/runMain com.colofabrix.scala.beesight.detection.bench.SwoopBenchmark"
+)
+addCommandAlias(
+  "benchSwoopSaveBaseline",
+  "beesightBenchmarks/runMain com.colofabrix.scala.beesight.detection.bench.SwoopBenchmark --save-baseline"
+)
+addCommandAlias(
+  "benchSwoopCompare",
+  "beesightBenchmarks/runMain com.colofabrix.scala.beesight.detection.bench.SwoopBenchmark --compare"
+)
