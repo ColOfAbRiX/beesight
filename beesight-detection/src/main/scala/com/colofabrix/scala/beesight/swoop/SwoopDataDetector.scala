@@ -4,7 +4,7 @@ import cats.effect.kernel.Concurrent
 import cats.syntax.functor.*
 import com.colofabrix.scala.beesight.config.{ DetectionConfig, SwoopConfig }
 import com.colofabrix.scala.beesight.model.*
-import com.colofabrix.scala.beesight.readers.PointReader
+import com.colofabrix.scala.beesight.readers.*
 import com.colofabrix.scala.beesight.swoop.computations.{ SwoopCascade, SwoopGround, SwoopMetrics }
 import com.colofabrix.scala.beesight.swoop.model.*
 import java.time.Duration
@@ -34,15 +34,32 @@ final class SwoopDataDetector private (config: SwoopConfig) {
     SwoopGround(config)
 
   /**
+   * Head cut margin before the freefall event: the pattern entry is the first crossing below the pattern-entry
+   * altitude, which happens after exit but can precede the freefall detection on low exits, so the cut retains a
+   * window before it.
+   */
+  // FIXME: Make this a configuration parameter
+  private val beforeCanopyMargin: Duration =
+    Duration.ofSeconds(10)
+
+  /**
    * Detects swoop metrics from the flight data stream.
    */
   def detect[F[_]: Concurrent, A: PointReader](events: FlightEvents, stream: fs2.Stream[F, A]): F[Option[SwoopData]] =
     stream
       .zipWithIndex
+      .through(cutStream(events))
       .map(IndexedPoint.fromZip)
       .compile
       .toVector
       .map(computeSwoopMetrics(_, events))
+
+  private def cutStream[F[_], A: PointReader](events: FlightEvents): fs2.Pipe[F, (A, Long), (A, Long)] =
+    stream =>
+      val cutStart =
+        events.freefall.map(fall => fall.time.minus(beforeCanopyMargin))
+
+      stream.dropWhile { case (point, _) => cutStart.exists(point.time.isBefore) }
 
   private def computeSwoopMetrics(dataPoints: Vector[IndexedPoint], events: FlightEvents): Option[SwoopData] =
     for

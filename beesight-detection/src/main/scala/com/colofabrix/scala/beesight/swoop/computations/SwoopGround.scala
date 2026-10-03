@@ -10,7 +10,7 @@ import java.time.Duration
 /**
  * Ground altitude estimation for swoop reporting: all reported altitudes are above ground level (AGL).
  */
-private[swoop] final class SwoopGround private (config: SwoopConfig) {
+final private[swoop] class SwoopGround private (config: SwoopConfig) {
 
   val groundWindow: Duration =
     config.groundWindow
@@ -18,14 +18,14 @@ private[swoop] final class SwoopGround private (config: SwoopConfig) {
   /**
    * Ground altitude.
    *
-   * Primary calculation: the median altitude over the window of points starting at the detected landing point.
-   * Fallback (no landing event): the last slow point's forward window.
+   * Primary calculation: the median altitude over the window of points starting at the detected landing point,
+   * located by its time within the series. Fallback (no landing event): the last slow point's forward window.
    */
   def detect(series: PointSeries, landing: Option[EventPoint]): Double =
     landing
-      .collect {
-        case l if 0 <= l.index && l.index < series.length =>
-          medianAltitude(series, l.index.toInt, groundWindow)
+      .flatMap { l =>
+        val start = series.points.indexWhere(!_.time.isBefore(l.time))
+        if start >= 0 then Some(medianAltitude(series, start, groundWindow)) else None
       }
       .orElse {
         (series.length - 1 to 0 by -1)
@@ -53,7 +53,7 @@ private[swoop] final class SwoopGround private (config: SwoopConfig) {
 }
 
 private[swoop] object SwoopGround {
-  
+
   def apply(config: SwoopConfig): SwoopGround =
     new SwoopGround(config)
 
