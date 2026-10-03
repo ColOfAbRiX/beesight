@@ -57,8 +57,14 @@ private[swoop] object SwoopConstants {
 
   //  Carve (turn angle)  //
 
-  /** Carve: smoothed turn rate above which a sample belongs to the carve. */
+  /** Carve: smoothed turn rate a sample must exceed for the carve to exist at all. */
   val carveRateThreshold = 20.0 // deg/s
+
+  /** Carve: smoothed turn rate above which a sample keeps the carve expanding once it exists. */
+  val carveExitRateThreshold = 5.0 // deg/s
+
+  /** Carve: turn-angle size above which the hysteresis expansion is discarded for the plain entry-threshold carve. */
+  val carveMaxTurnDegrees = 110.0 // deg
 
   /** Carve: minimum horizontal speed for the GPS heading to be reliable. */
   val carveReliableSpeed = 10.0 // ~22mph

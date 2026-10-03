@@ -71,11 +71,15 @@ private[swoop] object SwoopMetrics {
   /**
    * The turn angle: the net heading change over the carve, the sustained rotation around the dive point.
    *
-   * The carve is the maximal interval around the dive point where the smoothed turn rate stays above the carve
+   * The carve is the maximal interval around the dive point where the smoothed turn rate stays above the carve exit
    * threshold in the dominant direction, considering only samples whose horizontal speed makes the GPS heading
    * reliable and tolerating brief gaps. The dominant direction comes from the net heading change over the samples
-   * surrounding the dive point. When no sustained fast rotation exists - a straight dive, a slow landing-pattern
-   * turn, or heading noise at low horizontal speed - there is no carve and the turn angle is zero.
+   * surrounding the dive point. The carve exists only if it contains rotation above the carve entry threshold: the
+   * high entry bar keeps slow non-swoop rotations out, while the low exit bar keeps the decaying tail of a real turn
+   * inside the window. When the interval grows past the physical size of a swoop turn it is absorbing drift outside
+   * the turn, and the plain entry-threshold carve is reported instead. When no sustained fast rotation exists - a
+   * straight dive, a slow landing-pattern turn, or heading noise at low horizontal speed - there is no carve and the
+   * turn angle is zero.
    *
    * This replaces the sum of the per-sample heading deltas over (top of turn, bottom of turn],
    * which accumulates heading noise at low horizontal speeds, is cancelled by post-turn S-turns inside the window,
@@ -126,48 +130,87 @@ private[swoop] object SwoopMetrics {
 
     val dir = if aroundNet > 0 then 1 else -1
 
-    //  Expand forward from the dive point while the rotation persists  //
+    //  Expand forward from the dive point while the rotation persists: fast core first, then the decaying tail  //
 
     // FIXME: Can we do without var?
-    var end    = diveIdx
-    var misses = 0
-    var i      = diveIdx + 1
+    var end      = diveIdx
+    var endBase  = diveIdx
+    var misses   = 0
+    var missesB  = 0
+    var core     = false
+    var baseDone = false
+    var exitRun  = 0
+    var i        = diveIdx + 1
+
+    /** Any sample that does not extend the plain carve is a miss for it. */
+    def baselineMiss(): Unit =
+      if !baseDone then
+        missesB += 1
+        if missesB > SwoopConstants.carveGapSamples then baseDone = true
+
     while i <= endIdx do
       smoothRate(i) match
         case Some(r) if r * dir > SwoopConstants.carveRateThreshold =>
           end = i
+          core = true
           misses = 0
+          exitRun = 0
+          if !baseDone then { endBase = i; missesB = 0 }
+        case Some(r) if core && r * dir > SwoopConstants.carveExitRateThreshold =>
+          misses = 0
+          baselineMiss()
+          exitRun += 1
+          if exitRun >= 2 then end = i
         case _ =>
           misses += 1
+          exitRun = 0
+          baselineMiss()
           if misses > SwoopConstants.carveGapSamples then { end = i - misses; i = endIdx + 1 }
       i += 1
+    val hasCore = core
 
     //  Expand backward from the dive point while the rotation persists  //
 
-    var start = diveIdx
-    misses = 0
-    i = diveIdx
+    var start     = diveIdx
+    var startBase = diveIdx
+    misses        = 0
+    missesB       = 0
+    core          = false
+    baseDone      = false
+    exitRun       = 0
+    i             = diveIdx
     while i > topOfTurn + 1 do
       smoothRate(i) match
         case Some(r) if r * dir > SwoopConstants.carveRateThreshold =>
           start = i - 1
+          core = true
           misses = 0
+          exitRun = 0
+          if !baseDone then { startBase = i - 1; missesB = 0 }
+        case Some(r) if core && r * dir > SwoopConstants.carveExitRateThreshold =>
+          misses = 0
+          baselineMiss()
+          exitRun += 1
+          if exitRun >= 2 then start = i - 1
         case _ =>
           misses += 1
+          exitRun = 0
+          baselineMiss()
           if misses > SwoopConstants.carveGapSamples then { start = i + misses - 1; i = 0 }
       i -= 1
 
-    //  A carve must contain a sample rotating faster than the threshold, else it is not a carve  //
-    val hasCore = (start to end).exists { k =>
-      smoothRate(k).exists(r => r * dir > SwoopConstants.carveRateThreshold)
-    }
-
-    if !hasCore then 
+    //  A carve must contain a sample rotating faster than the entry threshold, else it is not a carve  //
+    if !(hasCore || core) then
       return 0.0
 
     //  The turn angle: the signed sum of the per-sample deltas over the carve  //
     var total = 0.0
     for i <- start + 1 to end do total += wrapDegrees(series.heading(i) - series.heading(i - 1))
+
+    //  An expansion past the physical turn size is absorbing drift outside the turn: report the plain carve  //
+    if Math.abs(total) > SwoopConstants.carveMaxTurnDegrees then
+      total = 0.0
+      for i <- startBase + 1 to endBase do total += wrapDegrees(series.heading(i) - series.heading(i - 1))
     total
   }
 

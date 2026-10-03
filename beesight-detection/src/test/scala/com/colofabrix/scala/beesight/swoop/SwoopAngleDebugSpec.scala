@@ -21,18 +21,15 @@ class SwoopAngleDebugSpec extends AnyWordSpec with IOValues {
 
   private val testFilesDir = Paths.get("src/test/resources/test_files")
 
-  /** Representative failing files: real turns the carve under-reports by 30-50 degrees. */
+  /** Representative failing files: over-count files broken by the carve tail, plus under-reported contrasts. */
   private val files = List(
-    "csv_files/jump_962.zip",  // expected  90, detected  33.4
-    "csv_files/jump_963.zip",  // expected  90, detected  44.1
-    "csv_files/jump_965.zip",  // expected  90, detected  59.0
-    "csv_files/jump_967.zip",  // expected  90, detected  49.1
-    "csv_files/jump_968.zip",  // expected  90, detected  48.7
-    "csv_files/jump_1418.zip", // expected  90, detected  58.6
-    "csv_files/jump_1445.zip", // expected  90, detected  43.2
-    "csv_files/jump_1857.zip", // expected 135, detected  88.1
-    //  passing carves for contrast  //
-    "csv_files/jump_1155.zip", // expected  90, detected  86.4
+    "csv_files/jump_961.zip",  // expected  90, over-count
+    "csv_files/jump_963.zip",  // expected  45, under-reported tail excluded by user verdict
+    "csv_files/jump_965.zip",  // expected  90, under-reported decay tail
+    "csv_files/jump_1133.zip", // expected  90, over-count
+    "csv_files/jump_1422.zip", // expected  90, over-count
+    "csv_files/jump_1466.zip", // expected  90, over-count
+    "csv_files/jump_973.zip",  // expected  90, over-count
   )
 
   "Swoop angle debug" should {
