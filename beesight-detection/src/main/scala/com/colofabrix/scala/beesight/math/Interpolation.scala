@@ -25,6 +25,9 @@ private[beesight] object Lerp {
 
 }
 
+/**
+ * Algebraic linear interpolation
+ */
 private[beesight] trait Interpolation[A] {
 
   def interpolate(a: A, b: A, time: Instant): A
@@ -38,10 +41,12 @@ private[beesight] object Interpolation {
 
 }
 
-extension [A: Interpolation](self: A)
+extension [A: Interpolation](self: A) {
   def interpolate(x2: A)(time: Instant): A =
     Interpolation[A].interpolate(self, x2, time)
+}
 
-extension [A: Lerp](self: A)
+extension [A: Lerp](self: A) {
   def interpolate(x2: A)(t1: Instant, t2: Instant, time: Instant): A =
     Lerp[A].lerp(self, x2, t1, t2, time)
+}

@@ -115,6 +115,13 @@ trait SwoopMatchers {
         expected.timeToExecuteTurn,
         timeTolerance,
       ),
+      check(
+        "Degrees of rotation",
+        "deg",
+        Math.abs(swoop.degreesOfRotation),
+        expected.degreesOfRotation.map(v => Math.abs(v)),
+        rotationTolerance,
+      ),
     ).flatten
 
   private def check(

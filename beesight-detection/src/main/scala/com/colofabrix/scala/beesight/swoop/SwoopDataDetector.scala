@@ -12,6 +12,8 @@ import java.time.Duration
 /**
  * Computes swoop metrics from the flight data stream:
  *
+ * FIXME: Check that the scaladoc still contains accurate information. Update if necessary but do not make it longer than it is now
+ * 
  *   1. Pattern entry: the first crossing below the pattern-entry altitude above the detected ground.
  *   2. Dive point: the first point achieving the maximum descent rate below the altitude cap.
  *   3. Top of turn: the walk-back from the dive point - pull threshold, deceleration boundary, steepening

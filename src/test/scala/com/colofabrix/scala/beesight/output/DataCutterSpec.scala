@@ -5,9 +5,8 @@ import cats.effect.unsafe.implicits.global
 import com.colofabrix.scala.beesight.config.*
 import com.colofabrix.scala.beesight.config.DataCutterConfig.given
 import com.colofabrix.scala.beesight.model.*
-import org.scalatest.freespec.AnyFreeSpec
-
 import java.time.Instant
+import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
 class DataCutterSpec extends AnyFreeSpec with Matchers {

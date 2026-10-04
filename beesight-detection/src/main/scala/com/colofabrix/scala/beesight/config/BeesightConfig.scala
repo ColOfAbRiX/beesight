@@ -6,9 +6,6 @@ import java.time.Duration
 /**
  * Top-level configuration for the flight stage detection algorithm.
  *
- * This is a pure data structure intrinsic to the detection engine. It carries no configuration-loading or CLI concerns;
- * those live in the CLI module (see `BeesightConfigCli`).
- *
  * @param jumpevents Settings for the jump-events detection algorithm
  * @param swoop Thresholds and settings for swoop metrics computation
  * @param metrics Settings for the per-point flight metrics computation
@@ -22,7 +19,7 @@ final case class BeesightConfig(
 object BeesightConfig {
 
   /**
-   * Default detection configuration, hardcoded as a pure value so the library has no configuration-loading dependency.
+   * Default detection configuration
    */
   val default: BeesightConfig =
     BeesightConfig(

@@ -3,9 +3,8 @@ package com.colofabrix.scala.beesight.metrics
 import com.colofabrix.scala.beesight.config.{ Altitude, Area, Mass, MetricsConfig }
 import com.colofabrix.scala.beesight.metrics.computations.*
 import com.colofabrix.scala.beesight.model.{ EventPoint, GeoVector }
-import org.scalatest.freespec.AnyFreeSpec
-
 import java.time.Instant
+import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
 class MetricsGroundSpec extends AnyFreeSpec with Matchers {

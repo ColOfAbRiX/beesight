@@ -11,7 +11,7 @@ import com.colofabrix.scala.beesight.utils.*
 /**
  * Computes per-point flight metrics.
  */
-final class FlightMetricsCalculator private (config: MetricsConfig, groundElevation: Option[Altitude]) {
+final class FlightMetricsCalculator private (config: MetricsConfig, groundElevation: Altitude) {
 
   private val windowCapacity: Int =
     2 * config.slopeHalfWindow + 1
@@ -19,13 +19,8 @@ final class FlightMetricsCalculator private (config: MetricsConfig, groundElevat
   private val aerodynamics: Aerodynamics =
     Aerodynamics(config)
 
-  private val _groundElevation: Double =
-    groundElevation
-      .map(_.value)
-      .getOrElse(0.0)
-
   /**
-   * Streaming pipe: one FlightMetric per input point.
+   * Compute the metrics for each point in the stream
    */
   def compute[F[_], A: PointReader: GpsReader]: fs2.Pipe[F, A, FlightMetric] =
     _.statefulMapEmits(initState, drainState)(advance)
@@ -67,8 +62,9 @@ final class FlightMetricsCalculator private (config: MetricsConfig, groundElevat
   //  Metric assembly  //
 
   private def metric[A: PointReader: GpsReader](centerIndex: Int, window: Vector[A]): FlightMetric =
-    val center = window(centerIndex)
-    val speed  = center.speed
+    val center    = window(centerIndex)
+    val speed     = center.speed
+    val elevation = center.altitude - groundElevation.value
 
     val horizontalAccuracy = center.horizontalAccuracy
     val verticalAccuracy   = center.verticalAccuracy
@@ -77,9 +73,9 @@ final class FlightMetricsCalculator private (config: MetricsConfig, groundElevat
     val acceleration = wmCalculator.acceleration
     val totalSpeed   = speed.magnitude
 
-    val sphericalErrorProbably = (horizontalAccuracy, verticalAccuracy).mapN(GpsMetrics.sphericalErrorProbable)
-    val elevation              = center.altitude - _groundElevation
+    val energyRate = totalSpeed * wmCalculator.totalSpeedRate - MetricsConstants.Gravity * speed.vertical
 
+    val sphericalErrorProbably = (horizontalAccuracy, verticalAccuracy).mapN(GpsMetrics.sphericalErrorProbable)
     val courseAccuracyEstimate =
       center.speedAccuracy.map { accuracy =>
         if totalSpeed > 0.0 then Math.toDegrees(accuracy / totalSpeed)
@@ -111,7 +107,7 @@ final class FlightMetricsCalculator private (config: MetricsConfig, groundElevat
       accelerationAlongTrack = PerPointMetrics.accelerationAlongTrack(acceleration, speed),
       accelerationCrossTrack = PerPointMetrics.accelerationCrossTrack(acceleration, speed),
       totalEnergy = PerPointMetrics.totalEnergy(elevation, totalSpeed),
-      energyRate = totalSpeed * wmCalculator.totalSpeedRate - MetricsConstants.Gravity * speed.vertical,
+      energyRate = energyRate,
       sphericalErrorProbably = sphericalErrorProbably,
       speedScoreAccuracy = verticalAccuracy.map(GpsMetrics.speedScoreAccuracy),
     )
@@ -127,9 +123,9 @@ object FlightMetricsCalculator {
   )
 
   def apply(config: MetricsConfig): FlightMetricsCalculator =
-    new FlightMetricsCalculator(config, None)
+    new FlightMetricsCalculator(config, Altitude(0.0))
 
   def apply(config: MetricsConfig, groundElevation: Altitude): FlightMetricsCalculator =
-    new FlightMetricsCalculator(config, groundElevation.some)
+    new FlightMetricsCalculator(config, groundElevation)
 
 }

@@ -8,13 +8,11 @@ import com.colofabrix.scala.beesight.swoop.model.PointSeries
  */
 private[swoop] object SwoopMetrics {
 
-  /** A maximum-speed scan result: the speed value and the index of the point achieving it. */
   final case class MaxSpeed(
     speed: Double,
     index: Int
   )
 
-  /** The maximum speeds over the swoop detection windows. */
   final case class MaxSpeeds(
     total: MaxSpeed,
     vertical: MaxSpeed,
@@ -57,10 +55,8 @@ private[swoop] object SwoopMetrics {
     MaxSpeeds(maxTotalSpeed, maxVerticalSpeed, maxHorizontalSpeed)
   }
 
-  /**
-   * First-max scan over the half-open window [from, until): the earliest point achieving the maximum of `f` among
-   * strictly positive values. Values at or below zero never qualify.
-   */
+  // First-max scan over the half-open window [from, until): the earliest point achieving the maximum of `f` among
+  // strictly positive values. Values at or below zero never qualify.
   private def argmax(from: Int, until: Int)(f: Int => Double): Option[Int] = (from until until)
     .view
     .map(i => f(i) -> i)
@@ -80,15 +76,11 @@ private[swoop] object SwoopMetrics {
    * the turn, and the plain entry-threshold carve is reported instead. When no sustained fast rotation exists - a
    * straight dive, a slow landing-pattern turn, or heading noise at low horizontal speed - there is no carve and the
    * turn angle is zero.
-   *
-   * This replaces the sum of the per-sample heading deltas over (top of turn, bottom of turn],
-   * which accumulates heading noise at low horizontal speeds, is cancelled by post-turn S-turns inside the window,
-   * and counts slow non-swoop rotations such as the landing pattern as turn degrees.
    */
   def turnDegrees(series: PointSeries, topOfTurn: Int, endIdx: Int, diveIdx: Int, config: SwoopConfig): Double = {
     val n = series.length
 
-    /** Per-sample turn rate in deg/s, defined only where both samples carry a reliable heading. */
+    // Per-sample turn rate in deg/s, defined only where both samples carry a reliable heading.
     def rate(i: Int): Option[Double] =
       if i <= 0 || i >= n then
         None
@@ -106,7 +98,7 @@ private[swoop] object SwoopMetrics {
           Some(wrapDegrees(series.heading(i) - series.heading(i - 1)) / dtSec)
       }
 
-    /** Turn rate smoothed over a +/-2 sample window. */
+    // Turn rate smoothed over a +/-2 sample window.
     def smoothRate(i: Int): Option[Double] =
       val values = (i - 2 to i + 2).flatMap(rate)
       if values.isEmpty then None
@@ -139,7 +131,7 @@ private[swoop] object SwoopMetrics {
     var exitRun  = 0
     var i        = diveIdx + 1
 
-    /** Any sample that does not extend the plain carve is a miss for it. */
+    // Any sample that does not extend the plain carve is a miss for it.
     def baselineMiss(): Unit =
       if !baseDone then
         missesB += 1
@@ -212,13 +204,13 @@ private[swoop] object SwoopMetrics {
     //  An expansion past the physical turn size is absorbing drift outside the turn: report the plain carve  //
     if Math.abs(total) > config.carve.maxTurnDegrees.value then
       total = 0.0
-      for i <- startBase + 1 to endBase do 
+      for i <- startBase + 1 to endBase do
         total += wrapDegrees(series.heading(i) - series.heading(i - 1))
 
     total
   }
 
-  /** Wraps a heading delta to [-180, 180]. */
+  // Wraps a heading delta to [-180, 180].
   private def wrapDegrees(raw: Double): Double =
     if raw > 180.0 then
       raw - 360.0

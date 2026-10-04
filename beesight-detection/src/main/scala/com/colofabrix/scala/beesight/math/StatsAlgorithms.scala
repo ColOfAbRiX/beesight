@@ -1,9 +1,13 @@
 package com.colofabrix.scala.beesight.math
 
-/** Pure array-based statistical algorithms, decoupled from any container. */
+/**
+ * Pure array-based statistical algorithms.
+ */
 private[math] object StatsAlgorithms {
 
-  /** Population standard deviation of the given values. */
+  /**
+   * Population standard deviation of the given values.
+   */
   def stdDev(values: Array[Double]): Double =
     val n     = values.length
     var sum   = 0.0
@@ -45,8 +49,10 @@ private[math] object StatsAlgorithms {
 
     val denom = n * sumXX - sumX * sumX
 
-    if Math.abs(denom) < 1e-12 then 0.0
-    else (n * sumXY - sumX * sumY) / denom
+    if Math.abs(denom) < 1e-12 then
+      0.0
+    else
+      (n * sumXY - sumX * sumY) / denom
 
   /**
    * Finds the inflection point where a signal transitions between a changing region and a stable one (or vice versa).

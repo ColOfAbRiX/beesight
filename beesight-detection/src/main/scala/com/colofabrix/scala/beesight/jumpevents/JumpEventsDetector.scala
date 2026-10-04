@@ -28,8 +28,6 @@ final class JumpEventsDetector private (config: JumpEventsConfig) {
     val validationWindows = configList.map(_.validationWindowSize.value)
     Math.max(smoothWindows.max, backWindows.max) + 1 + validationWindows.max
 
-  //  Dependencies  //
-
   private val eventPointDetector: StagesHandler =
     StagesHandler(config)
 
@@ -39,7 +37,7 @@ final class JumpEventsDetector private (config: JumpEventsConfig) {
   //  Public API  //
 
   /**
-   * Streaming pipe that detects flight event points using the provided configuration.
+   * Streaming pipe that detects flight event points
    */
   def detect[F[_], A: PointReader]: fs2.Pipe[F, A, FlightEvents] =
     _.through(mainDetectionPipe)

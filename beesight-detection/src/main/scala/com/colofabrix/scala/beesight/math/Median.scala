@@ -3,27 +3,11 @@ package com.colofabrix.scala.beesight.math
 import scala.math.*
 
 /**
- * How to compute the median of an array of A. The array may be mutated in place
+ * Median of an array of A
  */
 private[beesight] trait Median[A] {
 
   def median(values: Array[A]): A
-
-}
-
-private[beesight] trait LowPriorityMedian {
-
-  given medianForFractional[A: Fractional]: Median[A] with {
-    def median(values: Array[A]): A =
-      val num    = summon[Fractional[A]]
-      val sorted = values.sorted(using num)
-      val n      = sorted.length
-
-      if n % 2 == 0 then
-        num.div(num.plus(sorted(n / 2 - 1), sorted(n / 2)), num.fromInt(2))
-      else
-        sorted(n / 2)
-  }
 
 }
 
@@ -48,6 +32,7 @@ private[beesight] object Median extends LowPriorityMedian {
         else
           sorted(n / 2)
 
+  // FIXME: Add two lines description of why we need this function
   private def insertionSort(a: Array[Double]): Unit =
     var i = 1
     while i < a.length do
@@ -58,5 +43,21 @@ private[beesight] object Median extends LowPriorityMedian {
         j -= 1
       a(j + 1) = key
       i += 1
+
+}
+
+private[beesight] trait LowPriorityMedian {
+
+  given medianForFractional[A: Fractional]: Median[A] with {
+    def median(values: Array[A]): A =
+      val num    = summon[Fractional[A]]
+      val sorted = values.sorted(using num)
+      val n      = sorted.length
+
+      if n % 2 == 0 then
+        num.div(num.plus(sorted(n / 2 - 1), sorted(n / 2)), num.fromInt(2))
+      else
+        sorted(n / 2)
+  }
 
 }

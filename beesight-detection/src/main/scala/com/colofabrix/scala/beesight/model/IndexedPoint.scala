@@ -6,8 +6,6 @@ import java.time.Instant
 
 /**
  * Internal representation of a flight data point with its position in the stream, time, altitude, and velocity.
- *
- * @param idx Zero-based position of this point in the data stream
  */
 final private[beesight] case class IndexedPoint(
   idx: Long,

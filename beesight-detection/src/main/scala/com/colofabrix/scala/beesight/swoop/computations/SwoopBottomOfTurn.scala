@@ -21,7 +21,8 @@ private[swoop] object SwoopBottomOfTurn {
     earlierCrossing(backCross, fwdCross).getOrElse(rolloutIdx + 1)
   }
 
-  /** Forward walk from the rollout while the altitude strictly decreases or the descent stays fast; the last such point is the bottom candidate. */
+  // Forward walk from the rollout while the altitude strictly decreases or the descent stays fast; the last such point 
+  // is the bottom candidate.
   private def bottomCandidateWalk(series: PointSeries, rolloutIdx: Int, stopIdx: Int, config: SwoopConfig): Int =
     @tailrec
     def walk(k: Int, minAltitude: Double, bottomCandidate: Int): Int =
@@ -40,7 +41,8 @@ private[swoop] object SwoopBottomOfTurn {
 
     walk(rolloutIdx, series.altitude(rolloutIdx), stopIdx)
 
-  /** Backward bracket: first point more than the altitude offset above the bottom altitude, with the interpolated crossing time at the target altitude. */
+  // Backward bracket: first point more than the altitude offset above the bottom altitude, with the interpolated 
+  // crossing time at the target altitude.
   private def backwardAltitudeBracket(
     series: PointSeries,
     rolloutIdx: Int,
@@ -52,19 +54,19 @@ private[swoop] object SwoopBottomOfTurn {
     @tailrec
     def walk(k: Int): Option[(Int, Double)] =
       val j = k - 1
-      if j <= rolloutIdx then 
+      if j <= rolloutIdx then
         None
       else if series.altitude(j) > targetAltitude then
         val altDelta  = series.altitude(j + 1) - series.altitude(j)
         val fraction  = (targetAltitude - series.altitude(j)) / altDelta
         val timeDelta = series.timeMillis(j + 1) - series.timeMillis(j)
         Some((j, series.timeMillis(j) + fraction * timeDelta))
-      else 
+      else
         walk(j)
 
     walk(bottomCandidate)
 
-  /** Forward bracket: first point whose descent rate drops to the crossing threshold, with the interpolated crossing time. */
+  // Forward bracket: first point whose descent rate drops to the crossing threshold, with the interpolated crossing time.
   private def forwardDescentBracket(
     series: PointSeries,
     rolloutIdx: Int,
@@ -76,7 +78,7 @@ private[swoop] object SwoopBottomOfTurn {
     @tailrec
     def walk(k: Int): Option[(Int, Double)] =
       val j = k + 1
-      if stopIdx < j then 
+      if stopIdx < j then
         None
       else if series.verticalSpeed(j) <= vzCross then
         val vzDelta   = series.verticalSpeed(j) - series.verticalSpeed(k)
@@ -84,16 +86,17 @@ private[swoop] object SwoopBottomOfTurn {
         val timeDelta = series.timeMillis(j) - series.timeMillis(k)
         Some((k, series.timeMillis(k) + fraction * timeDelta))
       else
-         walk(j)
+        walk(j)
 
     walk(rolloutIdx)
 
-  /** The crossing with the earlier interpolated time, when both exist. */
+  // The crossing with the earlier interpolated time, when both exist.
   private def earlierCrossing(back: Option[(Int, Double)], fwd: Option[(Int, Double)]): Option[Int] =
-    (back, fwd) match
+    (back, fwd) match {
       case (Some((b, bt)), Some((f, ft))) => if bt <= ft then Some(b) else Some(f)
       case (Some((b, _)), None)           => Some(b)
       case (None, Some((f, _)))           => Some(f)
       case (None, None)                   => None
+    }
 
 }

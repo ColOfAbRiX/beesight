@@ -3,7 +3,9 @@ package com.colofabrix.scala.beesight.config
 import java.time.Duration
 
 /**
- * Configuration for the swoop detection pipeline and metrics computation, organized by functional areas.
+ * Configuration for the swoop detection pipeline and metrics computation.
+ *
+ * FIXME: This doesn't look like it's been grouped by functional areas. "altitudes", "speeds" and so on are not funtional area. They are determined by how the Swoop metrics work
  *
  * @param altitudes Altitude thresholds (m) of the detection stages
  * @param speeds    Speed thresholds (m/s) of the detection stages

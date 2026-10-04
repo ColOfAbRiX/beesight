@@ -154,6 +154,8 @@ object Mass {
 
 /**
  * An area value in m² (canopy planform area).
+ *
+ * FIXME: Areas are always >= 0.0
  */
 opaque type Area = Double
 

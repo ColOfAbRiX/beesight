@@ -1,8 +1,7 @@
 package com.colofabrix.scala.beesight.model
 
-import org.scalatest.freespec.AnyFreeSpec
-
 import java.time.Instant
+import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
 class OutputFlightPointSpec extends AnyFreeSpec with Matchers {

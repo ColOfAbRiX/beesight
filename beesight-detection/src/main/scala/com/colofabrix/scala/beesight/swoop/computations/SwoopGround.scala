@@ -1,5 +1,6 @@
 package com.colofabrix.scala.beesight.swoop.computations
 
+import cats.syntax.all.*
 import com.colofabrix.scala.beesight.config.{ Altitude, SwoopConfig }
 import com.colofabrix.scala.beesight.math.*
 import com.colofabrix.scala.beesight.model.EventPoint
@@ -11,9 +12,6 @@ import java.time.Duration
  */
 final private[swoop] class SwoopGround private (config: SwoopConfig) {
 
-  val groundWindow: Duration =
-    config.ground.window
-
   /**
    * Ground altitude.
    *
@@ -24,7 +22,10 @@ final private[swoop] class SwoopGround private (config: SwoopConfig) {
     landing
       .flatMap { l =>
         val start = series.points.indexWhere(!_.time.isBefore(l.time))
-        if start >= 0 then Some(Altitude(medianAltitude(series, start, groundWindow))) else None
+        if start >= 0 then 
+          Altitude(medianAltitude(series, start, config.ground.window)).some
+        else 
+          None
       }
       .orElse {
         (series.length - 1 to 0 by -1)
@@ -32,7 +33,7 @@ final private[swoop] class SwoopGround private (config: SwoopConfig) {
             series.totalSpeed(i) < config.ground.slowSpeed.value
           }
           .map { slowIdx =>
-            Altitude(medianAltitude(series, slowIdx, groundWindow))
+            Altitude(medianAltitude(series, slowIdx, config.ground.window))
           }
       }
       .getOrElse {

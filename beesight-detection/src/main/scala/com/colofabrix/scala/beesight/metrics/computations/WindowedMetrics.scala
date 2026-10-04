@@ -13,9 +13,6 @@ import java.time.Duration
  */
 final private[beesight] class WindowedMetrics[A: PointReader] private (window: Vector[A]) {
 
-  /**
-   * All slope-based windowed metrics of the window, sharing one extraction of the points' relative seconds.
-   */
   private lazy val slopeMetrics: SlopeMetrics =
     val times  = relativeSeconds
     val points = window
@@ -110,7 +107,6 @@ final private[beesight] class WindowedMetrics[A: PointReader] private (window: V
 
 object WindowedMetrics {
 
-  /** The slope-based windowed metrics of one window, computed together with a single shared time extraction. */
   final private case class SlopeMetrics(
     acceleration: GeoVector,
     courseRate: Double,
@@ -121,7 +117,7 @@ object WindowedMetrics {
   def apply[A: PointReader](window: Vector[A]): WindowedMetrics[A] =
     new WindowedMetrics(window)
 
-  //  Object-level conveniences (one shared computation per call)  //
+  // FIXME: These functions don't seem to be used. Remove.
 
   /** Component-wise least-squares slopes of the speed over the window (m/s²). */
   def acceleration[A: PointReader](window: Vector[A]): GeoVector =

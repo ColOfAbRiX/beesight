@@ -18,7 +18,11 @@ private[swoop] object SwoopTopOfTurn {
     val pullThreshold = config.speeds.pullThreshold.value
 
     def walkBack(i: Int)(pred: Int => Boolean): Int =
-      @tailrec def loop(i: Int): Int = if patternEntry < i && pred(i) then loop(i - 1) else i
+      @tailrec def loop(i: Int): Int =
+        if patternEntry < i && pred(i) then 
+          loop(i - 1) 
+        else 
+          i
       loop(i)
 
     val crossed = walkBack(diveIdx)(i => series.verticalSpeed(i) >= pullThreshold)
@@ -68,6 +72,7 @@ private[swoop] object SwoopTopOfTurn {
         steepening = updatedSteepening(series, i, dtSec, steepening)
 
         val turnRate     = Heading.angularDistance(series.heading(i - 1), series.heading(i)) / dtSec
+        // FIXME: Give names to the two sides on the expression around ||
         val capsExceeded =
           turnRate > config.angles.maxTurnRate.value || altitudeGain > config.altitudes.maxAltitudeGain.value
 
@@ -94,7 +99,7 @@ private[swoop] object SwoopTopOfTurn {
       steepening + descentIncrease
 
   /** True when the vertical speed is still increasing at point `i` (the descent is accelerating downward there). */
-  private def isSteepening(series: PointSeries, i: Int): Boolean = 
+  private def isSteepening(series: PointSeries, i: Int): Boolean =
     val dt = Duration.between(series.time(i - 1), series.time(i)).toMillis / 1000.0
 
     val vz     = series.verticalSpeed(i)

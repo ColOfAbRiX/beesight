@@ -3,12 +3,12 @@ package com.colofabrix.scala.beesight.detection.bench
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import cats.syntax.all.given
-import com.colofabrix.scala.beesight.{ CsvPoint, TestFilesHandler }
 import com.colofabrix.scala.beesight.TestFilesHandler.given
 import com.colofabrix.scala.beesight.config.BeesightConfig
 import com.colofabrix.scala.beesight.jumpevents.JumpEventsDetector
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.swoop.SwoopDataDetector
+import com.colofabrix.scala.beesight.{ CsvPoint, TestFilesHandler }
 import java.nio.file.{ Files, Path, Paths }
 
 /**

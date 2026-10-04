@@ -19,11 +19,15 @@ final private[metrics] class Aerodynamics private (config: MetricsConfig) {
   private val GravityVector: GeoVector =
     GeoVector(0.0, 0.0, Gravity)
 
-  /** Lift coefficient `m·|a − proj·v̂| / (q·S)`; 0 when the total speed is zero. */
+  /**
+   * Lift coefficient `m·|a − proj·v̂| / (q·S)`.
+   */
   def liftCoefficient(acceleration: GeoVector, speed: GeoVector, altitude: Double): Double =
     coefficients(acceleration, speed, altitude)._1
 
-  /** Drag coefficient `m·|proj| / (q·S)`; 0 when the total speed is zero. */
+  /**
+   * Drag coefficient `m·|proj| / (q·S)`.
+   */
   def dragCoefficient(acceleration: GeoVector, speed: GeoVector, altitude: Double): Double =
     coefficients(acceleration, speed, altitude)._2
 
@@ -57,7 +61,7 @@ final private[metrics] class Aerodynamics private (config: MetricsConfig) {
 
       (liftCoefficient, dragCoefficient)
 
-  /** ISA troposphere barometric air density (kg/m³) at the given altitude (m). */
+  // ISA troposphere barometric air density (kg/m³) at the given altitude (m).
   private def airDensity(altitude: Double): Double =
     val exponent    = Gravity * MolarMassDryAir / UniversalGasConstant / TemperatureLapseRate
     val pressure    = SeaLevelPressure * pow(1.0 - TemperatureLapseRate * altitude / SeaLevelTemperature, exponent)

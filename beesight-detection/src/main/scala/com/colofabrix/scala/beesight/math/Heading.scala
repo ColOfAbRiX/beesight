@@ -41,8 +41,8 @@ private[beesight] object Heading {
   /**
    * Computes cumulative absolute heading change across a sequence of points.
    *
-   * Points with horizontal speed below `minHorizontalSpeed` are skipped to avoid
-   * noisy heading values at near-zero ground speeds.
+   * Points with horizontal speed below `minHorizontalSpeed` are skipped to avoid noisy heading values at near-zero
+   * ground speeds.
    */
   def cumulativeHeadingChange(points: Vector[GeoVector], minHorizontalSpeed: Double): Double =
     val filtered = points.filter(_.horizontal >= minHorizontalSpeed)
