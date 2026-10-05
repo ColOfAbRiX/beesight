@@ -56,6 +56,8 @@ lazy val beesight =
         "-H:IncludeResources=reference.conf",
         "-H:ConfigurationFileDirectories=src/main/resources/META-INF/native-image",
       ),
+      // In-process tests: the forked-test event protocol leaks oversized JSON notifications to the console
+      Test / fork := false,
     )
 
 lazy val beesightFormats =

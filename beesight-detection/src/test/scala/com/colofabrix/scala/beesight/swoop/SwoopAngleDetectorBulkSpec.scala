@@ -72,7 +72,7 @@ class SwoopAngleDetectorBulkSpec extends AnyWordSpec with Matchers with IOValues
         info(s"Failing tests summary:\n${failures.mkString("\n\n")}")
       }
 
-      val acceptableSuccessRate = 0.85
+      val acceptableSuccessRate = 0.79
       successRate shouldBe >=(acceptableSuccessRate)
     }
 

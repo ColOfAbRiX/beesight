@@ -78,10 +78,9 @@ class SwoopAngleDebugSpec extends AnyWordSpec with IOValues {
       )
 
       val turnDegrees = for {
-        d <- dive
         t <- topOfTurn
         b <- bottom
-      } yield SwoopMetrics.turnDegrees(series, t, stop.getOrElse(b), d, config)
+      } yield SwoopMetrics.turnDegrees(series, t, b, config)
 
       val summary = List(
         f"turnDegrees=${turnDegrees.getOrElse("n/a")}",

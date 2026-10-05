@@ -65,149 +65,144 @@ private[swoop] object SwoopMetrics {
     .map(_._2)
 
   /**
-   * The turn angle: the net heading change over the carve, the sustained rotation around the dive point.
-   *
-   * The carve is the maximal interval around the dive point where the smoothed turn rate stays above the carve exit
-   * threshold in the dominant direction, considering only samples whose horizontal speed makes the GPS heading
-   * reliable and tolerating brief gaps. The dominant direction comes from the net heading change over the samples
-   * surrounding the dive point. The carve exists only if it contains rotation above the carve entry threshold: the
-   * high entry bar keeps slow non-swoop rotations out, while the low exit bar keeps the decaying tail of a real turn
-   * inside the window. When the interval grows past the physical size of a swoop turn it is absorbing drift outside
-   * the turn, and the plain entry-threshold carve is reported instead. When no sustained fast rotation exists - a
-   * straight dive, a slow landing-pattern turn, or heading noise at low horizontal speed - there is no carve and the
-   * turn angle is zero.
+   * The signed sum of the per-sample turn angles over (top of turn, bottom of turn], skipping values of a full turn
+   * or more. The angles come from the unwrap pass. Both window ends are trimmed over the drift: samples rotating at
+   * or below the trim threshold are not part of the turn. The trims share one net-shift budget: they stop when the
+   * combined shift reaches the trim cap, bounding how far the measurement may move from the untrimmed value.
    */
-  def turnDegrees(series: PointSeries, topOfTurn: Int, endIdx: Int, diveIdx: Int, config: SwoopConfig): Double = {
-    val n = series.length
+  def turnDegrees(series: PointSeries, topOfTurn: Int, bottomIdx: Int, config: SwoopConfig): Double = {
+    val turnAngles    = turnAnglesWithUnwrap(series, config)
+    val tailThreshold = config.unwrap.tailTrimThreshold.value
+    val tailCap       = config.unwrap.tailTrimCap.value
+    val headThreshold = config.unwrap.headTrimThreshold.value
+    val headCap       = config.unwrap.headTrimCap.value
 
-    // Per-sample turn rate in deg/s, defined only where both samples carry a reliable heading.
-    def rate(i: Int): Option[Double] =
-      if i <= 0 || i >= n then
-        None
-      else {
-        val dtSec = (series.timeMillis(i) - series.timeMillis(i - 1)) / 1000.0
-
-        val speed     = series.horizontalSpeed(i)
-        val speedPrev = series.horizontalSpeed(i - 1)
-
-        if dtSec <= 0 then
-          None
-        else if speed < config.carve.reliableSpeed.value || speedPrev < config.carve.reliableSpeed.value then
-          None
-        else
-          Some(wrapDegrees(series.heading(i) - series.heading(i - 1)) / dtSec)
-      }
-
-    // Turn rate smoothed over a +/-2 sample window.
-    def smoothRate(i: Int): Option[Double] =
-      val values = (i - 2 to i + 2).flatMap(rate)
-      if values.isEmpty then None
-      else Some(values.sum / values.size)
-
-    //  Dominant direction: the net heading change over +/-2 s of reliable samples around the dive point  //
-    val backRef = (diveIdx - config.carve.directionSamples.value to topOfTurn by -1)
-      .find(i => series.horizontalSpeed(i) >= config.carve.reliableSpeed.value)
-      .getOrElse((diveIdx - config.carve.directionSamples.value) max topOfTurn)
-
-    val fwdRef = (diveIdx + config.carve.directionSamples.value to endIdx)
-      .find(i => series.horizontalSpeed(i) >= config.carve.reliableSpeed.value)
-      .getOrElse((diveIdx + config.carve.directionSamples.value) min endIdx)
-
-    val aroundNet = wrapDegrees(series.heading(fwdRef) - series.heading(backRef))
-
-    if Math.abs(aroundNet) < config.carve.minDirectionChange.value then
-      return 0.0
-
-    val dir = if aroundNet > 0 then 1 else -1
-
-    //  Expand forward from the dive point while the rotation persists: fast core first, then the decaying tail  //
-
-    var end      = diveIdx
-    var endBase  = diveIdx
-    var misses   = 0
-    var missesB  = 0
-    var core     = false
-    var baseDone = false
-    var exitRun  = 0
-    var i        = diveIdx + 1
-
-    // Any sample that does not extend the plain carve is a miss for it.
-    def baselineMiss(): Unit =
-      if !baseDone then
-        missesB += 1
-        if missesB > config.carve.gapSamples.value then baseDone = true
-
-    while i <= endIdx do {
-      smoothRate(i) match
-        case Some(r) if r * dir > config.carve.rateThreshold.value =>
-          end = i
-          core = true
-          misses = 0
-          exitRun = 0
-          if !baseDone then { endBase = i; missesB = 0 }
-        case Some(r) if core && r * dir > config.carve.exitRateThreshold.value =>
-          misses = 0
-          baselineMiss()
-          exitRun += 1
-          if exitRun >= 2 then end = i
-        case _ =>
-          misses += 1
-          exitRun = 0
-          baselineMiss()
-          if misses > config.carve.gapSamples.value then { end = i - misses; i = endIdx + 1 }
-      i += 1
+    var end      = bottomIdx
+    var cut      = 0.0
+    var trimTail = true
+    while trimTail do {
+      val a = turnAngles(end)
+      if end > topOfTurn + 1 && Math.abs(a) <= tailThreshold && Math.abs(cut - a) <= tailCap then {
+        cut -= a
+        end -= 1
+      } else trimTail = false
     }
 
-    val hasCore = core
-
-    //  Expand backward from the dive point while the rotation persists  //
-
-    var start     = diveIdx
-    var startBase = diveIdx
-
-    misses = 0
-    missesB = 0
-    core = false
-    baseDone = false
-    exitRun = 0
-    i = diveIdx
-
-    while i > topOfTurn + 1 do {
-      smoothRate(i) match
-        case Some(r) if r * dir > config.carve.rateThreshold.value =>
-          start = i - 1
-          core = true
-          misses = 0
-          exitRun = 0
-          if !baseDone then { startBase = i - 1; missesB = 0 }
-        case Some(r) if core && r * dir > config.carve.exitRateThreshold.value =>
-          misses = 0
-          baselineMiss()
-          exitRun += 1
-          if exitRun >= 2 then start = i - 1
-        case _ =>
-          misses += 1
-          exitRun = 0
-          baselineMiss()
-          if misses > config.carve.gapSamples.value then { start = i + misses - 1; i = 0 }
-      i -= 1
+    var start    = topOfTurn + 1
+    var trimHead = true
+    while trimHead && start < end do {
+      val a = turnAngles(start)
+      if Math.abs(a) <= headThreshold && Math.abs(cut - a) <= headCap then {
+        cut -= a
+        start += 1
+      } else trimHead = false
     }
 
-    //  A carve must contain a sample rotating faster than the entry threshold, else it is not a carve  //
-    if !(hasCore || core) then
-      return 0.0
-
-    //  The turn angle: the signed sum of the per-sample deltas over the carve  //
     var total = 0.0
-    for i <- start + 1 to end do total += wrapDegrees(series.heading(i) - series.heading(i - 1))
-
-    //  An expansion past the physical turn size is absorbing drift outside the turn: report the plain carve  //
-    if Math.abs(total) > config.carve.maxTurnDegrees.value then
-      total = 0.0
-      for i <- startBase + 1 to endBase do
-        total += wrapDegrees(series.heading(i) - series.heading(i - 1))
+    for i <- start to end do {
+      val turnAngle = turnAngles(i)
+      if turnAngle < config.unwrap.fullTurnAngle.value then total += turnAngle
+    }
 
     total
+  }
+
+  /**
+   * Per-sample turn angles (heading deltas wrapped to [-180, 180]) with segment tracking. Inside a steep fast dive, a
+   * run of samples whose turn direction is opposite to the established one opens a segment; while it lasts (the
+   * opposite state persists, the dive persists, and the track stays within the displacement cap of the segment start),
+   * the segment's angles are replaced by dt-weighted shares of the net heading change from the sample before the
+   * segment to its end, resolved into the pre-segment direction and only when the resolved magnitude is under the
+   * segment cap. The displacement test is dead-reckoned from the horizontal velocities (the stream carries no
+   * positions).
+   */
+  private def turnAnglesWithUnwrap(series: PointSeries, config: SwoopConfig): Vector[Double] = {
+    val n       = series.length
+    val turn    = Array.fill(n)(0.0)
+    val heading = (0 until n).map(series.heading).toArray
+    val timeMs  = (0 until n).map(series.timeMillis).toArray
+
+    if n >= 2 then {
+      var prev     = 2 // 1 = right run, 0 = left run, 2 = straight
+      var segStart = 0 // 0 = no open segment
+      var segX     = 0.0
+      var segY     = 0.0
+
+      for i <- 1 until n do {
+        val d = wrapDegrees(heading(i) - heading(i - 1))
+        turn(i) = d
+
+        val inDive = diveAngle(series, i) > config.unwrap.diveAngleCap.value &&
+          series.verticalSpeed(i) > config.unwrap.diveVerticalSpeed.value
+        val state   = turnDirection(d, config)
+        val flipped = (prev == 1 && state == 0) || (prev == 0 && state == 1)
+
+        if segStart == 0 then {
+          if flipped && inDive then {
+            segStart = i
+            segX = 0.0
+            segY = 0.0
+          }
+        } else {
+          val dtSec = (timeMs(i) - timeMs(i - 1)) / 1000.0
+          segX += series.northSpeed(i) * dtSec
+          segY += series.eastSpeed(i) * dtSec
+
+          val segmentEnded = !flipped || !inDive || Math.hypot(segX, segY) > config.unwrap.segmentDisplacementCap.value
+
+          if segmentEnded then {
+            resolveSegment(turn, heading, timeMs, segStart, i - 1, prev, config)
+            segStart = 0
+          }
+        }
+
+        if segStart == 0 && state != 2 then prev = state
+      }
+    }
+
+    turn.toVector
+  }
+
+  /** The dive angle at point `i`: the arctangent of the vertical speed over the horizontal speed, in degrees; +/-90 when there is no horizontal speed. */
+  private def diveAngle(series: PointSeries, i: Int): Double = {
+    val h        = series.horizontalSpeed(i)
+    val vertical = series.verticalSpeed(i)
+    if h == 0.0 then
+      if vertical < 0.0 then -90.0 else 90.0
+    else
+      Math.atan(vertical / h) * 180.0 / Math.PI
+  }
+
+  /** The turn direction of a per-sample angle: 1 = right run, 0 = left run, 2 = straight. */
+  private def turnDirection(d: Double, config: SwoopConfig): Int =
+    if d > config.unwrap.turnStateThreshold.value then 1
+    else if d < -config.unwrap.turnStateThreshold.value then 0
+    else 2
+
+  /**
+   * Replaces the angles of a closed segment with dt-weighted shares of the net heading change from the sample before
+   * the segment to its end, resolved into the pre-segment direction and only when the resolved magnitude is under the
+   * segment cap.
+   */
+  private def resolveSegment(
+    turn: Array[Double],
+    heading: Array[Double],
+    timeMs: Array[Double],
+    segStart: Int,
+    end: Int,
+    direction: Int,
+    config: SwoopConfig,
+  ): Unit = {
+    var total = heading(end) - heading(segStart - 1)
+    if total < 0.0 && direction == 1 then total += 360.0
+    if total > 0.0 && direction == 0 then total -= 360.0
+
+    if Math.abs(total) < config.unwrap.segmentAngleCap.value then {
+      val rate = 1000.0 * total / (timeMs(end) - timeMs(segStart - 1))
+      for k <- segStart to end do {
+        turn(k) = (timeMs(k) - timeMs(k - 1)) * rate / 1000.0
+      }
+    }
   }
 
   // Wraps a heading delta to [-180, 180].

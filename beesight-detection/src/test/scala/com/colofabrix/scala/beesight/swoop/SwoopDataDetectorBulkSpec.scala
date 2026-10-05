@@ -41,7 +41,7 @@ class SwoopDataDetectorBulkSpec extends AnyWordSpec with Matchers with IOValues 
 
               detectSwoop(filePath)
                 .map { actual =>
-                  val matcher     = matchSwoop(expected)
+                  val matcher     = matchSwoo p(expected)
                   val matchResult = matcher(actual)
 
                   if (!matchResult.matches) {

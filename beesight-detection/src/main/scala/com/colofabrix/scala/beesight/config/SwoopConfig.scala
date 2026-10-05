@@ -10,7 +10,7 @@ import java.time.Duration
  * @param altitudes Altitude thresholds (m) of the detection stages
  * @param speeds    Speed thresholds (m/s) of the detection stages
  * @param angles    Heading thresholds (deg) of the detection stages
- * @param carve     Thresholds of the carve turn-angle measurement
+ * @param unwrap    Thresholds of the unwrap turn-angle measurement
  * @param ground    Ground altitude estimation settings
  * @param stream    Input stream cutting settings
  */
@@ -18,7 +18,7 @@ final case class SwoopConfig(
   altitudes: SwoopAltitudesConfig,
   speeds: SwoopSpeedsConfig,
   angles: SwoopAnglesConfig,
-  carve: SwoopCarveConfig,
+  unwrap: SwoopUnwrapConfig,
   ground: SwoopGroundConfig,
   stream: SwoopStreamConfig,
 )
@@ -75,24 +75,30 @@ final case class SwoopAnglesConfig(
 )
 
 /**
- * Thresholds of the carve turn-angle measurement.
+ * Thresholds of the unwrap turn-angle measurement.
  *
- * @param rateThreshold      Smoothed turn rate (deg/s) a sample must exceed for the carve to exist at all
- * @param exitRateThreshold  Smoothed turn rate (deg/s) above which a sample keeps the carve expanding once it exists
- * @param maxTurnDegrees     Turn-angle size (deg) above which the hysteresis expansion is discarded for the plain entry-threshold carve
- * @param reliableSpeed      Minimum horizontal speed (m/s) for the GPS heading to be reliable
- * @param gapSamples         Maximum run of below-threshold samples tolerated inside the carve
- * @param directionSamples   Samples either side of the dive point establishing the turn direction
- * @param minDirectionChange Minimum net heading change (deg) around the dive point for a turn direction to be established
+ * @param fullTurnAngle          Per-sample turn angles (deg) at or above this value are skipped in the sum
+ * @param diveAngleCap           Dive angle (deg) above which a point is inside a steep dive
+ * @param diveVerticalSpeed      Descent rate (m/s) above which a point is inside a fast dive
+ * @param turnStateThreshold     Per-sample turn angle (deg) above which a point turns right, below which it turns left
+ * @param segmentAngleCap        Resolved segment heading change (deg) below which the segment angles are replaced
+ * @param segmentDisplacementCap Maximum dead-reckoned displacement (m) of a segment from its start
+ * @param tailTrimThreshold      Per-sample turn angle (deg) at or below which a sample counts as drift when trimming the window tail
+ * @param tailTrimCap            Net angle (deg) the tail trim may shift the measurement by at most
+ * @param headTrimThreshold      Per-sample turn angle (deg) at or below which a sample counts as drift when trimming the window head
+ * @param headTrimCap            Net angle (deg) the head trim may shift the measurement by at most
  */
-final case class SwoopCarveConfig(
-  rateThreshold: TurnRate,
-  exitRateThreshold: TurnRate,
-  maxTurnDegrees: Angle,
-  reliableSpeed: Speed,
-  gapSamples: WindowSize,
-  directionSamples: WindowSize,
-  minDirectionChange: Angle,
+final case class SwoopUnwrapConfig(
+  fullTurnAngle: Angle,
+  diveAngleCap: Angle,
+  diveVerticalSpeed: Speed,
+  turnStateThreshold: Angle,
+  segmentAngleCap: Angle,
+  segmentDisplacementCap: Altitude,
+  tailTrimThreshold: Angle,
+  tailTrimCap: Angle,
+  headTrimThreshold: Angle,
+  headTrimCap: Angle,
 )
 
 /**

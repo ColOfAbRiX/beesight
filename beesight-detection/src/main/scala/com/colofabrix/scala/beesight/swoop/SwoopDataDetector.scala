@@ -69,7 +69,8 @@ final class SwoopDataDetector private (config: SwoopConfig) {
       topOfTurn     = SwoopTopOfTurn.find(series, dive, patternEntry, config)
       stop         <- SwoopStop.find(series, dive, config)
       rollout      <- SwoopRolloutStart.find(series, topOfTurn, stop, config)
-      swoopData     = buildSwoopData(series, dive, topOfTurn, rollout, stop, ground)
+      bottom        = SwoopBottomOfTurn.find(series, rollout, stop, config)
+      swoopData     = buildSwoopData(series, dive, topOfTurn, rollout, bottom, stop, ground)
       result       <- Option.when(events.canopy.isDefined)(swoopData)
     yield result
 
@@ -78,6 +79,7 @@ final class SwoopDataDetector private (config: SwoopConfig) {
     diveIdx: Int,
     topOfTurn: Int,
     rolloutIdx: Int,
+    bottomIdx: Int,
     stopIdx: Int,
     ground: Altitude
   ): SwoopData =
@@ -88,7 +90,7 @@ final class SwoopDataDetector private (config: SwoopConfig) {
       SwoopMetrics.maxSpeeds(series, diveIdx, topOfTurn, rolloutIdx, stopIdx)
 
     val degreesOfRotation =
-      SwoopMetrics.turnDegrees(series, topOfTurn, Math.min(stopIdx, last), diveIdx, config)
+      SwoopMetrics.turnDegrees(series, topOfTurn, Math.min(bottomIdx, last), config)
 
     val turnInitiation =
       EventPoint(series(topOfTurn).idx, agl(topOfTurn), series.time(topOfTurn), series(topOfTurn).speed)
