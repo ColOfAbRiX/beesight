@@ -11,7 +11,6 @@ trait SwoopMatchers {
 
   private val altitudeTolerance = 25.0 // m
   private val speedTolerance    = 2.0  // m/s
-  private val rotationTolerance = 30.0 // degrees
   private val timeTolerance     = 1.5  // s
 
   private val MpsToKmh = 3.6
@@ -19,7 +18,7 @@ trait SwoopMatchers {
   /**
    * Matches the swoop metrics computed from a recording against the expected values.
    */
-  def matchSwoop(expected: SwoopResult): Matcher[Option[SwoopData]] =
+  def matchSwoop(expected: SwoopResult, degreesTolerance: Double = 0.0): Matcher[Option[SwoopData]] =
     (obtained: Option[SwoopData]) => {
       val failures =
         (obtained, expected) match {
@@ -30,7 +29,7 @@ trait SwoopMatchers {
           case (Some(_), e) if e.isEmpty =>
             List("  Swoop: expected None, got metrics")
           case (Some(swoop), e) =>
-            checkFields(swoop, e)
+            checkFields(swoop, e, degreesTolerance)
         }
 
       MatchResult(
@@ -43,7 +42,7 @@ trait SwoopMatchers {
   /**
    * Matches only the expected angle of rotation from the logbook.
    */
-  def matchSwoopAngle(expected: SwoopResult): Matcher[Option[SwoopData]] =
+  def matchSwoopAngle(expected: SwoopResult, angleTolerance: Double = 0.0): Matcher[Option[SwoopData]] =
     (obtained: Option[SwoopData]) => {
       val failures =
         (obtained, expected.expectedAngle) match {
@@ -55,7 +54,7 @@ trait SwoopMatchers {
               "deg",
               Math.abs(swoop.degreesOfRotation),
               expected.expectedAngle,
-              rotationTolerance
+              angleTolerance
             ).toList
           case _ =>
             Nil
@@ -68,7 +67,7 @@ trait SwoopMatchers {
       )
     }
 
-  private def checkFields(swoop: SwoopData, expected: SwoopResult): List[String] =
+  private def checkFields(swoop: SwoopData, expected: SwoopResult, degreesTolerance: Double): List[String] =
     List(
       check(
         "Turn initiation altitude",
@@ -120,7 +119,7 @@ trait SwoopMatchers {
         "deg",
         Math.abs(swoop.degreesOfRotation),
         expected.degreesOfRotation.map(v => Math.abs(v)),
-        rotationTolerance,
+        degreesTolerance,
       ),
     ).flatten
 

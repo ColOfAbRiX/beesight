@@ -10,7 +10,7 @@ import java.time.Duration
  * @param altitudes Altitude thresholds (m) of the detection stages
  * @param speeds    Speed thresholds (m/s) of the detection stages
  * @param angles    Heading thresholds (deg) of the detection stages
- * @param unwrap    Thresholds of the unwrap turn-angle measurement
+ * @param rotation  Thresholds of the rotation measurement
  * @param ground    Ground altitude estimation settings
  * @param stream    Input stream cutting settings
  */
@@ -18,7 +18,7 @@ final case class SwoopConfig(
   altitudes: SwoopAltitudesConfig,
   speeds: SwoopSpeedsConfig,
   angles: SwoopAnglesConfig,
-  unwrap: SwoopUnwrapConfig,
+  rotation: SwoopRotationConfig,
   ground: SwoopGroundConfig,
   stream: SwoopStreamConfig,
 )
@@ -75,7 +75,7 @@ final case class SwoopAnglesConfig(
 )
 
 /**
- * Thresholds of the unwrap turn-angle measurement.
+ * Thresholds of the rotation measurement.
  *
  * @param fullTurnAngle          Per-sample turn angles (deg) at or above this value are skipped in the sum
  * @param diveAngleCap           Dive angle (deg) above which a point is inside a steep dive
@@ -83,18 +83,20 @@ final case class SwoopAnglesConfig(
  * @param turnStateThreshold     Per-sample turn angle (deg) above which a point turns right, below which it turns left
  * @param segmentAngleCap        Resolved segment heading change (deg) below which the segment angles are replaced
  * @param segmentDisplacementCap Maximum dead-reckoned displacement (m) of a segment from its start
+ * @param trimEnabled            Whether the drift at the window ends is trimmed off the measurement
  * @param tailTrimThreshold      Per-sample turn angle (deg) at or below which a sample counts as drift when trimming the window tail
  * @param tailTrimCap            Net angle (deg) the tail trim may shift the measurement by at most
  * @param headTrimThreshold      Per-sample turn angle (deg) at or below which a sample counts as drift when trimming the window head
  * @param headTrimCap            Net angle (deg) the head trim may shift the measurement by at most
  */
-final case class SwoopUnwrapConfig(
+final case class SwoopRotationConfig(
   fullTurnAngle: Angle,
   diveAngleCap: Angle,
   diveVerticalSpeed: Speed,
   turnStateThreshold: Angle,
   segmentAngleCap: Angle,
   segmentDisplacementCap: Altitude,
+  trimEnabled: Boolean,
   tailTrimThreshold: Angle,
   tailTrimCap: Angle,
   headTrimThreshold: Angle,

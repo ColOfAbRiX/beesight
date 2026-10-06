@@ -177,7 +177,7 @@ class SwoopMetricsSpec extends AnyFreeSpec with Matchers {
       SwoopMetrics.turnDegrees(series, topOfTurn = 0, bottomIdx = 5, config) shouldBe 0.0 +- 1e-9
     }
 
-    "counts slow rotations inside the window: the unwrap pass has no rate threshold" in {
+    "counts slow rotations inside the window: the measurement has no rate threshold" in {
       //  1.5 deg/sample at 100 ms spacing = 15 deg/s: gSwoop counts it; only the drift at the window ends is trimmed.
       val series = turnSeries(Vector(0, 10, 11.5, 13, 25, 35), vertical = 5.0)
 

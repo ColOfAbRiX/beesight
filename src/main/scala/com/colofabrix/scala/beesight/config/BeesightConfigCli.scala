@@ -121,7 +121,7 @@ object BeesightConfigCli {
   given ConfigReader[SwoopAnglesConfig] =
     ConfigReader.derived
 
-  given ConfigReader[SwoopUnwrapConfig] =
+  given ConfigReader[SwoopRotationConfig] =
     ConfigReader.derived
 
   given ConfigReader[SwoopGroundConfig] =

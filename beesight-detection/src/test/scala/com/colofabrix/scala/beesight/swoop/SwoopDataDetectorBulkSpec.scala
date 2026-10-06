@@ -41,7 +41,7 @@ class SwoopDataDetectorBulkSpec extends AnyWordSpec with Matchers with IOValues 
 
               detectSwoop(filePath)
                 .map { actual =>
-                  val matcher     = matchSwoo p(expected)
+                  val matcher     = matchSwoop(expected, degreesTolerance = 10.0)
                   val matchResult = matcher(actual)
 
                   if (!matchResult.matches) {
@@ -68,10 +68,31 @@ class SwoopDataDetectorBulkSpec extends AnyWordSpec with Matchers with IOValues 
 
   }
 
+  // FIXME: Introduce optics, in tests only, and clean this up
+  private val referenceConfig =
+    val rotationConfig =
+      BeesightConfig
+        .default
+        .swoop
+        .rotation
+        .copy(trimEnabled = false)
+
+    val swoopConfig =
+      BeesightConfig
+        .default
+        .swoop
+        .copy(
+          rotation = rotationConfig
+        )
+
+    BeesightConfig
+      .default
+      .copy(swoop = swoopConfig)
+
   private def detectSwoop(filePath: java.nio.file.Path): IO[Option[SwoopData]] =
     for {
       events  <- detectEvents(filePath)
-      detector = SwoopDataDetector(BeesightConfig.default)
+      detector = SwoopDataDetector(referenceConfig)
       swoop   <- detector.detect(events, TestFilesHandler.readCsv[CsvPoint](filePath))
     } yield swoop
 

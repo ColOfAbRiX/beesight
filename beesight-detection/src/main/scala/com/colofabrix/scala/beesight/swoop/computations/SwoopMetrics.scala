@@ -66,42 +66,46 @@ private[swoop] object SwoopMetrics {
 
   /**
    * The signed sum of the per-sample turn angles over (top of turn, bottom of turn], skipping values of a full turn
-   * or more. The angles come from the unwrap pass. Both window ends are trimmed over the drift: samples rotating at
-   * or below the trim threshold are not part of the turn. The trims share one net-shift budget: they stop when the
-   * combined shift reaches the trim cap, bounding how far the measurement may move from the untrimmed value.
+   * or more. The angles come from the segment-resolved per-sample rotation. When the trim is enabled, both window
+   * ends are trimmed over the drift: samples rotating at or below the trim threshold are not part of the turn, and
+   * the trims share one net-shift budget, stopping when the combined shift reaches the trim cap.
    */
   def turnDegrees(series: PointSeries, topOfTurn: Int, bottomIdx: Int, config: SwoopConfig): Double = {
-    val turnAngles    = turnAnglesWithUnwrap(series, config)
-    val tailThreshold = config.unwrap.tailTrimThreshold.value
-    val tailCap       = config.unwrap.tailTrimCap.value
-    val headThreshold = config.unwrap.headTrimThreshold.value
-    val headCap       = config.unwrap.headTrimCap.value
+    val turnAngles = turnAnglesWithSegments(series, config)
+    val rotation   = config.rotation
 
-    var end      = bottomIdx
-    var cut      = 0.0
-    var trimTail = true
-    while trimTail do {
-      val a = turnAngles(end)
-      if end > topOfTurn + 1 && Math.abs(a) <= tailThreshold && Math.abs(cut - a) <= tailCap then {
-        cut -= a
-        end -= 1
-      } else trimTail = false
-    }
+    var start = topOfTurn + 1
+    var end   = bottomIdx
+    if rotation.trimEnabled then {
+      val tailThreshold = rotation.tailTrimThreshold.value
+      val tailCap       = rotation.tailTrimCap.value
+      val headThreshold = rotation.headTrimThreshold.value
+      val headCap       = rotation.headTrimCap.value
 
-    var start    = topOfTurn + 1
-    var trimHead = true
-    while trimHead && start < end do {
-      val a = turnAngles(start)
-      if Math.abs(a) <= headThreshold && Math.abs(cut - a) <= headCap then {
-        cut -= a
-        start += 1
-      } else trimHead = false
+      var cut      = 0.0
+      var trimTail = true
+      while trimTail do {
+        val a = turnAngles(end)
+        if end > topOfTurn + 1 && Math.abs(a) <= tailThreshold && Math.abs(cut - a) <= tailCap then {
+          cut -= a
+          end -= 1
+        } else trimTail = false
+      }
+
+      var trimHead = true
+      while trimHead && start < end do {
+        val a = turnAngles(start)
+        if Math.abs(a) <= headThreshold && Math.abs(cut - a) <= headCap then {
+          cut -= a
+          start += 1
+        } else trimHead = false
+      }
     }
 
     var total = 0.0
     for i <- start to end do {
       val turnAngle = turnAngles(i)
-      if turnAngle < config.unwrap.fullTurnAngle.value then total += turnAngle
+      if turnAngle < rotation.fullTurnAngle.value then total += turnAngle
     }
 
     total
@@ -116,7 +120,7 @@ private[swoop] object SwoopMetrics {
    * segment cap. The displacement test is dead-reckoned from the horizontal velocities (the stream carries no
    * positions).
    */
-  private def turnAnglesWithUnwrap(series: PointSeries, config: SwoopConfig): Vector[Double] = {
+  private def turnAnglesWithSegments(series: PointSeries, config: SwoopConfig): Vector[Double] = {
     val n       = series.length
     val turn    = Array.fill(n)(0.0)
     val heading = (0 until n).map(series.heading).toArray
@@ -132,8 +136,8 @@ private[swoop] object SwoopMetrics {
         val d = wrapDegrees(heading(i) - heading(i - 1))
         turn(i) = d
 
-        val inDive = diveAngle(series, i) > config.unwrap.diveAngleCap.value &&
-          series.verticalSpeed(i) > config.unwrap.diveVerticalSpeed.value
+        val inDive = diveAngle(series, i) > config.rotation.diveAngleCap.value &&
+          series.verticalSpeed(i) > config.rotation.diveVerticalSpeed.value
         val state   = turnDirection(d, config)
         val flipped = (prev == 1 && state == 0) || (prev == 0 && state == 1)
 
@@ -148,7 +152,7 @@ private[swoop] object SwoopMetrics {
           segX += series.northSpeed(i) * dtSec
           segY += series.eastSpeed(i) * dtSec
 
-          val segmentEnded = !flipped || !inDive || Math.hypot(segX, segY) > config.unwrap.segmentDisplacementCap.value
+          val segmentEnded = !flipped || !inDive || Math.hypot(segX, segY) > config.rotation.segmentDisplacementCap.value
 
           if segmentEnded then {
             resolveSegment(turn, heading, timeMs, segStart, i - 1, prev, config)
@@ -175,8 +179,8 @@ private[swoop] object SwoopMetrics {
 
   /** The turn direction of a per-sample angle: 1 = right run, 0 = left run, 2 = straight. */
   private def turnDirection(d: Double, config: SwoopConfig): Int =
-    if d > config.unwrap.turnStateThreshold.value then 1
-    else if d < -config.unwrap.turnStateThreshold.value then 0
+    if d > config.rotation.turnStateThreshold.value then 1
+    else if d < -config.rotation.turnStateThreshold.value then 0
     else 2
 
   /**
@@ -197,7 +201,7 @@ private[swoop] object SwoopMetrics {
     if total < 0.0 && direction == 1 then total += 360.0
     if total > 0.0 && direction == 0 then total -= 360.0
 
-    if Math.abs(total) < config.unwrap.segmentAngleCap.value then {
+    if Math.abs(total) < config.rotation.segmentAngleCap.value then {
       val rate = 1000.0 * total / (timeMs(end) - timeMs(segStart - 1))
       for k <- segStart to end do {
         turn(k) = (timeMs(k) - timeMs(k - 1)) * rate / 1000.0

@@ -49,7 +49,7 @@ class SwoopAngleDetectorBulkSpec extends AnyWordSpec with Matchers with IOValues
 
               detectSwoop(filePath)
                 .map { actual =>
-                  val matcher     = matchSwoopAngle(expected)
+                  val matcher     = matchSwoopAngle(expected, angleTolerance = 30.0)
                   val matchResult = matcher(actual)
 
                   if (!matchResult.matches) {

@@ -84,13 +84,14 @@ object BeesightConfig {
           stopHeadingDeviation = Angle(45.0),
           maxTurnRate = TurnRate(30.0),
         ),
-        unwrap = SwoopUnwrapConfig(
+        rotation = SwoopRotationConfig(
           fullTurnAngle = Angle(360.0),
           diveAngleCap = Angle(60.0),
           diveVerticalSpeed = Speed(26.8224),
           turnStateThreshold = Angle(2.0),
           segmentAngleCap = Angle(315.0),
           segmentDisplacementCap = Altitude(9.144),
+          trimEnabled = true,
           tailTrimThreshold = Angle(7.0),
           tailTrimCap = Angle(20.0),
           headTrimThreshold = Angle(2.0),
