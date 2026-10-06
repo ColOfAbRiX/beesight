@@ -128,4 +128,7 @@ object FlightMetricsCalculator {
   def apply(config: MetricsConfig, groundElevation: Altitude): FlightMetricsCalculator =
     new FlightMetricsCalculator(config, groundElevation)
 
+  def apply(config: MetricsConfig, groundElevation: Option[Altitude]): FlightMetricsCalculator =
+    new FlightMetricsCalculator(config, groundElevation.getOrElse(Altitude(0.0)))
+
 }

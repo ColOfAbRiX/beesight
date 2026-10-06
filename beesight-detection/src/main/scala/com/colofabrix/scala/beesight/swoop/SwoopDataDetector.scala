@@ -140,7 +140,7 @@ final class SwoopDataDetector private (config: SwoopConfig) {
 
 object SwoopDataDetector {
 
-  def apply(config: BeesightConfig): SwoopDataDetector =
-    new SwoopDataDetector(config.swoop)
+  def apply(config: SwoopConfig): SwoopDataDetector =
+    new SwoopDataDetector(config)
 
 }

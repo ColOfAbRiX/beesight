@@ -1,4 +1,4 @@
-package com.colofabrix.scala.beesight.formats
+package com.colofabrix.scala.beesight.formats.devices
 
 import cats.data.NonEmptyList
 import com.colofabrix.scala.beesight.formats.derivation.given
@@ -6,6 +6,7 @@ import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.readers.*
 import fs2.data.csv.*
 import java.time.*
+import com.colofabrix.scala.beesight.formats.*
 
 /**
  * Generic Data Point
@@ -28,7 +29,8 @@ final private[beesight] case class GenericPoint(
 
 private[beesight] object GenericPoint {
 
-  val GenericSpecBuilder: CsvSpecBuilder[GenericPoint] = CsvSpecBuilder.forFormat[GenericPoint]
+  val GenericSpecBuilder: CsvSpecBuilder[GenericPoint] = 
+    CsvSpecBuilder.forFormat[GenericPoint]
 
   import GenericSpecBuilder._
 

@@ -4,6 +4,7 @@ import cats.effect.IO
 import cats.syntax.all.*
 import com.colofabrix.scala.beesight.config.Config
 import com.colofabrix.scala.beesight.formats.*
+import com.colofabrix.scala.beesight.formats.devices.*
 import com.colofabrix.scala.beesight.input.*
 import com.colofabrix.scala.beesight.jumpevents.*
 import com.colofabrix.scala.beesight.output.*

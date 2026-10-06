@@ -8,6 +8,7 @@ import java.nio.file.Paths
 import java.time.Instant
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
+import com.colofabrix.scala.beesight.formats.devices.DekunuPoint
 
 class DekunuPointAdapterSpec extends AnyFreeSpec with Matchers with IOValues {
 

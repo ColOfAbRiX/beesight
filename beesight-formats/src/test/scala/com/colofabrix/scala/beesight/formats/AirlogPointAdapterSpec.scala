@@ -8,6 +8,7 @@ import java.nio.file.Paths
 import java.time.*
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
+import com.colofabrix.scala.beesight.formats.devices.{Acceleration, AirlogPoint, Altitude, AngularVelocity, Coordinates, Metadata, Motion, Quaternion}
 
 class AirlogPointAdapterSpec extends AnyFreeSpec with Matchers with IOValues {
 

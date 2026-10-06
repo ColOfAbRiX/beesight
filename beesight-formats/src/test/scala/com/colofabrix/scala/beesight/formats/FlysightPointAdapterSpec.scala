@@ -8,6 +8,7 @@ import java.nio.file.Paths
 import java.time.*
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
+import com.colofabrix.scala.beesight.formats.devices.FlysightPoint
 
 class FlysightPointAdapterSpec extends AnyFreeSpec with Matchers with IOValues {
 

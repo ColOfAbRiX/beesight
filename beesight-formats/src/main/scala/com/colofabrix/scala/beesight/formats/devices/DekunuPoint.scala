@@ -1,10 +1,11 @@
-package com.colofabrix.scala.beesight.formats
+package com.colofabrix.scala.beesight.formats.devices
 
 import cats.data.NonEmptyList
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.readers.*
 import fs2.data.csv.*
 import java.time.*
+import com.colofabrix.scala.beesight.formats.*
 
 /**
  * Dekunu Data Point, see https://github.com/ColOfAbRiX/dekunu-flysight-fix/blob/master/dekunu_to_flysight.py
@@ -32,7 +33,8 @@ final private[beesight] case class DekunuPoint(
 
 private[beesight] object DekunuPoint {
 
-  val dekunuSpecBuilder: CsvSpecBuilder[DekunuPoint] = CsvSpecBuilder.forFormat[DekunuPoint]
+  val dekunuSpecBuilder: CsvSpecBuilder[DekunuPoint] = 
+    CsvSpecBuilder.forFormat[DekunuPoint]
 
   import dekunuSpecBuilder._
 
