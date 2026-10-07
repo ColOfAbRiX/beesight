@@ -7,12 +7,12 @@ import com.colofabrix.scala.beesight.TestFilesHandler.given
 import com.colofabrix.scala.beesight.config.BeesightConfig
 import com.colofabrix.scala.beesight.jumpevents.JumpEventsDetector
 import com.colofabrix.scala.beesight.model.*
-import com.colofabrix.scala.beesight.swoop.SwoopDataDetector
+import com.colofabrix.scala.beesight.swoop.SwoopAnalyser
 import com.colofabrix.scala.beesight.{ CsvPoint, TestFilesHandler }
 import java.nio.file.{ Files, Path, Paths }
 
 /**
- * Wall-clock benchmark for the swoop detection stage (SwoopDataDetector) on real jump recordings.
+ * Wall-clock benchmark for the swoop analysis stage (SwoopAnalyser) on real jump recordings.
  *
  * Unlike JMH microbenchmarks, this measures the wall-clock time of the full swoop pipeline (file read → decode →
  * index → cut → materialise → cascade computations) per recording. The flight events (takeoff, freefall, canopy,
@@ -55,7 +55,7 @@ object SwoopBenchmark {
 
     val config         = BeesightConfig.default
     val eventsDetector = JumpEventsDetector(config.jumpevents)
-    val swoopDetector  = SwoopDataDetector(config)
+    val swoopAnalyser  = SwoopAnalyser(config.swoop)
     val zipFiles       = collectZipFiles()
 
     if zipFiles.isEmpty then
@@ -91,7 +91,7 @@ object SwoopBenchmark {
     println(s"Warming up ($WarmupPasses full passes on all files)...")
     for pass <- 1 to WarmupPasses do
       print(s"  Warmup pass $pass/$WarmupPasses\r")
-      zipFiles.foreach(path => timedRun(swoopDetector, events, path))
+      zipFiles.foreach(path => timedRun(swoopAnalyser, events, path))
     println(s"Warmup complete ($WarmupPasses passes on ${zipFiles.size} files)")
     println()
 
@@ -105,7 +105,7 @@ object SwoopBenchmark {
       print(s"  Measure pass $pass/$MeasurePasses\r")
       zipFiles.map { path =>
         val filename = path.getFileName.toString
-        val ms       = timedRun(swoopDetector, events, path)
+        val ms       = timedRun(swoopAnalyser, events, path)
         filename -> ms
       }
     }
@@ -193,11 +193,11 @@ object SwoopBenchmark {
   /**
    * Timed run of a single file through the swoop detection pipeline. Returns wall-clock milliseconds.
    */
-  private def timedRun(detector: SwoopDataDetector, events: Map[String, FlightEvents], filePath: Path): Long =
+  private def timedRun(detector: SwoopAnalyser, events: Map[String, FlightEvents], filePath: Path): Long =
     val start = System.nanoTime()
     val _     =
       detector
-        .detect(
+        .analyse(
           events.getOrElse(filePath.getFileName.toString, FlightEvents.empty),
           TestFilesHandler.readCsv[CsvPoint](filePath)
         )

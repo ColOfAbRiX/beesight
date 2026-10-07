@@ -1,12 +1,12 @@
 package com.colofabrix.scala.beesight.formats.devices
 
 import cats.data.NonEmptyList
+import com.colofabrix.scala.beesight.formats.*
 import com.colofabrix.scala.beesight.formats.derivation.given
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.readers.*
 import fs2.data.csv.*
 import java.time.*
-import com.colofabrix.scala.beesight.formats.*
 
 /**
  * Flysight Data Point, see https://flysight.ca/wiki/index.php/File_format
@@ -46,7 +46,7 @@ final private[beesight] case class FlysightPoint(
 
 private[beesight] object FlysightPoint {
 
-  val flysightSpecBuilder: CsvSpecBuilder[FlysightPoint] = 
+  val flysightSpecBuilder: CsvSpecBuilder[FlysightPoint] =
     CsvSpecBuilder.forFormat[FlysightPoint]
 
   import flysightSpecBuilder._

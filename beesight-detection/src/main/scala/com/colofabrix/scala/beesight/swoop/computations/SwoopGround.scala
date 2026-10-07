@@ -22,9 +22,9 @@ final private[swoop] class SwoopGround private (config: SwoopConfig) {
     landing
       .flatMap { l =>
         val start = series.points.indexWhere(!_.time.isBefore(l.time))
-        if start >= 0 then 
+        if start >= 0 then
           Altitude(medianAltitude(series, start, config.ground.window)).some
-        else 
+        else
           None
       }
       .orElse {

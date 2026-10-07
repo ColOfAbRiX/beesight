@@ -1,6 +1,7 @@
 package com.colofabrix.scala.beesight.formats
 
 import cats.data.NonEmptyList
+import com.colofabrix.scala.beesight.formats.devices.FlysightPoint
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.{ IOValues, TestFilesHandler }
 import fs2.data.csv.*
@@ -8,7 +9,6 @@ import java.nio.file.Paths
 import java.time.*
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
-import com.colofabrix.scala.beesight.formats.devices.FlysightPoint
 
 class FlysightPointAdapterSpec extends AnyFreeSpec with Matchers with IOValues {
 

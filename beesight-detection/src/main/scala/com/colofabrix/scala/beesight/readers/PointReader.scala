@@ -9,7 +9,9 @@ import java.time.Instant
 trait PointReader[A] {
 
   def time(point: A): Instant
+
   def altitude(point: A): Double
+
   def speed(point: A): GeoVector
 
 }

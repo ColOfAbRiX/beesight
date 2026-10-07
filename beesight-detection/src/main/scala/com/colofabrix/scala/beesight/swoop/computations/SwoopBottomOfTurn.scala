@@ -12,16 +12,15 @@ import scala.annotation.tailrec
  */
 private[swoop] object SwoopBottomOfTurn {
 
-  def find(series: PointSeries, rolloutIdx: Int, stopIdx: Int, config: SwoopConfig): Int = {
+  def find(series: PointSeries, rolloutIdx: Int, stopIdx: Int, config: SwoopConfig): Int =
     val bottomCandidate = bottomCandidateWalk(series, rolloutIdx, stopIdx, config)
 
     val backCross = backwardAltitudeBracket(series, rolloutIdx, bottomCandidate, config)
     val fwdCross  = forwardDescentBracket(series, rolloutIdx, stopIdx, config)
 
     earlierCrossing(backCross, fwdCross).getOrElse(rolloutIdx + 1)
-  }
 
-  // Forward walk from the rollout while the altitude strictly decreases or the descent stays fast; the last such point 
+  // Forward walk from the rollout while the altitude strictly decreases or the descent stays fast; the last such point
   // is the bottom candidate.
   private def bottomCandidateWalk(series: PointSeries, rolloutIdx: Int, stopIdx: Int, config: SwoopConfig): Int =
     @tailrec
@@ -41,7 +40,7 @@ private[swoop] object SwoopBottomOfTurn {
 
     walk(rolloutIdx, series.altitude(rolloutIdx), stopIdx)
 
-  // Backward bracket: first point more than the altitude offset above the bottom altitude, with the interpolated 
+  // Backward bracket: first point more than the altitude offset above the bottom altitude, with the interpolated
   // crossing time at the target altitude.
   private def backwardAltitudeBracket(
     series: PointSeries,
@@ -66,7 +65,8 @@ private[swoop] object SwoopBottomOfTurn {
 
     walk(bottomCandidate)
 
-  // Forward bracket: first point whose descent rate drops to the crossing threshold, with the interpolated crossing time.
+  // Forward bracket: first point whose descent rate drops to the crossing threshold, with the interpolated crossing
+  // time.
   private def forwardDescentBracket(
     series: PointSeries,
     rolloutIdx: Int,

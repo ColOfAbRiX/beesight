@@ -6,9 +6,13 @@ package com.colofabrix.scala.beesight.readers
 trait GpsReader[A] {
 
   def horizontalAccuracy(point: A): Option[Double]
+
   def verticalAccuracy(point: A): Option[Double]
+
   def speedAccuracy(point: A): Option[Double]
+
   def courseAccuracy(point: A): Option[Double]
+
   def satellites(point: A): Option[Int]
 
 }

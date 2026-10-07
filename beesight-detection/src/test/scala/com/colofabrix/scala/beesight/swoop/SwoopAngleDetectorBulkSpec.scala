@@ -13,9 +13,6 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import scala.concurrent.duration.*
 
-/**
- * Bulk check of the turn angle against the logbook.
- */
 class SwoopAngleDetectorBulkSpec extends AnyWordSpec with Matchers with IOValues with SwoopMatchers {
 
   private val testFilesDir =
@@ -24,7 +21,7 @@ class SwoopAngleDetectorBulkSpec extends AnyWordSpec with Matchers with IOValues
   private val resultsFile =
     Paths.get("src/test/resources/test_files/swoop_results.csv")
 
-  "SwoopDataDetector" should {
+  "SwoopAnalyser" should {
 
     "match the logbook angle of rotation for a minimum share of the test recordings" in {
       val expectedValues =
@@ -81,8 +78,8 @@ class SwoopAngleDetectorBulkSpec extends AnyWordSpec with Matchers with IOValues
   private def detectSwoop(filePath: java.nio.file.Path): IO[Option[SwoopData]] =
     for {
       events  <- detectEvents(filePath)
-      detector = SwoopDataDetector(BeesightConfig.default)
-      swoop   <- detector.detect(events, TestFilesHandler.readCsv[CsvPoint](filePath))
+      detector = SwoopAnalyser(BeesightConfig.default.swoop)
+      swoop   <- detector.analyse(events, TestFilesHandler.readCsv[CsvPoint](filePath))
     } yield swoop
 
   private def detectEvents(filePath: java.nio.file.Path): IO[FlightEvents] =

@@ -42,6 +42,9 @@ object Config {
       parallelism = Parallelism(1).some,
     )
 
+  /**
+   * Decline-style CLI options assembling a [[Config]], falling back to [[default]] for omitted options.
+   */
   lazy val declineOpts: Opts[Config] =
     (
       input,

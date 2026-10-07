@@ -2,7 +2,7 @@ package com.colofabrix.scala.beesight.swoop
 
 import cats.effect.kernel.Concurrent
 import cats.syntax.functor.*
-import com.colofabrix.scala.beesight.config.{ Altitude, BeesightConfig, SwoopConfig }
+import com.colofabrix.scala.beesight.config.{ Altitude, SwoopConfig }
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.readers.*
 import com.colofabrix.scala.beesight.swoop.computations.*
@@ -12,8 +12,6 @@ import java.time.Duration
 /**
  * Computes swoop metrics from the flight data stream:
  *
- * FIXME: Check that the scaladoc still contains accurate information. Update if necessary but do not make it longer than it is now
- * 
  *   1. Pattern entry: the first crossing below the pattern-entry altitude above the detected ground.
  *   2. Dive point: the first point achieving the maximum descent rate below the altitude cap.
  *   3. Top of turn: the walk-back from the dive point - pull threshold, deceleration boundary, steepening
@@ -30,15 +28,15 @@ import java.time.Duration
  *
  * All reported altitudes are AGL relative to the detected ground.
  */
-final class SwoopDataDetector private (config: SwoopConfig) {
+final class SwoopAnalyser private (config: SwoopConfig) {
 
   private val groundDetector =
     SwoopGround(config)
 
   /**
-   * Detects swoop metrics from the flight data stream.
+   * Analyses the flight data stream: detects the swoop and computes its metrics.
    */
-  def detect[F[_]: Concurrent, A: PointReader](events: FlightEvents, stream: fs2.Stream[F, A]): F[Option[SwoopData]] =
+  def analyse[F[_]: Concurrent, A: PointReader](events: FlightEvents, stream: fs2.Stream[F, A]): F[Option[SwoopData]] =
     stream
       .zipWithIndex
       .through(cutStream(events))
@@ -138,9 +136,9 @@ final class SwoopDataDetector private (config: SwoopConfig) {
 
 }
 
-object SwoopDataDetector {
+object SwoopAnalyser {
 
-  def apply(config: SwoopConfig): SwoopDataDetector =
-    new SwoopDataDetector(config)
+  def apply(config: SwoopConfig): SwoopAnalyser =
+    new SwoopAnalyser(config)
 
 }

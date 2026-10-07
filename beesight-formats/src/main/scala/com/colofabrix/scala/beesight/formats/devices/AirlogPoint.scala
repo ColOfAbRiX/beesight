@@ -1,12 +1,12 @@
 package com.colofabrix.scala.beesight.formats.devices
 
 import cats.data.NonEmptyList
+import com.colofabrix.scala.beesight.formats.*
 import com.colofabrix.scala.beesight.formats.derivation.given
 import com.colofabrix.scala.beesight.model.*
 import com.colofabrix.scala.beesight.readers.*
 import fs2.data.csv.*
 import java.time.*
-import com.colofabrix.scala.beesight.formats.*
 
 /**
  * AirlogOne Data Point
@@ -34,7 +34,7 @@ final private[beesight] case class AirlogPoint(
 
 private[beesight] object AirlogPoint {
 
-  val airlogSpecBuilder: CsvSpecBuilder[AirlogPoint] = 
+  val airlogSpecBuilder: CsvSpecBuilder[AirlogPoint] =
     CsvSpecBuilder.forFormat[AirlogPoint]
 
   import airlogSpecBuilder._
@@ -223,10 +223,10 @@ final private[beesight] case class Altitude(
 /**
  * Motion data
  *
- * @param speed Horizontal speed (likely km/h)
- * @param sink Vertical speed (likely m/s, negative during descent)
+ * @param speed Horizontal speed
+ * @param sink Vertical speed
  * @param heading Direction of travel in degrees (0-360, where 0/360 is North)
- * @param backupSink Backup vertical speed calculation (likely m/s)
+ * @param backupSink Backup vertical speed calculation
  */
 final private[beesight] case class Motion(
   speed: Double,
@@ -268,7 +268,7 @@ object Quaternion {
 }
 
 /**
- * Acceleration data (likely g-force)
+ * Acceleration data
  *
  * @param x Acceleration on X axis
  * @param y Acceleration on Y axis
@@ -281,7 +281,7 @@ final private[beesight] case class Acceleration(
 )
 
 /**
- * Angular velocity data (likely deg/s)
+ * Angular velocity data
  *
  * @param x Angular velocity on X axis
  * @param y Angular velocity on Y axis

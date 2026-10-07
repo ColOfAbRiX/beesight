@@ -29,7 +29,7 @@ metals.sbt
 *.semanticdb
 
 # Native image binaries
-dist/beesight.bin
+dist/
 
 # Other
 real_data/
@@ -46,6 +46,5 @@ plans/
 
 # FIXME: These are temporary until problems fixed
 gswoop/
-angle-analysis/
 
 TODO.md

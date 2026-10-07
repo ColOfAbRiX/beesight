@@ -20,6 +20,9 @@ final private[beesight] case class CsvFieldSpec[A, T](
   required: Boolean = true,
 )
 
+/**
+ * Builder of [[CsvFieldSpec]] columns for a CSV-backed point type.
+ */
 final class CsvSpecBuilder[A] {
 
   /**
@@ -46,6 +49,7 @@ final class CsvSpecBuilder[A] {
 
 object CsvSpecBuilder {
 
+  /** Creates a new builder for the given point type. */
   def forFormat[A]: CsvSpecBuilder[A] = new CsvSpecBuilder[A]
 
 }

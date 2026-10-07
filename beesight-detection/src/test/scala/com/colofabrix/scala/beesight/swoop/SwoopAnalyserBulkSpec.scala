@@ -13,7 +13,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import scala.concurrent.duration.*
 
-class SwoopDataDetectorBulkSpec extends AnyWordSpec with Matchers with IOValues with SwoopMatchers {
+class SwoopAnalyserBulkSpec extends AnyWordSpec with Matchers with IOValues with SwoopMatchers {
 
   private val testFilesDir =
     Paths.get("src/test/resources/test_files")
@@ -21,7 +21,7 @@ class SwoopDataDetectorBulkSpec extends AnyWordSpec with Matchers with IOValues 
   private val resultsFile =
     Paths.get("src/test/resources/test_files/swoop_results.csv")
 
-  "SwoopDataDetector" should {
+  "SwoopAnalyser" should {
 
     "match the reference metrics for all test recordings" in {
       val expectedValues =
@@ -68,7 +68,6 @@ class SwoopDataDetectorBulkSpec extends AnyWordSpec with Matchers with IOValues 
 
   }
 
-  // FIXME: Introduce optics, in tests only, and clean this up
   private val referenceConfig =
     val rotationConfig =
       BeesightConfig
@@ -92,8 +91,8 @@ class SwoopDataDetectorBulkSpec extends AnyWordSpec with Matchers with IOValues 
   private def detectSwoop(filePath: java.nio.file.Path): IO[Option[SwoopData]] =
     for {
       events  <- detectEvents(filePath)
-      detector = SwoopDataDetector(referenceConfig)
-      swoop   <- detector.detect(events, TestFilesHandler.readCsv[CsvPoint](filePath))
+      detector = SwoopAnalyser(referenceConfig.swoop)
+      swoop   <- detector.analyse(events, TestFilesHandler.readCsv[CsvPoint](filePath))
     } yield swoop
 
   private def detectEvents(filePath: java.nio.file.Path): IO[FlightEvents] =

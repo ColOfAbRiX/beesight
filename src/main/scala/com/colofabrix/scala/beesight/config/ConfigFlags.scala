@@ -28,6 +28,9 @@ object ConfigFlags {
       createSummary = false,
     )
 
+  /**
+   * Decline-style CLI flags assembling [[ConfigFlags]].
+   */
   lazy val declineOpts: Opts[ConfigFlags] =
     (dryRun, writeCsv, createGraph, createSummary).mapN(ConfigFlags.apply)
 

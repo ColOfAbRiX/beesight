@@ -1,12 +1,10 @@
 package com.colofabrix.scala.beesight.formats
 
+import com.colofabrix.scala.beesight.formats.devices.{ DekunuPoint, FlysightPoint, * }
 import com.colofabrix.scala.beesight.readers.GpsReader
 import java.time.{ Instant, OffsetDateTime }
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
-import com.colofabrix.scala.beesight.formats.devices.FlysightPoint
-import com.colofabrix.scala.beesight.formats.devices.DekunuPoint
-import com.colofabrix.scala.beesight.formats.devices.{Acceleration, AirlogPoint, Altitude, AngularVelocity, Coordinates, Metadata, Motion}
 
 class GpsReaderSpec extends AnyFreeSpec with Matchers {
 

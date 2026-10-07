@@ -1,10 +1,7 @@
 package com.colofabrix.scala.beesight.formats
 
 import com.colofabrix.scala.beesight.*
-import com.colofabrix.scala.beesight.formats.devices.GenericPoint
-import com.colofabrix.scala.beesight.formats.devices.FlysightPoint
-import com.colofabrix.scala.beesight.formats.devices.DekunuPoint
-import com.colofabrix.scala.beesight.formats.devices.AirlogPoint
+import com.colofabrix.scala.beesight.formats.devices.{ AirlogPoint, DekunuPoint, FlysightPoint, GenericPoint }
 
 /**
  * Detects the file format of a CSV file by inspecting its header columns.

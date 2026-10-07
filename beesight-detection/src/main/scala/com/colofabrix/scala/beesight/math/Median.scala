@@ -32,7 +32,7 @@ private[beesight] object Median extends LowPriorityMedian {
         else
           sorted(n / 2)
 
-  // FIXME: Add two lines description of why we need this function
+  // In-place insertion sort: on the tiny windows of the small-median path it avoids the allocation of `sorted`.
   private def insertionSort(a: Array[Double]): Unit =
     var i = 1
     while i < a.length do

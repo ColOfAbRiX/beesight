@@ -34,6 +34,7 @@ extension (self: ReaderT.type) {
   def blocking[A](thunk: => A): IOConfig[A] =
     ReaderT.liftF(IO.blocking(thunk))
 
+  /** Lifts an Option into IOConfig, raising the given throwable on None. */
   def fromOption[A](o: => Option[A])(orElse: => Throwable): IOConfig[A] =
     ReaderT.liftF(IO.fromOption(o)(orElse))
 
@@ -41,6 +42,7 @@ extension (self: ReaderT.type) {
 
 extension [A](self: Option[A]) {
 
+  /** Lifts this Option into IOConfig, raising the given throwable on None. */
   def toIOConfig(orElse: => Throwable): IOConfig[A] =
     ReaderT.liftF(IO.fromOption(self)(orElse))
 
@@ -48,6 +50,7 @@ extension [A](self: Option[A]) {
 
 extension [E <: Throwable, A](self: Either[E, A]) {
 
+  /** Lifts this Either into IOConfig, raising the left value on Left. */
   def toIOConfig: IOConfig[A] =
     ReaderT.liftF(IO.fromEither(self))
 

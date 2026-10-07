@@ -1,10 +1,7 @@
 package com.colofabrix.scala.beesight.formats
 
+import com.colofabrix.scala.beesight.formats.devices.{ AirlogPoint, DekunuPoint, FlysightPoint, GenericPoint }
 import com.colofabrix.scala.beesight.formats.{ FileFormat, FormatDetector }
-import com.colofabrix.scala.beesight.formats.devices.GenericPoint
-import com.colofabrix.scala.beesight.formats.devices.FlysightPoint
-import com.colofabrix.scala.beesight.formats.devices.DekunuPoint
-import com.colofabrix.scala.beesight.formats.devices.AirlogPoint
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 

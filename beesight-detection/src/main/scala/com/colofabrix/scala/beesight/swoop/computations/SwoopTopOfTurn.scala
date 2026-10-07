@@ -19,9 +19,9 @@ private[swoop] object SwoopTopOfTurn {
 
     def walkBack(i: Int)(pred: Int => Boolean): Int =
       @tailrec def loop(i: Int): Int =
-        if patternEntry < i && pred(i) then 
-          loop(i - 1) 
-        else 
+        if patternEntry < i && pred(i) then
+          loop(i - 1)
+        else
           i
       loop(i)
 
@@ -29,7 +29,6 @@ private[swoop] object SwoopTopOfTurn {
 
     val afterPull =
       if series.verticalSpeed(crossed) >= pullThreshold then
-        // keep the largest index among the minima (last occurrence of the minimum descent)
         (patternEntry to diveIdx)
           .reverse
           .minBy(series.verticalSpeed)
@@ -47,12 +46,10 @@ private[swoop] object SwoopTopOfTurn {
     walkBack(steepeningEnd)(i => isSteepening(series, i))
   }
 
-  /**
-   * Steepening accumulator walk: walks backward from the deceleration boundary accumulating the descent-rate increase
-   * over the samples that are still accelerating downward (resetting on the others), and stops when the accumulation
-   * exceeds the steepening threshold - the dive steepening began at the sample before. The walk is aborted, keeping
-   * the starting point, when the altitude gain or the turn rate exceeds its cap.
-   */
+  // Steepening accumulator walk: walks backward from the deceleration boundary accumulating the descent-rate increase
+  // over the samples that are still accelerating downward (resetting on the others), and stops when the accumulation
+  // exceeds the steepening threshold - the dive steepening began at the sample before. The walk is aborted, keeping
+  // the starting point, when the altitude gain or the turn rate exceeds its cap.
   private def steepeningWalk(series: PointSeries, startIdx: Int, patternEntry: Int, config: SwoopConfig): Int = {
     var result       = startIdx
     var altitudeGain = 0.0 // metres gained walking backward
@@ -65,16 +62,18 @@ private[swoop] object SwoopTopOfTurn {
 
       if dtMs <= 0 then
         stop = true
-      else {
+      else
         val dtSec = dtMs / 1000.0
 
         altitudeGain += series.altitude(i - 1) - series.altitude(i)
         steepening = updatedSteepening(series, i, dtSec, steepening)
 
-        val turnRate     = Heading.angularDistance(series.heading(i - 1), series.heading(i)) / dtSec
-        // FIXME: Give names to the two sides on the expression around ||
-        val capsExceeded =
-          turnRate > config.angles.maxTurnRate.value || altitudeGain > config.altitudes.maxAltitudeGain.value
+        val turnRate = Heading.angularDistance(series.heading(i - 1), series.heading(i)) / dtSec
+
+        val turnRateCapExceeded     = turnRate > config.angles.maxTurnRate.value
+        val altitudeGainCapExceeded = altitudeGain > config.altitudes.maxAltitudeGain.value
+
+        val capsExceeded = turnRateCapExceeded || altitudeGainCapExceeded
 
         if capsExceeded then
           stop = true // cap fired: keep the starting point
@@ -83,13 +82,13 @@ private[swoop] object SwoopTopOfTurn {
           stop = true
         else
           i = i - 1
-      }
     }
 
     result
   }
 
-  /** The accumulator value after processing sample `i`: reset when the descent stops accelerating downward, increased by the descent-rate rise otherwise. */
+  // The accumulator value after processing sample `i`: reset when the descent stops accelerating downward, increased by
+  // the descent-rate rise otherwise.
   private def updatedSteepening(series: PointSeries, i: Int, dtSec: Double, steepening: Double): Double =
     val descentIncrease = series.verticalSpeed(i) - series.verticalSpeed(i - 1)
 
@@ -98,7 +97,7 @@ private[swoop] object SwoopTopOfTurn {
     else
       steepening + descentIncrease
 
-  /** True when the vertical speed is still increasing at point `i` (the descent is accelerating downward there). */
+  // True when the vertical speed is still increasing at point `i` (the descent is accelerating downward there).
   private def isSteepening(series: PointSeries, i: Int): Boolean =
     val dt = Duration.between(series.time(i - 1), series.time(i)).toMillis / 1000.0
 

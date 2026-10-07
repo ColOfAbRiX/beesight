@@ -116,7 +116,6 @@ final class FlightMetricsCalculator private (config: MetricsConfig, groundElevat
 
 object FlightMetricsCalculator {
 
-  /** Rolling buffer of the most recent points, at most one full window long, plus the total point count. */
   final private[metrics] case class MetricsState[A](
     points: Vector[A],
     count: Long
