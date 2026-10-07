@@ -1,7 +1,7 @@
 package com.colofabrix.scala.beesight.output
 
 import com.colofabrix.scala.beesight.config.*
-import com.colofabrix.scala.beesight.model.*
+import com.colofabrix.scala.beesight.detection.model.*
 import com.colofabrix.scala.beesight.output.DataCutter.*
 import scala.collection.immutable.Queue
 

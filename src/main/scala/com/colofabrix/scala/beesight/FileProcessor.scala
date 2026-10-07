@@ -6,9 +6,9 @@ import com.colofabrix.scala.beesight.config.Config
 import com.colofabrix.scala.beesight.formats.*
 import com.colofabrix.scala.beesight.formats.devices.*
 import com.colofabrix.scala.beesight.input.*
-import com.colofabrix.scala.beesight.jumpevents.*
+import com.colofabrix.scala.beesight.detection.jumpevents.*
 import com.colofabrix.scala.beesight.output.*
-import com.colofabrix.scala.beesight.readers.*
+import com.colofabrix.scala.beesight.detection.readers.*
 import fs2.data.csv.*
 import java.nio.file.*
 

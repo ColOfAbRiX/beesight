@@ -1,8 +1,8 @@
 package com.colofabrix.scala.beesight.bench
 
-import com.colofabrix.scala.beesight.collections.NonEmptyWindow
-import com.colofabrix.scala.beesight.math.*
-import com.colofabrix.scala.beesight.model.GeoVector
+import com.colofabrix.scala.beesight.detection.collections.NonEmptyWindow
+import com.colofabrix.scala.beesight.detection.math.*
+import com.colofabrix.scala.beesight.detection.model.GeoVector
 import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations.*
 import scala.compiletime.uninitialized

@@ -4,7 +4,7 @@ import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import com.colofabrix.scala.beesight.Tools
 import com.colofabrix.scala.beesight.config.*
-import com.colofabrix.scala.beesight.model.*
+import com.colofabrix.scala.beesight.detection.model.*
 import java.io.File
 import java.nio.file.Paths
 import java.time.Instant

@@ -3,8 +3,8 @@ package com.colofabrix.scala.beesight.formats.devices
 import cats.data.NonEmptyList
 import com.colofabrix.scala.beesight.formats.*
 import com.colofabrix.scala.beesight.formats.derivation.given
-import com.colofabrix.scala.beesight.model.*
-import com.colofabrix.scala.beesight.readers.*
+import com.colofabrix.scala.beesight.detection.model.*
+import com.colofabrix.scala.beesight.detection.readers.*
 import fs2.data.csv.*
 import java.time.*
 

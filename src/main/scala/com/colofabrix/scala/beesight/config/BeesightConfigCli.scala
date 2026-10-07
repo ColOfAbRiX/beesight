@@ -1,6 +1,7 @@
 package com.colofabrix.scala.beesight.config
 
 import cats.data.{ Validated, ValidatedNel }
+import com.colofabrix.scala.beesight.detection.config.*
 import com.monovore.decline.Opts
 import com.typesafe.config.ConfigFactory
 import io.github.iltotore.iron.*

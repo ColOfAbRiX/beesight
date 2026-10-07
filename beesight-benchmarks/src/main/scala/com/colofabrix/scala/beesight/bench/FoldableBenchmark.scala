@@ -1,7 +1,7 @@
 package com.colofabrix.scala.beesight.bench
 
-import com.colofabrix.scala.beesight.collections.NonEmptyWindow
-import com.colofabrix.scala.beesight.math.toArrayBy
+import com.colofabrix.scala.beesight.detection.collections.NonEmptyWindow
+import com.colofabrix.scala.beesight.detection.math.toArrayBy
 import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations.*
 import scala.compiletime.uninitialized
@@ -70,6 +70,6 @@ class FoldableBenchmark {
   /** Baseline: median over the extracted array (mirrors `StatsOps.medianBy` used by jump-event handlers). */
   @Benchmark
   def median_overArray(): Double =
-    com.colofabrix.scala.beesight.math.Median[Double].median(window.toArrayBy(identity))
+    com.colofabrix.scala.beesight.detection.math.Median[Double].median(window.toArrayBy(identity))
 
 }

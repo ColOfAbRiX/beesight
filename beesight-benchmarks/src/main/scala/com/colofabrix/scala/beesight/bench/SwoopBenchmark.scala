@@ -4,10 +4,10 @@ import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import cats.syntax.all.given
 import com.colofabrix.scala.beesight.TestFilesHandler.given
-import com.colofabrix.scala.beesight.config.BeesightConfig
-import com.colofabrix.scala.beesight.jumpevents.JumpEventsDetector
-import com.colofabrix.scala.beesight.model.*
-import com.colofabrix.scala.beesight.swoop.SwoopAnalyser
+import com.colofabrix.scala.beesight.detection.config.BeesightConfig
+import com.colofabrix.scala.beesight.detection.jumpevents.JumpEventsDetector
+import com.colofabrix.scala.beesight.detection.model.*
+import com.colofabrix.scala.beesight.detection.swoop.SwoopAnalyser
 import com.colofabrix.scala.beesight.{ CsvPoint, TestFilesHandler }
 import java.nio.file.{ Files, Path, Paths }
 

@@ -4,7 +4,7 @@ import cats.Show
 import cats.implicits.given
 import com.colofabrix.scala.beesight.*
 import com.colofabrix.scala.beesight.config.Config
-import com.colofabrix.scala.beesight.model.*
+import com.colofabrix.scala.beesight.detection.model.*
 import scala.io.AnsiColor.*
 
 /**

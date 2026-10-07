@@ -1,8 +1,8 @@
 package com.colofabrix.scala.beesight
 
 import cats.effect.IO
-import com.colofabrix.scala.beesight.model.*
-import com.colofabrix.scala.beesight.readers.*
+import com.colofabrix.scala.beesight.detection.model.*
+import com.colofabrix.scala.beesight.detection.readers.*
 import fs2.data.csv.*
 import java.io.FileInputStream
 import java.nio.file.{ Path, Paths }

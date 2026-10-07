@@ -3,8 +3,8 @@ package com.colofabrix.scala.beesight.output
 import cats.syntax.all.*
 import com.colofabrix.scala.beesight.*
 import com.colofabrix.scala.beesight.config.Config
-import com.colofabrix.scala.beesight.model.*
-import com.colofabrix.scala.beesight.readers.*
+import com.colofabrix.scala.beesight.detection.model.*
+import com.colofabrix.scala.beesight.detection.readers.*
 import java.nio.file.*
 
 /**

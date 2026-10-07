@@ -1,6 +1,6 @@
 package com.colofabrix.scala.beesight.bench
 
-import com.colofabrix.scala.beesight.model.GeoVector
+import com.colofabrix.scala.beesight.detection.model.GeoVector
 import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations.*
 import scala.compiletime.uninitialized

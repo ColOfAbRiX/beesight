@@ -3,13 +3,13 @@ package com.colofabrix.scala.beesight.detection
 import cats.data.OptionT
 import cats.effect.kernel.Concurrent
 import cats.syntax.all.*
-import com.colofabrix.scala.beesight.config.*
+import com.colofabrix.scala.beesight.detection.config.*
 import com.colofabrix.scala.beesight.detection.Beesight.*
-import com.colofabrix.scala.beesight.jumpevents.JumpEventsDetector
-import com.colofabrix.scala.beesight.metrics.FlightMetricsCalculator
-import com.colofabrix.scala.beesight.model.*
-import com.colofabrix.scala.beesight.readers.*
-import com.colofabrix.scala.beesight.swoop.SwoopAnalyser
+import com.colofabrix.scala.beesight.detection.jumpevents.JumpEventsDetector
+import com.colofabrix.scala.beesight.detection.metrics.FlightMetricsCalculator
+import com.colofabrix.scala.beesight.detection.model.*
+import com.colofabrix.scala.beesight.detection.readers.*
+import com.colofabrix.scala.beesight.detection.swoop.SwoopAnalyser
 
 /**
  * Main entry point for clients of the library.

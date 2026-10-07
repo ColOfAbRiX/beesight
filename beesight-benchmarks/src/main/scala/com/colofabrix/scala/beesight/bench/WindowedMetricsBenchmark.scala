@@ -1,7 +1,7 @@
 package com.colofabrix.scala.beesight.bench
 
-import com.colofabrix.scala.beesight.metrics.computations.WindowedMetrics
-import com.colofabrix.scala.beesight.model.{ GeoVector, IndexedPoint }
+import com.colofabrix.scala.beesight.detection.metrics.computations.WindowedMetrics
+import com.colofabrix.scala.beesight.detection.model.{ GeoVector, IndexedPoint }
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations.*

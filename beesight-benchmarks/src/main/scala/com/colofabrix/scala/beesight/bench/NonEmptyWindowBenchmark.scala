@@ -1,6 +1,6 @@
 package com.colofabrix.scala.beesight.bench
 
-import com.colofabrix.scala.beesight.collections.NonEmptyWindow
+import com.colofabrix.scala.beesight.detection.collections.NonEmptyWindow
 import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations.*
 import scala.compiletime.uninitialized

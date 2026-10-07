@@ -4,7 +4,7 @@ import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import com.colofabrix.scala.beesight.config.*
 import com.colofabrix.scala.beesight.config.DataCutterConfig.given
-import com.colofabrix.scala.beesight.model.*
+import com.colofabrix.scala.beesight.detection.model.*
 import java.time.Instant
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers

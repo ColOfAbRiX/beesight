@@ -2,6 +2,7 @@ package com.colofabrix.scala.beesight.config
 
 import cats.Show
 import cats.syntax.all.*
+import com.colofabrix.scala.beesight.detection.config.*
 import com.monovore.decline.*
 import io.github.iltotore.iron.*
 import io.github.iltotore.iron.constraint.all.*
