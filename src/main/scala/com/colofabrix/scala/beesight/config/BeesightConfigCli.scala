@@ -84,7 +84,7 @@ object BeesightConfigCli {
     ConfigReader[Double].map(Mass(_))
 
   given ConfigReader[Area] =
-    ConfigReader[Double].map(Area(_))
+    ConfigReader[Double].map(a => Area(a.refineUnsafe))
 
   given ConfigReader[Angle] =
     ConfigReader[Double].map(Angle(_))
@@ -113,13 +113,22 @@ object BeesightConfigCli {
   given ConfigReader[SwoopConfig] =
     ConfigReader.derived
 
-  given ConfigReader[SwoopAltitudesConfig] =
+  given ConfigReader[SwoopPatternEntryConfig] =
     ConfigReader.derived
 
-  given ConfigReader[SwoopSpeedsConfig] =
+  given ConfigReader[SwoopDivePointConfig] =
     ConfigReader.derived
 
-  given ConfigReader[SwoopAnglesConfig] =
+  given ConfigReader[SwoopTopOfTurnConfig] =
+    ConfigReader.derived
+
+  given ConfigReader[SwoopStopConfig] =
+    ConfigReader.derived
+
+  given ConfigReader[SwoopRolloutConfig] =
+    ConfigReader.derived
+
+  given ConfigReader[SwoopBottomOfTurnConfig] =
     ConfigReader.derived
 
   given ConfigReader[SwoopRotationConfig] =

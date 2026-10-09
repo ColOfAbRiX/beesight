@@ -153,19 +153,17 @@ object Mass {
 }
 
 /**
- * An area value in m² (canopy planform area).
- *
- * FIXME: Areas are always >= 0.0
+ * An area value in m² (canopy planform area, always ≥ 0.0).
  */
-opaque type Area = Double
+opaque type Area = Double :| GreaterEqual[0.0]
 
 object Area {
 
-  def apply(value: Double): Area =
+  def apply(value: Double :| GreaterEqual[0.0]): Area =
     value
 
   extension (self: Area)
-    def value: Double = self
+    def value: Double :| GreaterEqual[0.0] = self
 
   given Ordering[Area] =
     Ordering.by(_.value)

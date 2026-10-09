@@ -15,7 +15,7 @@ import scala.annotation.tailrec
 private[swoop] object SwoopTopOfTurn {
 
   def find(series: PointSeries, diveIdx: Int, patternEntry: Int, config: SwoopConfig): Int = {
-    val pullThreshold = config.speeds.pullThreshold.value
+    val pullThreshold = config.topOfTurn.pullThreshold.value
 
     def walkBack(i: Int)(pred: Int => Boolean): Int =
       @tailrec def loop(i: Int): Int =
@@ -38,7 +38,7 @@ private[swoop] object SwoopTopOfTurn {
     val decelerationEnd = walkBack(afterPull)(i => isSteepening(series, i))
 
     val steepeningEnd =
-      if series.verticalSpeed(decelerationEnd) >= config.speeds.steepeningEntry.value then
+      if series.verticalSpeed(decelerationEnd) >= config.topOfTurn.steepeningEntry.value then
         steepeningWalk(series, decelerationEnd, patternEntry, config)
       else
         decelerationEnd
@@ -70,14 +70,14 @@ private[swoop] object SwoopTopOfTurn {
 
         val turnRate = Heading.angularDistance(series.heading(i - 1), series.heading(i)) / dtSec
 
-        val turnRateCapExceeded     = turnRate > config.angles.maxTurnRate.value
-        val altitudeGainCapExceeded = altitudeGain > config.altitudes.maxAltitudeGain.value
+        val turnRateCapExceeded     = turnRate > config.topOfTurn.maxTurnRate.value
+        val altitudeGainCapExceeded = altitudeGain > config.topOfTurn.maxAltitudeGain.value
 
         val capsExceeded = turnRateCapExceeded || altitudeGainCapExceeded
 
         if capsExceeded then
           stop = true // cap fired: keep the starting point
-        else if steepening > config.speeds.steepeningAccumulator.value then
+        else if steepening > config.topOfTurn.steepeningAccumulator.value then
           result = i - 1
           stop = true
         else

@@ -5,6 +5,7 @@ import com.colofabrix.scala.beesight.IOValues
 import com.colofabrix.scala.beesight.detection.config.{ Area, Mass, MetricsConfig }
 import com.colofabrix.scala.beesight.detection.model.{ FlightMetric, * }
 import com.colofabrix.scala.beesight.detection.readers.*
+import io.github.iltotore.iron.autoRefine
 import java.time.Instant
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers

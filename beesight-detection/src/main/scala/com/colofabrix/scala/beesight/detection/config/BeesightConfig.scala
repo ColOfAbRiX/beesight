@@ -63,26 +63,32 @@ object BeesightConfig {
         ),
       ),
       swoop = SwoopConfig(
-        altitudes = SwoopAltitudesConfig(
-          patternEntryAltitude = Altitude(762.0),
-          diveAltitudeCap = Altitude(304.8),
-          maxAltitudeGain = Altitude(152.4),
-          bottomAltitudeOffset = Altitude(1.0),
-          rolloutWindow = Altitude(30.48),
+        patternEntry = SwoopPatternEntryConfig(
+          entryAltitude = Altitude(762.0),
         ),
-        speeds = SwoopSpeedsConfig(
+        dive = SwoopDivePointConfig(
+          altitudeCap = Altitude(304.8),
+        ),
+        topOfTurn = SwoopTopOfTurnConfig(
           pullThreshold = Speed(11.176),
           steepeningEntry = Speed(6.7056),
           steepeningAccumulator = Speed(6.7056),
-          stopDescentThreshold = Speed(4.4704),
-          stopHorizontalThreshold = Speed(8.9408),
-          stopEndHorizontal = Speed(0.89408),
-          bottomDescentThreshold = Speed(4.4704),
-          bottomVzCross = Speed(1.25),
-        ),
-        angles = SwoopAnglesConfig(
-          stopHeadingDeviation = Angle(45.0),
+          maxAltitudeGain = Altitude(152.4),
           maxTurnRate = TurnRate(30.0),
+        ),
+        stop = SwoopStopConfig(
+          descentThreshold = Speed(4.4704),
+          horizontalThreshold = Speed(8.9408),
+          endHorizontal = Speed(0.89408),
+          headingDeviation = Angle(45.0),
+        ),
+        rollout = SwoopRolloutConfig(
+          window = Altitude(30.48),
+        ),
+        bottom = SwoopBottomOfTurnConfig(
+          altitudeOffset = Altitude(1.0),
+          descentThreshold = Speed(4.4704),
+          vzCross = Speed(1.25),
         ),
         rotation = SwoopRotationConfig(
           fullTurnAngle = Angle(360.0),

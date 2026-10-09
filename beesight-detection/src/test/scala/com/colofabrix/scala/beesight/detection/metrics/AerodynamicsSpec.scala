@@ -3,6 +3,7 @@ package com.colofabrix.scala.beesight.detection.metrics
 import com.colofabrix.scala.beesight.detection.config.{ Area, Mass, MetricsConfig }
 import com.colofabrix.scala.beesight.detection.metrics.computations.*
 import com.colofabrix.scala.beesight.detection.model.GeoVector
+import io.github.iltotore.iron.autoRefine
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 

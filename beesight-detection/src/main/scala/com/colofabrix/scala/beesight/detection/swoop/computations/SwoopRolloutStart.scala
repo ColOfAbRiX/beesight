@@ -13,12 +13,14 @@ import scala.annotation.tailrec
 private[swoop] object SwoopRolloutStart {
 
   def find(series: PointSeries, topOfTurn: Int, stopIdx: Int, config: SwoopConfig): Option[Int] =
-    val rolloutWindow = config.altitudes.rolloutWindow.value
+    val rolloutWindow = config.rollout.window.value
 
     @tailrec
     def advance(i: Int): Int =
-      if i <= stopIdx && (series.altitude(i) - series.altitude(stopIdx)) >= rolloutWindow then advance(i + 1)
-      else i
+      if i <= stopIdx && (series.altitude(i) - series.altitude(stopIdx)) >= rolloutWindow then
+        advance(i + 1)
+      else
+        i
 
     val startIdx = advance(topOfTurn)
 

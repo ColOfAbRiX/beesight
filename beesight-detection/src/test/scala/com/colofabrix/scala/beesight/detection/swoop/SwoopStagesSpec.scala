@@ -193,7 +193,7 @@ class SwoopStagesSpec extends AnyFreeSpec with Matchers {
         series,
         topOfTurn = 0,
         stopIdx = 2,
-        config.copy(altitudes = config.altitudes.copy(rolloutWindow = Altitude(1000.0)))
+        config.copy(rollout = config.rollout.copy(window = Altitude(1000.0)))
       ) shouldBe
       None
     }

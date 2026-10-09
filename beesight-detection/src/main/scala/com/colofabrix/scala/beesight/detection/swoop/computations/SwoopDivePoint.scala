@@ -15,7 +15,7 @@ private[swoop] object SwoopDivePoint {
     (patternEntry until series.length)
       .view
       .filter { i =>
-        agl(i) < config.altitudes.diveAltitudeCap.value && series.verticalSpeed(i) > 0
+        agl(i) < config.dive.altitudeCap.value && series.verticalSpeed(i) > 0
       }
       .maxByOption(series.verticalSpeed)
 

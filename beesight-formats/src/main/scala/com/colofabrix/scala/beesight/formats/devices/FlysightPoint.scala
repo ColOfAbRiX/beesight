@@ -41,7 +41,6 @@ final private[beesight] case class FlysightPoint(
   cAcc: Double,
   gpsFix: Option[Int],
   numSV: Int,
-  extra: List[(String, String)],
 )
 
 private[beesight] object FlysightPoint {
@@ -105,25 +104,34 @@ private[beesight] object FlysightPoint {
       .map(_.name)
       .toSet
 
-  given flysightPointReader: PointReader[FlysightPoint] with {
+  given flysightPointReader: FlysightReader[FlysightPoint] with {
     def time(point: FlysightPoint): Instant =
       point.time.toInstant
     def altitude(point: FlysightPoint): Double =
       point.hMSL
     def speed(point: FlysightPoint): GeoVector =
       GeoVector(north = point.velN, east = point.velE, vertical = point.velD)
-  }
-
-  given flysightGpsReader: GpsReader[FlysightPoint] with {
-    def horizontalAccuracy(point: FlysightPoint): Option[Double] = Some(point.hAcc)
-    def verticalAccuracy(point: FlysightPoint): Option[Double]   = Some(point.vAcc)
-    def speedAccuracy(point: FlysightPoint): Option[Double]      = Some(point.sAcc)
-    def courseAccuracy(point: FlysightPoint): Option[Double]     = Some(point.cAcc)
-    def satellites(point: FlysightPoint): Option[Int]            = Some(point.numSV)
+    def lat(point: FlysightPoint): Double =
+      point.lat
+    def lon(point: FlysightPoint): Double =
+      point.lon
+    def heading(point: FlysightPoint): Double =
+      point.heading
+    def gpsFix(point: FlysightPoint): Option[Int] =
+      point.gpsFix
+    def horizontalAccuracy(point: FlysightPoint): Option[Double] =
+      Some(point.hAcc)
+    def verticalAccuracy(point: FlysightPoint): Option[Double] =
+      Some(point.vAcc)
+    def speedAccuracy(point: FlysightPoint): Option[Double] =
+      Some(point.sAcc)
+    def courseAccuracy(point: FlysightPoint): Option[Double] =
+      Some(point.cAcc)
+    def satellites(point: FlysightPoint): Option[Int] =
+      Some(point.numSV)
   }
 
   given csvRowDecoder: CsvRowDecoder[FlysightPoint, String] with {
-
     def apply(row: CsvRow[String]): DecoderResult[FlysightPoint] =
       for
         time    <- timeField.decode(row)
@@ -155,9 +163,7 @@ private[beesight] object FlysightPoint {
         cAcc = cAcc,
         gpsFix = gpsFix,
         numSV = numSV,
-        extra = List.empty,
       )
-
   }
 
   given csvRowEncoder: CsvRowEncoder[FlysightPoint, String] with {
@@ -168,9 +174,7 @@ private[beesight] object FlysightPoint {
   }
 
   private def flysightFields(row: FlysightPoint): NonEmptyList[(String, String)] =
-    fieldSpecs
-      .map(f => (f.name, f.encode(row)))
-      .appendList(row.extra)
+    fieldSpecs.map(f => (f.name, f.encode(row)))
 
   private def formatDouble(value: Double, precision: Int): String =
     String.format(s"%.${precision}f", value)

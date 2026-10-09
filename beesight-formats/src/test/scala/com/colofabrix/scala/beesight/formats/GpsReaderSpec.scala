@@ -26,7 +26,6 @@ class GpsReaderSpec extends AnyFreeSpec with Matchers {
         cAcc = 4.0,
         gpsFix = Some(3),
         numSV = 11,
-        extra = List.empty,
       )
 
       val reader = GpsReader[FlysightPoint]

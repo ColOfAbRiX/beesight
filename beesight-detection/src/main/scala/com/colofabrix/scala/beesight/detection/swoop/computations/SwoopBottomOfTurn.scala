@@ -31,7 +31,7 @@ private[swoop] object SwoopBottomOfTurn {
         bottomCandidate
       else
         val stillDescending = series.altitude(j) < minAltitude
-        val stillFast       = series.verticalSpeed(j) >= config.speeds.bottomDescentThreshold.value
+        val stillFast       = series.verticalSpeed(j) >= config.bottom.descentThreshold.value
 
         if stillDescending || stillFast then
           walk(j, series.altitude(j), bottomCandidate)
@@ -48,7 +48,7 @@ private[swoop] object SwoopBottomOfTurn {
     bottomCandidate: Int,
     config: SwoopConfig
   ): Option[(Int, Double)] =
-    val targetAltitude = series.altitude(bottomCandidate) + config.altitudes.bottomAltitudeOffset.value
+    val targetAltitude = series.altitude(bottomCandidate) + config.bottom.altitudeOffset.value
 
     @tailrec
     def walk(k: Int): Option[(Int, Double)] =
@@ -73,7 +73,7 @@ private[swoop] object SwoopBottomOfTurn {
     stopIdx: Int,
     config: SwoopConfig
   ): Option[(Int, Double)] =
-    val vzCross = config.speeds.bottomVzCross.value
+    val vzCross = config.bottom.vzCross.value
 
     @tailrec
     def walk(k: Int): Option[(Int, Double)] =

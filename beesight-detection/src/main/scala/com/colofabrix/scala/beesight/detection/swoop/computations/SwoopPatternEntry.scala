@@ -11,7 +11,7 @@ private[swoop] object SwoopPatternEntry {
   def find(series: PointSeries, ground: Altitude, config: SwoopConfig): Option[Int] =
     val agl = (i: Int) => series.altitude(i) - ground.value
 
-    val patternEntryAltitude = config.altitudes.patternEntryAltitude.value
+    val patternEntryAltitude = config.patternEntry.entryAltitude.value
 
     (0 until series.length - 1)
       .find { i =>

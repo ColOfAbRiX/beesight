@@ -7,6 +7,7 @@ import com.colofabrix.scala.beesight.detection.config.*
 import com.colofabrix.scala.beesight.detection.Beesight.*
 import com.colofabrix.scala.beesight.detection.jumpevents.JumpEventsDetector
 import com.colofabrix.scala.beesight.detection.metrics.FlightMetricsCalculator
+import com.colofabrix.scala.beesight.detection.metrics.computations.MetricsGround
 import com.colofabrix.scala.beesight.detection.model.*
 import com.colofabrix.scala.beesight.detection.readers.*
 import com.colofabrix.scala.beesight.detection.swoop.SwoopAnalyser
@@ -55,24 +56,35 @@ final class Beesight private (config: BeesightConfig) {
 
   /**
    * Processes a jump end-to-end, emitting per-point metrics with the detected flight events and, when the jump
-   * includes a swoop, its swoop data.
+   * includes a swoop, its swoop data. The flight events are detected for the whole jump up front, so each point
+   * carries the final events and its metric altitude is above ground level, resolved from the landing point.
    */
   def enrichedPoints[F[_]: Concurrent, A: PointReader: GpsReader]: fs2.Pipe[F, A, EnrichedPoint] =
     stream =>
-      val flightEventsStream = stream.through(jumpEventsDetector.detect[F, A])
-      val metricsStream      = stream.through(flightMetricsCalculator.compute[F, A])
+      fs2.Stream
+        .eval {
+          jumpPoints(stream).map { events =>
+            val ground     = MetricsGround.detect(events.landing, config.metrics)
+            val calculator = FlightMetricsCalculator(config.metrics, Altitude(ground))
 
-      (flightEventsStream zip metricsStream)
-        .zipWithIndex
-        .evalMap {
-          case ((events, metrics), idx) =>
-            OptionT
-              .fromOption[F](events.canopy)
-              .flatMapF { _ =>
-                swoopAnalyser.analyse[F, A](events, stream.take(idx + 1))
+            (events, calculator)
+          }
+        }
+        .flatMap {
+          case (events, calculator) =>
+            stream
+              .through(calculator.compute[F, A])
+              .zipWithIndex
+              .evalMap {
+                case (metrics, idx) =>
+                  OptionT
+                    .fromOption[F](events.canopy)
+                    .flatMapF { _ =>
+                      swoopAnalyser.analyse[F, A](events, stream.take(idx + 1))
+                    }
+                    .value
+                    .map(EnrichedPoint(events, metrics, _))
               }
-              .value
-              .map(EnrichedPoint(events, metrics, _))
         }
 
 }

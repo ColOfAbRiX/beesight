@@ -114,7 +114,6 @@ class FlysightPointAdapterSpec extends AnyFreeSpec with Matchers with IOValues {
           cAcc = 5.0,
           gpsFix = Some(3),
           numSV = 10,
-          extra = List.empty,
         )
 
       val decoded =
@@ -242,7 +241,6 @@ class FlysightPointAdapterSpec extends AnyFreeSpec with Matchers with IOValues {
           cAcc = 2.03103,
           gpsFix = Some(3),
           numSV = 4,
-          extra = List.empty,
         )
 
       points.head shouldBe expected
@@ -295,7 +293,6 @@ class FlysightPointAdapterSpec extends AnyFreeSpec with Matchers with IOValues {
       cAcc = 0.0,
       gpsFix = Some(3),
       numSV = 10,
-      extra = List.empty,
     )
 
 }

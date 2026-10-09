@@ -3,75 +3,101 @@ package com.colofabrix.scala.beesight.detection.config
 import java.time.Duration
 
 /**
- * Configuration for the swoop detection pipeline and metrics computation.
+ * Configuration for the swoop detection pipeline and metrics computation, grouped by pipeline stage.
  *
- * FIXME: This doesn't look like it's been grouped by functional areas. "altitudes", "speeds" and so on are not funtional area. They are determined by how the Swoop metrics work
- *
- * @param altitudes Altitude thresholds (m) of the detection stages
- * @param speeds    Speed thresholds (m/s) of the detection stages
- * @param angles    Heading thresholds (deg) of the detection stages
- * @param rotation  Thresholds of the rotation measurement
- * @param ground    Ground altitude estimation settings
- * @param stream    Input stream cutting settings
+ * @param patternEntry Pattern entry stage settings
+ * @param dive         Dive point stage settings
+ * @param topOfTurn    Top of turn stage settings
+ * @param stop         Stop stage settings
+ * @param rollout      Rollout stage settings
+ * @param bottom       Bottom of turn stage settings
+ * @param rotation     Thresholds of the rotation measurement
+ * @param ground       Ground altitude estimation settings
+ * @param stream       Input stream cutting settings
  */
 final case class SwoopConfig(
-  altitudes: SwoopAltitudesConfig,
-  speeds: SwoopSpeedsConfig,
-  angles: SwoopAnglesConfig,
+  patternEntry: SwoopPatternEntryConfig,
+  dive: SwoopDivePointConfig,
+  topOfTurn: SwoopTopOfTurnConfig,
+  stop: SwoopStopConfig,
+  rollout: SwoopRolloutConfig,
+  bottom: SwoopBottomOfTurnConfig,
   rotation: SwoopRotationConfig,
   ground: SwoopGroundConfig,
   stream: SwoopStreamConfig,
 )
 
 /**
- * Altitude thresholds (m) of the swoop detection stages.
+ * Pattern entry stage settings.
  *
- * @param patternEntryAltitude Pattern entry: first crossing below this AGL altitude
- * @param diveAltitudeCap      Dive point: maximum AGL altitude at which the maximum-descent scan applies
- * @param maxAltitudeGain      Steepening walk: maximum altitude gain before the walk is aborted
- * @param bottomAltitudeOffset Bottom of turn: altitude offset above the bottom altitude for the backward bracket
- * @param rolloutWindow        Rollout start: height above the stop altitude where the rollout search starts
+ * @param entryAltitude First crossing below this AGL altitude (m)
  */
-final case class SwoopAltitudesConfig(
-  patternEntryAltitude: Altitude,
-  diveAltitudeCap: Altitude,
-  maxAltitudeGain: Altitude,
-  bottomAltitudeOffset: Altitude,
-  rolloutWindow: Altitude,
+final case class SwoopPatternEntryConfig(
+  entryAltitude: Altitude,
 )
 
 /**
- * Speed thresholds (m/s) of the swoop detection stages.
+ * Dive point stage settings.
  *
- * @param pullThreshold           Top of turn: descent rate below which the dive is considered over
- * @param steepeningEntry         Steepening walk: descent rate above which the accumulator is armed
- * @param steepeningAccumulator   Steepening walk: accumulated descent-rate increase that ends the walk
- * @param stopDescentThreshold    Stop search: descent rate below which a point can fix the swoop heading
- * @param stopHorizontalThreshold Stop search: horizontal speed below which a point can fix the swoop heading
- * @param stopEndHorizontal       Stop: horizontal speed below which the stop is confirmed
- * @param bottomDescentThreshold  Bottom candidate: descent rate above which the forward walk continues
- * @param bottomVzCross           Bottom bracket: descent rate whose forward crossing brackets the bottom of turn
+ * @param altitudeCap Maximum AGL altitude (m) at which the maximum-descent scan applies
  */
-final case class SwoopSpeedsConfig(
+final case class SwoopDivePointConfig(
+  altitudeCap: Altitude,
+)
+
+/**
+ * Top of turn stage settings: the walk-back from the dive point through the pull threshold, the deceleration boundary
+ * and the steepening accumulator.
+ *
+ * @param pullThreshold         Descent rate (m/s) below which the dive is considered over
+ * @param steepeningEntry       Descent rate (m/s) above which the accumulator is armed
+ * @param steepeningAccumulator Accumulated descent-rate increase (m/s) that ends the walk
+ * @param maxAltitudeGain       Maximum altitude gain (m) before the walk is aborted
+ * @param maxTurnRate           Turn rate (deg/s) that aborts the walk
+ */
+final case class SwoopTopOfTurnConfig(
   pullThreshold: Speed,
   steepeningEntry: Speed,
   steepeningAccumulator: Speed,
-  stopDescentThreshold: Speed,
-  stopHorizontalThreshold: Speed,
-  stopEndHorizontal: Speed,
-  bottomDescentThreshold: Speed,
-  bottomVzCross: Speed,
+  maxAltitudeGain: Altitude,
+  maxTurnRate: TurnRate,
 )
 
 /**
- * Heading thresholds (deg) of the swoop detection stages.
+ * Stop stage settings: the end of motion after the dive.
  *
- * @param stopHeadingDeviation Stop: heading deviation from the swoop heading that ends the search
- * @param maxTurnRate          Steepening walk: turn rate that aborts the walk
+ * @param descentThreshold    Descent rate (m/s) below which a point can fix the swoop heading
+ * @param horizontalThreshold Horizontal speed (m/s) below which a point can fix the swoop heading
+ * @param endHorizontal       Horizontal speed (m/s) below which the stop is confirmed
+ * @param headingDeviation    Heading deviation (deg) from the swoop heading that ends the search
  */
-final case class SwoopAnglesConfig(
-  stopHeadingDeviation: Angle,
-  maxTurnRate: TurnRate,
+final case class SwoopStopConfig(
+  descentThreshold: Speed,
+  horizontalThreshold: Speed,
+  endHorizontal: Speed,
+  headingDeviation: Angle,
+)
+
+/**
+ * Rollout stage settings.
+ *
+ * @param window Height above the stop altitude (m) where the rollout search starts
+ */
+final case class SwoopRolloutConfig(
+  window: Altitude,
+)
+
+/**
+ * Bottom of turn stage settings.
+ *
+ * @param altitudeOffset   Altitude offset (m) above the bottom altitude for the backward bracket
+ * @param descentThreshold Descent rate (m/s) above which the forward walk continues
+ * @param vzCross          Descent rate (m/s) whose forward crossing brackets the bottom of turn
+ */
+final case class SwoopBottomOfTurnConfig(
+  altitudeOffset: Altitude,
+  descentThreshold: Speed,
+  vzCross: Speed,
 )
 
 /**

@@ -76,13 +76,11 @@ private[beesight] object DekunuPoint {
 
   private val KnotsToMs = 0.51444444
 
-  given dekunuPointReader: PointReader[DekunuPoint] with {
+  given dekunuPointReader: FlysightReader[DekunuPoint] with {
     def time(point: DekunuPoint): Instant =
       Instant.ofEpochSecond(point.gpsTime)
-
     def altitude(point: DekunuPoint): Double =
       point.gpsAltitudeMeters
-
     def speed(point: DekunuPoint): GeoVector =
       val speedMs    = point.gpsSpeedKnot * KnotsToMs
       val headingRad = Math.toRadians(point.gpsAngleDegree)
@@ -91,14 +89,24 @@ private[beesight] object DekunuPoint {
         east = speedMs * Math.sin(headingRad),
         vertical = point.instVertSpeed.getOrElse(0.0),
       )
-  }
-
-  given dekunuGpsReader: GpsReader[DekunuPoint] with {
-    def horizontalAccuracy(point: DekunuPoint): Option[Double] = None
-    def verticalAccuracy(point: DekunuPoint): Option[Double]   = None
-    def speedAccuracy(point: DekunuPoint): Option[Double]      = None
-    def courseAccuracy(point: DekunuPoint): Option[Double]     = None
-    def satellites(point: DekunuPoint): Option[Int]            = point.gpsNumOfSats
+    def lat(point: DekunuPoint): Double =
+      point.gpsLatitude
+    def lon(point: DekunuPoint): Double =
+      point.gpsLongitude
+    def heading(point: DekunuPoint): Double =
+      point.gpsAngleDegree
+    def gpsFix(point: DekunuPoint): Option[Int] =
+      None
+    def horizontalAccuracy(point: DekunuPoint): Option[Double] =
+      None
+    def verticalAccuracy(point: DekunuPoint): Option[Double] =
+      None
+    def speedAccuracy(point: DekunuPoint): Option[Double] =
+      None
+    def courseAccuracy(point: DekunuPoint): Option[Double] =
+      None
+    def satellites(point: DekunuPoint): Option[Int] =
+      point.gpsNumOfSats
   }
 
   given csvRowDecoder: CsvRowDecoder[DekunuPoint, String] with {

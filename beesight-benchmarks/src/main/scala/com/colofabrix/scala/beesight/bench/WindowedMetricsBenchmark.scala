@@ -49,19 +49,19 @@ class WindowedMetricsBenchmark {
     val wm = WindowedMetrics(window)
     (wm.acceleration.vertical, wm.totalSpeedRate, wm.courseRate, wm.diveRate)
 
-  /** Per-metric path: each metric extracts its own seconds array. */
+  /** Per-metric path: each metric builds its own instance, extracting its own seconds array. */
   @Benchmark
   def fullMetricWorkload(): (Double, Double, Double, Double) =
     (
-      WindowedMetrics.acceleration(window).vertical,
-      WindowedMetrics.totalSpeedRate(window),
-      WindowedMetrics.courseRate(window),
-      WindowedMetrics.diveRate(window),
+      WindowedMetrics(window).acceleration.vertical,
+      WindowedMetrics(window).totalSpeedRate,
+      WindowedMetrics(window).courseRate,
+      WindowedMetrics(window).diveRate,
     )
 
   /** Cost of a single metric call alone, for reference. */
   @Benchmark
   def accelerationOnly(): Double =
-    WindowedMetrics.acceleration(window).vertical
+    WindowedMetrics(window).acceleration.vertical
 
 }

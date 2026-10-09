@@ -3,8 +3,6 @@
 # Prerequisites: run 'bash dist/install-graalvm.sh' first.
 set -euo pipefail
 
-# FIXME: Fix the scala-native build of the project for CLI
-
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DIST_DIR="$PROJECT_DIR/dist"
 

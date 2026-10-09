@@ -64,21 +64,32 @@ private[beesight] object GenericPoint {
       .map(_.name)
       .toSet
 
-  given GenericPointReader: PointReader[GenericPoint] with {
+  given genericPointReader: FlysightReader[GenericPoint] with {
     def time(point: GenericPoint): Instant =
       point.time.toInstant
     def altitude(point: GenericPoint): Double =
       point.hMSL
     def speed(point: GenericPoint): GeoVector =
       GeoVector(north = point.velN, east = point.velE, vertical = point.velD)
-  }
-
-  given GenericGpsReader: GpsReader[GenericPoint] with {
-    def horizontalAccuracy(point: GenericPoint): Option[Double] = None
-    def verticalAccuracy(point: GenericPoint): Option[Double]   = None
-    def speedAccuracy(point: GenericPoint): Option[Double]      = None
-    def courseAccuracy(point: GenericPoint): Option[Double]     = None
-    def satellites(point: GenericPoint): Option[Int]            = Some(point.numSV)
+    def lat(point: GenericPoint): Double =
+      0.0
+    def lon(point: GenericPoint): Double =
+      0.0
+    def heading(point: GenericPoint): Double =
+      val degrees = Math.toDegrees(Math.atan2(point.velE, point.velN))
+      if degrees < 0.0 then degrees + 360.0 else degrees
+    def gpsFix(point: GenericPoint): Option[Int] =
+      None
+    def horizontalAccuracy(point: GenericPoint): Option[Double] =
+      None
+    def verticalAccuracy(point: GenericPoint): Option[Double] =
+      None
+    def speedAccuracy(point: GenericPoint): Option[Double] =
+      None
+    def courseAccuracy(point: GenericPoint): Option[Double] =
+      None
+    def satellites(point: GenericPoint): Option[Int] =
+      Some(point.numSV)
   }
 
   given csvRowDecoder: CsvRowDecoder[GenericPoint, String] with {

@@ -117,7 +117,7 @@ private[beesight] object AirlogPoint {
       .map(_.name)
       .toSet
 
-  given airlogPointReader: PointReader[AirlogPoint] with {
+  given airlogPointReader: FlysightReader[AirlogPoint] with {
     def time(point: AirlogPoint): Instant =
       point.time
     def altitude(point: AirlogPoint): Double =
@@ -129,14 +129,24 @@ private[beesight] object AirlogPoint {
         east = point.motion.speed * Math.sin(headingRad),
         vertical = point.motion.sink,
       )
-  }
-
-  given airlogGpsReader: GpsReader[AirlogPoint] with {
-    def horizontalAccuracy(point: AirlogPoint): Option[Double] = None
-    def verticalAccuracy(point: AirlogPoint): Option[Double]   = None
-    def speedAccuracy(point: AirlogPoint): Option[Double]      = None
-    def courseAccuracy(point: AirlogPoint): Option[Double]     = None
-    def satellites(point: AirlogPoint): Option[Int]            = Some(point.metadata.numSat)
+    def lat(point: AirlogPoint): Double =
+      point.coordinates.lat
+    def lon(point: AirlogPoint): Double =
+      point.coordinates.lon
+    def heading(point: AirlogPoint): Double =
+      point.motion.heading
+    def gpsFix(point: AirlogPoint): Option[Int] =
+      None
+    def horizontalAccuracy(point: AirlogPoint): Option[Double] =
+      None
+    def verticalAccuracy(point: AirlogPoint): Option[Double] =
+      None
+    def speedAccuracy(point: AirlogPoint): Option[Double] =
+      None
+    def courseAccuracy(point: AirlogPoint): Option[Double] =
+      None
+    def satellites(point: AirlogPoint): Option[Int] =
+      Some(point.metadata.numSat)
   }
 
   given csvRowDecoder: CsvRowDecoder[AirlogPoint, String] with {

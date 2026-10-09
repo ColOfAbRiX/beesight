@@ -20,7 +20,7 @@ class WindowedMetricsSpec extends AnyFreeSpec with Matchers {
     "acceleration" - {
 
       "is zero for a constant speed" in {
-        WindowedMetrics.acceleration(ConstantFlight) shouldBe GeoVector.zero
+        WindowedMetrics(ConstantFlight).acceleration shouldBe GeoVector.zero
       }
 
       "returns the component-wise least-squares slopes" in {
@@ -30,7 +30,7 @@ class WindowedMetricsSpec extends AnyFreeSpec with Matchers {
           point(2, vertical = 20.0),
         )
 
-        WindowedMetrics.acceleration(window) shouldBe GeoVector(north = 0.0, east = 0.0, vertical = 5.0)
+        WindowedMetrics(window).acceleration shouldBe GeoVector(north = 0.0, east = 0.0, vertical = 5.0)
       }
 
     }
@@ -38,7 +38,7 @@ class WindowedMetricsSpec extends AnyFreeSpec with Matchers {
     "courseRate" - {
 
       "is 0 for a constant course" in {
-        WindowedMetrics.courseRate(ConstantFlight) shouldBe 0.0 +- 1e-9
+        WindowedMetrics(ConstantFlight).courseRate shouldBe 0.0 +- 1e-9
       }
 
       "unwraps the course when it crosses north" in {
@@ -48,7 +48,7 @@ class WindowedMetricsSpec extends AnyFreeSpec with Matchers {
           point(2, courseDegrees = 0.0),
         )
 
-        WindowedMetrics.courseRate(window) shouldBe 5.0 +- 1e-6
+        WindowedMetrics(window).courseRate shouldBe 5.0 +- 1e-6
       }
 
     }
@@ -56,7 +56,7 @@ class WindowedMetricsSpec extends AnyFreeSpec with Matchers {
     "diveRate" - {
 
       "is 0 for a constant dive angle" in {
-        WindowedMetrics.diveRate(ConstantFlight) shouldBe 0.0 +- 1e-9
+        WindowedMetrics(ConstantFlight).diveRate shouldBe 0.0 +- 1e-9
       }
 
       "is the slope of the dive angle between two points" in {
@@ -66,7 +66,7 @@ class WindowedMetricsSpec extends AnyFreeSpec with Matchers {
         )
         val expected = Math.toDegrees(Math.atan2(20.0, 30.0)) - Math.toDegrees(Math.atan2(10.0, 30.0))
 
-        WindowedMetrics.diveRate(window) shouldBe expected +- 1e-9
+        WindowedMetrics(window).diveRate shouldBe expected +- 1e-9
       }
 
     }
@@ -74,7 +74,7 @@ class WindowedMetricsSpec extends AnyFreeSpec with Matchers {
     "totalSpeedRate" - {
 
       "is 0 for a constant speed" in {
-        WindowedMetrics.totalSpeedRate(ConstantFlight) shouldBe 0.0 +- 1e-9
+        WindowedMetrics(ConstantFlight).totalSpeedRate shouldBe 0.0 +- 1e-9
       }
 
       "is the slope of the total speed" in {
@@ -83,7 +83,7 @@ class WindowedMetricsSpec extends AnyFreeSpec with Matchers {
           point(1, vertical = 20.0),
         )
 
-        WindowedMetrics.totalSpeedRate(window) shouldBe 10.0 +- 1e-9
+        WindowedMetrics(window).totalSpeedRate shouldBe 10.0 +- 1e-9
       }
 
     }
@@ -91,11 +91,11 @@ class WindowedMetricsSpec extends AnyFreeSpec with Matchers {
     "turnRate" - {
 
       "is 0 for the first point of the window" in {
-        WindowedMetrics.turnRate(0, ConstantFlight) shouldBe 0.0
+        WindowedMetrics(ConstantFlight).turnRate(0) shouldBe 0.0
       }
 
       "is 0 for a constant course" in {
-        WindowedMetrics.turnRate(1, ConstantFlight) shouldBe 0.0 +- 1e-9
+        WindowedMetrics(ConstantFlight).turnRate(1) shouldBe 0.0 +- 1e-9
       }
 
       "wraps the turn when the course crosses north" in {
@@ -104,7 +104,7 @@ class WindowedMetricsSpec extends AnyFreeSpec with Matchers {
           point(1, courseDegrees = 0.0),
         )
 
-        WindowedMetrics.turnRate(1, window) shouldBe 10.0 +- 1e-6
+        WindowedMetrics(window).turnRate(1) shouldBe 10.0 +- 1e-6
       }
 
       "is 0 for a non-positive time step" in {
@@ -113,7 +113,7 @@ class WindowedMetricsSpec extends AnyFreeSpec with Matchers {
           point(0, courseDegrees = 90.0),
         )
 
-        WindowedMetrics.turnRate(1, window) shouldBe 0.0
+        WindowedMetrics(window).turnRate(1) shouldBe 0.0
       }
 
     }

@@ -14,8 +14,8 @@ private[swoop] object SwoopStop {
   def find(series: PointSeries, diveIdx: Int, config: SwoopConfig): Option[Int] = {
     val headingIdx = (diveIdx until series.length)
       .find { i =>
-        val slowDescent    = series.verticalSpeed(i) < config.speeds.stopDescentThreshold.value
-        val slowHorizontal = series.horizontalSpeed(i) < config.speeds.stopHorizontalThreshold.value
+        val slowDescent    = series.verticalSpeed(i) < config.stop.descentThreshold.value
+        val slowHorizontal = series.horizontalSpeed(i) < config.stop.horizontalThreshold.value
         slowDescent && slowHorizontal
       }
 
@@ -24,10 +24,10 @@ private[swoop] object SwoopStop {
 
       (slowIdx until series.length)
         .find { i =>
-          val nearlyStopped = series.horizontalSpeed(i) < config.speeds.stopEndHorizontal.value
+          val nearlyStopped = series.horizontalSpeed(i) < config.stop.endHorizontal.value
 
           val deviation    = Heading.angularDistance(series.heading(i), swoopHeading)
-          val maxDeviation = config.angles.stopHeadingDeviation.value
+          val maxDeviation = config.stop.headingDeviation.value
           val turnedAway   = deviation > maxDeviation
 
           nearlyStopped || turnedAway

@@ -117,26 +117,4 @@ object WindowedMetrics {
   def apply[A: PointReader](window: Vector[A]): WindowedMetrics[A] =
     new WindowedMetrics(window)
 
-  // FIXME: These functions don't seem to be used. Remove.
-
-  /** Component-wise least-squares slopes of the speed over the window (m/s²). */
-  def acceleration[A: PointReader](window: Vector[A]): GeoVector =
-    apply(window).acceleration
-
-  /** Least-squares slope of the course over the window, unwrapped to a continuous signal (deg/s). */
-  def courseRate[A: PointReader](window: Vector[A]): Double =
-    apply(window).courseRate
-
-  /** Least-squares slope of the dive angle over the window (deg/s). */
-  def diveRate[A: PointReader](window: Vector[A]): Double =
-    apply(window).diveRate
-
-  /** Least-squares slope of the total speed over the window (m/s²). */
-  def totalSpeedRate[A: PointReader](window: Vector[A]): Double =
-    apply(window).totalSpeedRate
-
-  /** Instantaneous signed turn rate at the window center (deg/s); 0 for the first point or non-positive dt. */
-  def turnRate[A: PointReader](centerIndex: Int, window: Vector[A]): Double =
-    apply(window).turnRate(centerIndex)
-
 }
