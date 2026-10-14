@@ -4,6 +4,7 @@ import cats.Show
 import cats.syntax.contravariant.*
 import io.github.iltotore.iron.*
 import io.github.iltotore.iron.constraint.numeric.*
+import cats.kernel.Order
 
 /**
  * Size of a sliding window used during detection (must be ≥ 1).
@@ -36,11 +37,20 @@ object Percent {
   def apply(value: Double :| Interval.Closed[0.0, 1.0]): Percent =
     value
 
+  val zero: Percent = 
+    0.0
+
+  val one: Percent = 
+    1.0
+
   extension (self: Percent)
     def value: Double :| Interval.Closed[0.0, 1.0] = self
 
   given Ordering[Percent] =
     Ordering.by(_.value)
+
+  given Order[Percent] =
+    Order.fromOrdering
 
   given Show[Percent] =
     Show[Double].contramap[Percent](_.value)
@@ -99,11 +109,17 @@ object Altitude {
   def apply(value: Double): Altitude =
     value
 
+  def zero: Altitude = 
+    0.0
+
   extension (self: Altitude)
     def value: Double = self
 
   given Ordering[Altitude] =
     Ordering.by(_.value)
+
+  given Order[Altitude] =
+    Order.fromOrdering
 
   given Show[Altitude] =
     Show[Double].contramap[Altitude](_.value)
@@ -176,6 +192,7 @@ object Area {
 /**
  * An angle value in degrees.
  */
+// FIXME: Should angle be constrainted (with iron) between (-360, 360) or [-360, 360]?
 opaque type Angle = Double
 
 object Angle {

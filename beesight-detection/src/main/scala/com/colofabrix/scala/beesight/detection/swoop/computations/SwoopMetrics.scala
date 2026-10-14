@@ -1,6 +1,6 @@
 package com.colofabrix.scala.beesight.detection.swoop.computations
 
-import com.colofabrix.scala.beesight.detection.config.SwoopConfig
+import com.colofabrix.scala.beesight.detection.config.{ SwoopConfig, * }
 import com.colofabrix.scala.beesight.detection.swoop.model.PointSeries
 
 /**
@@ -9,13 +9,13 @@ import com.colofabrix.scala.beesight.detection.swoop.model.PointSeries
 private[swoop] object SwoopMetrics {
 
   /** A maximum speed over a detection window, with the index of the point where it occurs. */
-  final case class MaxSpeed(
+  final private[swoop] case class MaxSpeed(
     speed: Double,
     index: Int
   )
 
   /** Maximum total, vertical and horizontal speeds, each with its point index. */
-  final case class MaxSpeeds(
+  final private[swoop] case class MaxSpeeds(
     total: MaxSpeed,
     vertical: MaxSpeed,
     horizontal: MaxSpeed,
@@ -63,7 +63,7 @@ private[swoop] object SwoopMetrics {
    * ends are trimmed over the drift: samples rotating at or below the trim threshold are not part of the turn, and
    * the trims share one net-shift budget, stopping when the combined shift reaches the trim cap.
    */
-  def turnDegrees(series: PointSeries, topOfTurn: Int, bottomIdx: Int, config: SwoopConfig): Double = {
+  def turnDegrees(series: PointSeries, topOfTurn: Int, bottomIdx: Int, config: SwoopConfig): Angle = {
     val turnAngles = turnAnglesWithSegments(series, config)
     val rotation   = config.rotation
 
@@ -83,7 +83,7 @@ private[swoop] object SwoopMetrics {
         if end > topOfTurn + 1 && Math.abs(a) <= tailThreshold && Math.abs(cut - a) <= tailCap then
           cut -= a
           end -= 1
-        else 
+        else
           trimTail = false
       }
 
@@ -93,7 +93,7 @@ private[swoop] object SwoopMetrics {
         if Math.abs(a) <= headThreshold && Math.abs(cut - a) <= headCap then
           cut -= a
           start += 1
-        else 
+        else
           trimHead = false
       }
 
@@ -103,7 +103,7 @@ private[swoop] object SwoopMetrics {
       if turnAngle < rotation.fullTurnAngle.value then total += turnAngle
     }
 
-    total
+    Angle(total)
   }
 
   // First-max scan over the half-open window [from, until): the earliest point achieving the maximum of `f` among

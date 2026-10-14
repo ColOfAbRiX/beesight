@@ -52,7 +52,7 @@ trait SwoopMatchers {
             check(
               "Expected angle of rotation",
               "deg",
-              Math.abs(swoop.degreesOfRotation),
+              Math.abs(swoop.degreesOfRotation.value),
               expected.expectedAngle,
               angleTolerance
             ).toList
@@ -117,7 +117,7 @@ trait SwoopMatchers {
       check(
         "Degrees of rotation",
         "deg",
-        Math.abs(swoop.degreesOfRotation),
+        Math.abs(swoop.degreesOfRotation.value),
         expected.degreesOfRotation.map(v => Math.abs(v)),
         degreesTolerance,
       ),

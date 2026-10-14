@@ -3,12 +3,12 @@ package com.colofabrix.scala.beesight
 import cats.effect.IO
 import cats.syntax.all.*
 import com.colofabrix.scala.beesight.config.Config
+import com.colofabrix.scala.beesight.detection.jumpevents.*
+import com.colofabrix.scala.beesight.detection.readers.*
 import com.colofabrix.scala.beesight.formats.*
 import com.colofabrix.scala.beesight.formats.devices.*
 import com.colofabrix.scala.beesight.input.*
-import com.colofabrix.scala.beesight.detection.jumpevents.*
 import com.colofabrix.scala.beesight.output.*
-import com.colofabrix.scala.beesight.detection.readers.*
 import fs2.data.csv.*
 import java.nio.file.*
 

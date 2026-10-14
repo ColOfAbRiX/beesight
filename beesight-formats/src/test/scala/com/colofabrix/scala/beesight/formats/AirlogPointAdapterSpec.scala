@@ -1,8 +1,8 @@
 package com.colofabrix.scala.beesight.formats
 
 import cats.data.NonEmptyList
-import com.colofabrix.scala.beesight.formats.devices.*
 import com.colofabrix.scala.beesight.detection.model.*
+import com.colofabrix.scala.beesight.formats.devices.*
 import com.colofabrix.scala.beesight.{ IOValues, TestFilesHandler }
 import fs2.data.csv.*
 import java.nio.file.Paths

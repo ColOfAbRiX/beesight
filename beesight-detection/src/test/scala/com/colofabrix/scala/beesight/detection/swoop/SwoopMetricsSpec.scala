@@ -145,57 +145,57 @@ class SwoopMetricsSpec extends AnyFreeSpec with Matchers {
       //  10 deg/sample: every delta inside (top of turn, bottom of turn] counts.
       val series = turnSeries(Vector(0, 10, 20, 30, 40, 50), vertical = 5.0)
 
-      SwoopMetrics.turnDegrees(series, topOfTurn = 0, bottomIdx = 5, config) shouldBe 50.0 +- 1e-9
-      SwoopMetrics.turnDegrees(series, topOfTurn = 2, bottomIdx = 4, config) shouldBe 20.0 +- 1e-9
+      SwoopMetrics.turnDegrees(series, topOfTurn = 0, bottomIdx = 5, config).value shouldBe 50.0 +- 1e-9
+      SwoopMetrics.turnDegrees(series, topOfTurn = 2, bottomIdx = 4, config).value shouldBe 20.0 +- 1e-9
     }
 
     "is negative for left turns" in {
       val series = turnSeries(Vector(50, 40, 30, 20, 10, 0), vertical = 5.0)
 
-      SwoopMetrics.turnDegrees(series, topOfTurn = 0, bottomIdx = 5, config) shouldBe -50.0 +- 1e-9
+      SwoopMetrics.turnDegrees(series, topOfTurn = 0, bottomIdx = 5, config).value shouldBe -50.0 +- 1e-9
     }
 
     "wraps heading deltas across north" in {
       val right = turnSeries(Vector(350, 10, 30), vertical = 5.0)
       val left  = turnSeries(Vector(10, 350, 330), vertical = 5.0)
 
-      SwoopMetrics.turnDegrees(right, topOfTurn = 0, bottomIdx = 2, config) shouldBe 40.0 +- 1e-9
-      SwoopMetrics.turnDegrees(left, topOfTurn = 0, bottomIdx = 2, config) shouldBe -40.0 +- 1e-9
+      SwoopMetrics.turnDegrees(right, topOfTurn = 0, bottomIdx = 2, config).value shouldBe 40.0 +- 1e-9
+      SwoopMetrics.turnDegrees(left, topOfTurn = 0, bottomIdx = 2, config).value shouldBe -40.0 +- 1e-9
     }
 
     "returns zero when the window contains no samples" in {
       val series = turnSeries(Vector(0, 10, 20, 30), vertical = 5.0)
 
-      SwoopMetrics.turnDegrees(series, topOfTurn = 3, bottomIdx = 3, config) shouldBe 0.0 +- 1e-9
-      SwoopMetrics.turnDegrees(series, topOfTurn = 0, bottomIdx = 0, config) shouldBe 0.0 +- 1e-9
-      SwoopMetrics.turnDegrees(series, topOfTurn = 3, bottomIdx = 1, config) shouldBe 0.0 +- 1e-9
+      SwoopMetrics.turnDegrees(series, topOfTurn = 3, bottomIdx = 3, config).value shouldBe 0.0 +- 1e-9
+      SwoopMetrics.turnDegrees(series, topOfTurn = 0, bottomIdx = 0, config).value shouldBe 0.0 +- 1e-9
+      SwoopMetrics.turnDegrees(series, topOfTurn = 3, bottomIdx = 1, config).value shouldBe 0.0 +- 1e-9
     }
 
     "returns zero when there is no rotation" in {
       val series = turnSeries(Vector.fill(6)(0.0), vertical = 5.0)
 
-      SwoopMetrics.turnDegrees(series, topOfTurn = 0, bottomIdx = 5, config) shouldBe 0.0 +- 1e-9
+      SwoopMetrics.turnDegrees(series, topOfTurn = 0, bottomIdx = 5, config).value shouldBe 0.0 +- 1e-9
     }
 
     "counts slow rotations inside the window: the measurement has no rate threshold" in {
       //  1.5 deg/sample at 100 ms spacing = 15 deg/s: gSwoop counts it; only the drift at the window ends is trimmed.
       val series = turnSeries(Vector(0, 10, 11.5, 13, 25, 35), vertical = 5.0)
 
-      SwoopMetrics.turnDegrees(series, topOfTurn = 0, bottomIdx = 5, config) shouldBe 35.0 +- 1e-9
+      SwoopMetrics.turnDegrees(series, topOfTurn = 0, bottomIdx = 5, config).value shouldBe 35.0 +- 1e-9
     }
 
     "excludes the rotation preceding the window through the top-of-turn boundary" in {
       //  A right-hand drift into the dive followed by the left turn: only the deltas after top of turn count.
       val series = turnSeries(Vector(0, 10, 20, 30, 20, 10, 0, 350, 340, 330), vertical = 5.0)
 
-      SwoopMetrics.turnDegrees(series, topOfTurn = 3, bottomIdx = 9, config) shouldBe -60.0 +- 1e-9
+      SwoopMetrics.turnDegrees(series, topOfTurn = 3, bottomIdx = 9, config).value shouldBe -60.0 +- 1e-9
     }
 
     "excludes a post-turn S-turn through the bottom-of-turn boundary" in {
       //  A left turn followed by a rightward S-turn: the window ends at the bottom of turn, before the S-turn.
       val series = turnSeries(Vector(0, 340, 320, 300, 280, 260, 270, 280, 290, 300), vertical = 5.0)
 
-      SwoopMetrics.turnDegrees(series, topOfTurn = 0, bottomIdx = 5, config) shouldBe -100.0 +- 1e-9
+      SwoopMetrics.turnDegrees(series, topOfTurn = 0, bottomIdx = 5, config).value shouldBe -100.0 +- 1e-9
     }
 
     "reinterprets a counter-rotating run inside a steep fast dive as continuation" in {
@@ -208,7 +208,7 @@ class SwoopMetricsSpec extends AnyFreeSpec with Matchers {
         dtMillis = 100.0
       )
 
-      SwoopMetrics.turnDegrees(series, topOfTurn = 0, bottomIdx = 5, config) shouldBe 390.0 +- 1e-9
+      SwoopMetrics.turnDegrees(series, topOfTurn = 0, bottomIdx = 5, config).value shouldBe 390.0 +- 1e-9
     }
 
     "keeps the raw angles of a counter-rotating run whose resolved change exceeds the segment cap" in {
@@ -220,7 +220,7 @@ class SwoopMetricsSpec extends AnyFreeSpec with Matchers {
         dtMillis = 100.0
       )
 
-      SwoopMetrics.turnDegrees(series, topOfTurn = 0, bottomIdx = 5, config) shouldBe 70.0 +- 1e-9
+      SwoopMetrics.turnDegrees(series, topOfTurn = 0, bottomIdx = 5, config).value shouldBe 70.0 +- 1e-9
     }
 
   }

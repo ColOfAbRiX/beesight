@@ -68,12 +68,13 @@ final class SwoopAnalyser private (config: SwoopConfig) {
       stop         <- SwoopStop.find(series, dive, config)
       rollout      <- SwoopRolloutStart.find(series, topOfTurn, stop, config)
       bottom        = SwoopBottomOfTurn.find(series, rollout, stop, config)
-      swoopData     = buildSwoopData(series, dive, topOfTurn, rollout, bottom, stop, ground)
+      swoopData     = buildSwoopData(series, patternEntry, dive, topOfTurn, rollout, bottom, stop, ground)
       result       <- Option.when(events.canopy.isDefined)(swoopData)
     yield result
 
   private def buildSwoopData(
     series: PointSeries,
+    patternEntryIdx: Int,
     diveIdx: Int,
     topOfTurn: Int,
     rolloutIdx: Int,
@@ -81,8 +82,9 @@ final class SwoopAnalyser private (config: SwoopConfig) {
     stopIdx: Int,
     ground: Altitude
   ): SwoopData =
-    val agl  = (j: Int) => series.altitude(j) - ground.value
-    val last = series.length - 1
+    val agl        = (j: Int) => series.altitude(j) - ground.value
+    val eventPoint = (j: Int) => EventPoint(series(j).idx, agl(j), series.time(j), series(j).speed)
+    val last       = series.length - 1
 
     val maxSpeeds =
       SwoopMetrics.maxSpeeds(series, diveIdx, topOfTurn, rolloutIdx, stopIdx)
@@ -90,11 +92,12 @@ final class SwoopAnalyser private (config: SwoopConfig) {
     val degreesOfRotation =
       SwoopMetrics.turnDegrees(series, topOfTurn, Math.min(bottomIdx, last), config)
 
-    val turnInitiation =
-      EventPoint(series(topOfTurn).idx, agl(topOfTurn), series.time(topOfTurn), series(topOfTurn).speed)
-
-    val rolloutStart =
-      EventPoint(series(rolloutIdx).idx, agl(rolloutIdx), series.time(rolloutIdx), series(rolloutIdx).speed)
+    val turnInitiation = eventPoint(topOfTurn)
+    val rolloutStart   = eventPoint(rolloutIdx)
+    val patternEntry   = eventPoint(patternEntryIdx)
+    val divePoint      = eventPoint(diveIdx)
+    val stop           = eventPoint(stopIdx)
+    val bottomOfTurn   = eventPoint(Math.min(bottomIdx, last))
 
     val maxVerticalSpeed =
       SpeedAtAltitude(
@@ -132,6 +135,11 @@ final class SwoopAnalyser private (config: SwoopConfig) {
       degreesOfRotation = degreesOfRotation,
       turnDirection = turnDirection,
       timeToExecuteTurn = timeToExecuteTurn,
+      ground = ground,
+      patternEntry = patternEntry,
+      divePoint = divePoint,
+      stop = stop,
+      bottomOfTurn = bottomOfTurn,
     )
 
 }

@@ -1,7 +1,7 @@
 package com.colofabrix.scala.beesight.formats
 
-import com.colofabrix.scala.beesight.formats.devices.{ DekunuPoint, FlysightPoint, * }
 import com.colofabrix.scala.beesight.detection.readers.GpsReader
+import com.colofabrix.scala.beesight.formats.devices.{ DekunuPoint, FlysightPoint, * }
 import java.time.{ Instant, OffsetDateTime }
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers

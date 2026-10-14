@@ -3,8 +3,8 @@ package com.colofabrix.scala.beesight.detection
 import cats.data.OptionT
 import cats.effect.kernel.Concurrent
 import cats.syntax.all.*
-import com.colofabrix.scala.beesight.detection.config.*
 import com.colofabrix.scala.beesight.detection.Beesight.*
+import com.colofabrix.scala.beesight.detection.config.*
 import com.colofabrix.scala.beesight.detection.jumpevents.JumpEventsDetector
 import com.colofabrix.scala.beesight.detection.metrics.FlightMetricsCalculator
 import com.colofabrix.scala.beesight.detection.metrics.computations.MetricsGround
