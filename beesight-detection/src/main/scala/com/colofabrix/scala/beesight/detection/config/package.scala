@@ -1,10 +1,11 @@
 package com.colofabrix.scala.beesight.detection.config
 
 import cats.Show
+import cats.kernel.Order
 import cats.syntax.contravariant.*
 import io.github.iltotore.iron.*
 import io.github.iltotore.iron.constraint.numeric.*
-import cats.kernel.Order
+import scala.math.Numeric
 
 /**
  * Size of a sliding window used during detection (must be ≥ 1).
@@ -16,11 +17,17 @@ object WindowSize {
   def apply(value: Int :| GreaterEqual[1]): WindowSize =
     value
 
+  val one: WindowSize =
+    1
+
   extension (self: WindowSize)
     def value: Int :| GreaterEqual[1] = self
 
   given Ordering[WindowSize] =
     Ordering.by(_.value)
+
+  given Order[WindowSize] =
+    Order.fromOrdering
 
   given Show[WindowSize] =
     Show[Int].contramap[WindowSize](_.value)
@@ -37,10 +44,10 @@ object Percent {
   def apply(value: Double :| Interval.Closed[0.0, 1.0]): Percent =
     value
 
-  val zero: Percent = 
+  val zero: Percent =
     0.0
 
-  val one: Percent = 
+  val one: Percent =
     1.0
 
   extension (self: Percent)
@@ -67,11 +74,17 @@ object KeepPoints {
   def apply(value: Int :| GreaterEqual[0]): KeepPoints =
     value
 
+  val zero: KeepPoints =
+    0
+
   extension (self: KeepPoints)
     def value: Int :| GreaterEqual[0] = self
 
   given Ordering[KeepPoints] =
     Ordering.by(_.value)
+
+  given Order[KeepPoints] =
+    Order.fromOrdering
 
   given Show[KeepPoints] =
     Show[Int].contramap[KeepPoints](_.value)
@@ -88,11 +101,20 @@ object Speed {
   def apply(value: Double): Speed =
     value
 
+  val zero: Speed =
+    0.0
+
   extension (self: Speed)
     def value: Double = self
 
   given Ordering[Speed] =
     Ordering.by(_.value)
+
+  given Order[Speed] =
+    Order.fromOrdering
+
+  given Numeric[Speed] =
+    Numeric[Double].asInstanceOf[Numeric[Speed]]
 
   given Show[Speed] =
     Show[Double].contramap[Speed](_.value)
@@ -109,7 +131,7 @@ object Altitude {
   def apply(value: Double): Altitude =
     value
 
-  def zero: Altitude = 
+  val zero: Altitude =
     0.0
 
   extension (self: Altitude)
@@ -120,6 +142,9 @@ object Altitude {
 
   given Order[Altitude] =
     Order.fromOrdering
+
+  given Numeric[Altitude] =
+    Numeric[Double].asInstanceOf[Numeric[Altitude]]
 
   given Show[Altitude] =
     Show[Double].contramap[Altitude](_.value)
@@ -136,11 +161,20 @@ object Acceleration {
   def apply(value: Double): Acceleration =
     value
 
+  val zero: Acceleration =
+    0.0
+
   extension (self: Acceleration)
     def value: Double = self
 
   given Ordering[Acceleration] =
     Ordering.by(_.value)
+
+  given Order[Acceleration] =
+    Order.fromOrdering
+
+  given Numeric[Acceleration] =
+    Numeric[Double].asInstanceOf[Numeric[Acceleration]]
 
   given Show[Acceleration] =
     Show[Double].contramap[Acceleration](_.value)
@@ -157,11 +191,20 @@ object Mass {
   def apply(value: Double): Mass =
     value
 
+  val zero: Mass =
+    0.0
+
   extension (self: Mass)
     def value: Double = self
 
   given Ordering[Mass] =
     Ordering.by(_.value)
+
+  given Order[Mass] =
+    Order.fromOrdering
+
+  given Numeric[Mass] =
+    Numeric[Double].asInstanceOf[Numeric[Mass]]
 
   given Show[Mass] =
     Show[Double].contramap[Mass](_.value)
@@ -178,11 +221,17 @@ object Area {
   def apply(value: Double :| GreaterEqual[0.0]): Area =
     value
 
+  val zero: Area =
+    0.0
+
   extension (self: Area)
     def value: Double :| GreaterEqual[0.0] = self
 
   given Ordering[Area] =
     Ordering.by(_.value)
+
+  given Order[Area] =
+    Order.fromOrdering
 
   given Show[Area] =
     Show[Double].contramap[Area](_.value)
@@ -192,7 +241,6 @@ object Area {
 /**
  * An angle value in degrees.
  */
-// FIXME: Should angle be constrainted (with iron) between (-360, 360) or [-360, 360]?
 opaque type Angle = Double
 
 object Angle {
@@ -200,11 +248,20 @@ object Angle {
   def apply(value: Double): Angle =
     value
 
+  val zero: Angle =
+    0.0
+
   extension (self: Angle)
     def value: Double = self
 
   given Ordering[Angle] =
     Ordering.by(_.value)
+
+  given Order[Angle] =
+    Order.fromOrdering
+
+  given Numeric[Angle] =
+    Numeric[Double].asInstanceOf[Numeric[Angle]]
 
   given Show[Angle] =
     Show[Double].contramap[Angle](_.value)
@@ -221,11 +278,20 @@ object TurnRate {
   def apply(value: Double): TurnRate =
     value
 
+  val zero: TurnRate =
+    0.0
+
   extension (self: TurnRate)
     def value: Double = self
 
   given Ordering[TurnRate] =
     Ordering.by(_.value)
+
+  given Order[TurnRate] =
+    Order.fromOrdering
+
+  given Numeric[TurnRate] =
+    Numeric[Double].asInstanceOf[Numeric[TurnRate]]
 
   given Show[TurnRate] =
     Show[Double].contramap[TurnRate](_.value)

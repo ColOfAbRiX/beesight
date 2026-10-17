@@ -86,26 +86,26 @@ trait SwoopMatchers {
       check(
         "Max vertical speed",
         "km/h",
-        swoop.maxVerticalSpeed.speed * MpsToKmh,
+        swoop.maxVerticalSpeed.speed.value * MpsToKmh,
         expected.maxVerticalSpeed.map(_ * MpsToKmh),
         speedTolerance * MpsToKmh,
-        Some(swoop.maxVerticalSpeed.altitude)
+        Some(swoop.maxVerticalSpeed.altitude.value)
       ),
       check(
         "Max total speed",
         "km/h",
-        swoop.maxTotalSpeed.speed * MpsToKmh,
+        swoop.maxTotalSpeed.speed.value * MpsToKmh,
         expected.maxTotalSpeed.map(_ * MpsToKmh),
         speedTolerance * MpsToKmh,
-        Some(swoop.maxTotalSpeed.altitude)
+        Some(swoop.maxTotalSpeed.altitude.value)
       ),
       check(
         "Max horizontal speed",
         "km/h",
-        swoop.maxHorizontalSpeed.speed * MpsToKmh,
+        swoop.maxHorizontalSpeed.speed.value * MpsToKmh,
         expected.maxHorizontalSpeed.map(_ * MpsToKmh),
         speedTolerance * MpsToKmh,
-        Some(swoop.maxHorizontalSpeed.altitude)
+        Some(swoop.maxHorizontalSpeed.altitude.value)
       ),
       check(
         "Time to execute turn",

@@ -2,7 +2,7 @@ package com.colofabrix.scala.beesight.detection.swoop
 
 import cats.effect.kernel.Concurrent
 import cats.syntax.functor.*
-import com.colofabrix.scala.beesight.detection.config.{ Altitude, SwoopConfig }
+import com.colofabrix.scala.beesight.detection.config.{ Altitude, Speed, SwoopConfig }
 import com.colofabrix.scala.beesight.detection.model.*
 import com.colofabrix.scala.beesight.detection.readers.*
 import com.colofabrix.scala.beesight.detection.swoop.computations.*
@@ -102,22 +102,22 @@ final class SwoopAnalyser private (config: SwoopConfig) {
     val maxVerticalSpeed =
       SpeedAtAltitude(
         series(maxSpeeds.vertical.index).idx,
-        maxSpeeds.vertical.speed,
-        agl(maxSpeeds.vertical.index)
+        Speed(maxSpeeds.vertical.speed),
+        Altitude(agl(maxSpeeds.vertical.index))
       )
 
     val maxTotalSpeed =
       SpeedAtAltitude(
         series(maxSpeeds.total.index).idx,
-        maxSpeeds.total.speed,
-        agl(maxSpeeds.total.index)
+        Speed(maxSpeeds.total.speed),
+        Altitude(agl(maxSpeeds.total.index))
       )
 
     val maxHorizontalSpeed =
       SpeedAtAltitude(
         series(maxSpeeds.horizontal.index).idx,
-        maxSpeeds.horizontal.speed,
-        agl(maxSpeeds.horizontal.index)
+        Speed(maxSpeeds.horizontal.speed),
+        Altitude(agl(maxSpeeds.horizontal.index))
       )
 
     val turnDirection =
