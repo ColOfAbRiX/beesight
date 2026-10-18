@@ -24,10 +24,10 @@ class ConfigTypesSpec extends AnyWordSpec with Matchers {
     }
 
     "support comparisons on unconstrained quantities via Numeric syntax" in {
-      val a     = Altitude(100.0)
-      val b     = Altitude(200.0)
-      val max   = Altitude(200.0)
-      val min   = Altitude(100.0)
+      val a   = Altitude(100.0)
+      val b   = Altitude(200.0)
+      val max = Altitude(200.0)
+      val min = Altitude(100.0)
 
       a < b shouldBe true
       a max b shouldBe max
@@ -69,9 +69,9 @@ class ConfigTypesSpec extends AnyWordSpec with Matchers {
     }
 
     "render quantities with Show" in {
-      val angle     = Angle(42.0)
-      val turnRate  = TurnRate(-1.5)
-      val window    = WindowSize(3)
+      val angle    = Angle(42.0)
+      val turnRate = TurnRate(-1.5)
+      val window   = WindowSize(3)
 
       Show[Angle].show(angle) shouldBe "42.0"
       Show[TurnRate].show(turnRate) shouldBe "-1.5"
