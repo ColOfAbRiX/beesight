@@ -2,9 +2,12 @@ package com.colofabrix.scala.beesight.metadata
 
 import com.colofabrix.scala.beesight.detection.config.{ Altitude, Angle, Speed }
 import com.colofabrix.scala.beesight.detection.model.*
+import com.colofabrix.scala.beesight.output.DataCutter
 import java.time.Duration
 
-/** Bidirectional conversions between detection-library models and their JSON-storage counterparts. */
+/**
+ * Bidirectional conversions between detection-library models and their JSON-storage counterparts.
+ */
 object StoredConversions:
 
   extension (point: EventPoint)
@@ -82,6 +85,16 @@ object StoredConversions:
           bottomOfTurn = swoop.bottomOfTurn.toEventPoint,
         )
       }
+
+  extension (summary: DataCutter.CutSummary)
+    def toStored: StoredCutSummary =
+      StoredCutSummary(
+        applied = summary.applied,
+        totalPoints = summary.totalPoints,
+        retainedPoints = summary.retainedPoints,
+        firstRetainedIndex = summary.firstRetainedIndex,
+        lastRetainedIndex = summary.lastRetainedIndex,
+      )
 
   private def turnDirection(name: String): Either[String, TurnDirection] =
     name.toLowerCase() match {

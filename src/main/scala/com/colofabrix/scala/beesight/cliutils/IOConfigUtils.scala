@@ -15,7 +15,7 @@ private[cliutils] trait IOConfigUtils {
 
     def configTraverse[B](f: A => IOConfig[B]): IOConfig[List[B]] =
       IOConfig.ask.flatMap { config =>
-        config.parallelism match {
+        config.global.parallelism match {
           case Some(Parallelism(1)) => self.traverse(f)
           case Some(Parallelism(n)) => self.parTraverseN(n)(f)
           case None                 => self.parTraverse(f)

@@ -15,7 +15,7 @@ private[beesight] object FileOps {
    */
   def discoverCsvFiles(): IOConfig[List[Path]] =
     IOConfig.ask.flatMap { config =>
-      val (baseDir, glob) = parseInputAsGlob(config.input)
+      val (baseDir, glob) = parseInputAsGlob(config.global.input)
       val matcher         = FileSystems.getDefault.getPathMatcher(s"glob:${glob.toLowerCase}")
 
       IOConfig
@@ -34,6 +34,7 @@ private[beesight] object FileOps {
         }
         .map { files =>
           config
+            .global
             .processLimit
             .fold(files)(limit => files.take(limit.value))
         }
@@ -53,18 +54,19 @@ private[beesight] object FileOps {
    */
   private[beesight] def getInputBaseDir(): IOConfig[Path] =
     IOConfig.ask.map { config =>
-      val (baseDir, _) = parseInputAsGlob(config.input)
+      val (baseDir, _) = parseInputAsGlob(config.global.input)
       baseDir
     }
 
   private def computeProcessedPath(inputFile: Path): IOConfig[Path] =
     IOConfig.ask.map { config =>
-      val (inputBaseDir, _) = parseInputAsGlob(config.input)
+      val (inputBaseDir, _) = parseInputAsGlob(config.global.input)
       val parent            = Option(inputBaseDir.getParent).getOrElse(Paths.get("."))
       val inputDirName      = inputBaseDir.getFileName
       val relativePath      = inputBaseDir.relativize(inputFile.toAbsolutePath.normalize)
 
       config
+        .global
         .output
         .getOrElse(parent.resolve("processed"))
         .resolve(inputDirName)

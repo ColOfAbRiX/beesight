@@ -2,7 +2,7 @@ package com.colofabrix.scala.beesight.detection.matchers
 
 import com.colofabrix.scala.beesight.detection.model.*
 import com.colofabrix.scala.beesight.detection.swoop.*
-import org.scalatest.matchers.{ Matcher, MatchResult }
+import org.scalatest.matchers.{ MatchResult, Matcher }
 
 /**
  * Custom ScalaTest matchers comparing [[SwoopData]] against the expected values from the reference recordings.

@@ -4,6 +4,7 @@ import cats.syntax.all.*
 import com.colofabrix.scala.beesight.*
 import com.colofabrix.scala.beesight.config.Config
 import com.colofabrix.scala.beesight.detection.model.*
+import com.colofabrix.scala.beesight.pipeline.Stage
 import com.colofabrix.scala.beesight.detection.readers.*
 import java.nio.file.*
 
@@ -17,7 +18,7 @@ final private[beesight] class ChartGenerator private (config: Config) {
    */
   def chartPipe[A: PointReader](outputFile: Path): fs2.Pipe[IOConfig, (FlightEvents, A), Nothing] =
     stream =>
-      if config.flags.createGraph && !config.flags.dryRun then
+      if config.command.stages.contains(Stage.Charts) && !config.global.dryRun then
         stream
           .zipWithIndex
           .fold(ChartState[A]()) {

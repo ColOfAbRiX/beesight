@@ -86,7 +86,7 @@ final case class InputFingerprint(
 
 object InputFingerprint {
 
-  given Eq[InputFingerprint] = 
+  given Eq[InputFingerprint] =
     Eq.fromUniversalEquals
 
   def of(file: Path): InputFingerprint =

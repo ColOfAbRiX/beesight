@@ -1,6 +1,6 @@
-package com.colofabrix.scala.beesight.formats
+package com.colofabrix.scala.beesight.formats.devices
 
-import com.colofabrix.scala.beesight.detection.readers.GpsReader
+import com.colofabrix.scala.beesight.detection.readers.{ FlysightReader, GpsReader }
 import com.colofabrix.scala.beesight.formats.devices.{ DekunuPoint, FlysightPoint, * }
 import java.time.{ Instant, OffsetDateTime }
 import org.scalatest.freespec.AnyFreeSpec
@@ -57,6 +57,25 @@ class GpsReaderSpec extends AnyFreeSpec with Matchers {
       reader.speedAccuracy(point) shouldBe None
       reader.courseAccuracy(point) shouldBe None
       reader.satellites(point) shouldBe Some(9)
+    }
+
+    "DekunuPoint coordinates are degrees, not micro-degrees" in {
+      val point = DekunuPoint(
+        gpsTime = 1700000000L,
+        gpsLatitude = 51000000.0,
+        gpsLongitude = -1000000.0,
+        gpsAltitudeMeters = 1000.0,
+        gpsSpeedKnot = 10.0,
+        gpsAngleDegree = 90.0,
+        instVertSpeed = Some(50.0),
+        gpsNumOfSats = Some(9),
+        extra = List.empty,
+      )
+
+      val reader = FlysightReader[DekunuPoint]
+
+      reader.lat(point) shouldBe 51.0
+      reader.lon(point) shouldBe -1.0
     }
 
     "AirlogPoint has no accuracy data but reports the satellites" in {

@@ -5,6 +5,7 @@ import cats.implicits.given
 import com.colofabrix.scala.beesight.*
 import com.colofabrix.scala.beesight.config.Config
 import com.colofabrix.scala.beesight.detection.model.*
+import com.colofabrix.scala.beesight.pipeline.Stage
 import scala.io.AnsiColor.*
 
 /**
@@ -17,7 +18,7 @@ final private[beesight] class ResultPrinter private (config: Config) {
    */
   def printStagesPipe: fs2.Pipe[IOConfig, (FlightEvents, ?), Nothing] =
     data =>
-      if config.flags.writeCsv then
+      if config.command.stages.contains(Stage.JumpEvents) then
         data
           .fold(Option.empty[FlightEvents]) {
             case (_, (events, _)) =>

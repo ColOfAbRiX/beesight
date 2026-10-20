@@ -1,8 +1,5 @@
 package com.colofabrix.scala.beesight.detection.readers
 
-import com.colofabrix.scala.beesight.detection.model.GeoVector
-import java.time.Instant
-
 /**
  * Reader for a point of flight data
  */

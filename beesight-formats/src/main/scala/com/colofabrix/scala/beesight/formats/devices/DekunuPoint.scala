@@ -33,6 +33,8 @@ final private[beesight] case class DekunuPoint(
 
 private[beesight] object DekunuPoint {
 
+  private val KnotsToMs = 0.51444444
+
   val dekunuSpecBuilder: CsvSpecBuilder[DekunuPoint] =
     CsvSpecBuilder.forFormat[DekunuPoint]
 
@@ -74,8 +76,6 @@ private[beesight] object DekunuPoint {
       .map(_.name)
       .toSet
 
-  private val KnotsToMs = 0.51444444
-
   given dekunuPointReader: FlysightReader[DekunuPoint] with {
     def time(point: DekunuPoint): Instant =
       Instant.ofEpochSecond(point.gpsTime)
@@ -90,9 +90,9 @@ private[beesight] object DekunuPoint {
         vertical = point.instVertSpeed.getOrElse(0.0),
       )
     def lat(point: DekunuPoint): Double =
-      point.gpsLatitude
+      point.gpsLatitude / 1000000.0
     def lon(point: DekunuPoint): Double =
-      point.gpsLongitude
+      point.gpsLongitude / 1000000.0
     def heading(point: DekunuPoint): Double =
       point.gpsAngleDegree
     def gpsFix(point: DekunuPoint): Option[Int] =

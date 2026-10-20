@@ -1,7 +1,7 @@
 package com.colofabrix.scala.beesight.detection.matchers
 
 import com.colofabrix.scala.beesight.detection.model.*
-import org.scalatest.matchers.{ Matcher, MatchResult }
+import org.scalatest.matchers.{ MatchResult, Matcher }
 
 /**
  * Custom ScalaTest matchers for FlightEvents comparison with tolerances

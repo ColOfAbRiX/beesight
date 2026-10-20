@@ -2,7 +2,7 @@ package com.colofabrix.scala.beesight.detection.metrics
 
 import com.colofabrix.scala.beesight.detection.math.Heading
 import com.colofabrix.scala.beesight.detection.model.FlightMetric
-import org.scalatest.matchers.{ Matcher, MatchResult }
+import org.scalatest.matchers.{ MatchResult, Matcher }
 
 /**
  * Field-by-field comparison of a [[FlightMetric]] against the golden metrics export, converting the export's

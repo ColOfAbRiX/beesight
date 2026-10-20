@@ -2,6 +2,7 @@ package com.colofabrix.scala.beesight.output
 
 import com.colofabrix.scala.beesight.IOConfig
 import com.colofabrix.scala.beesight.config.Config
+import com.colofabrix.scala.beesight.pipeline.Stage
 import fs2.data.csv.*
 import fs2.io.file.{ Files, Path as Fs2Path }
 import java.nio.file.Path
@@ -16,7 +17,7 @@ final private[beesight] class CsvResultWriter private (config: Config) {
    */
   def writePipe[A](filePath: Path)(using CsvRowEncoder[A, String]): fs2.Pipe[IOConfig, (?, A), Nothing] =
     stream =>
-      if !config.flags.dryRun && config.flags.writeCsv then
+      if !config.global.dryRun && config.command.stages.exists(_.producesProcessedCsv) then
         stream
           .map(_._2)
           .through(encodeUsingFirstHeaders(fullRows = true))

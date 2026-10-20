@@ -1,46 +1,32 @@
 package com.colofabrix.scala.beesight.config
 
-import cats.Show
 import cats.syntax.all.*
 import com.colofabrix.scala.beesight.detection.config.*
-import com.monovore.decline.*
-import io.github.iltotore.iron.*
-import io.github.iltotore.iron.constraint.all.*
-import io.github.iltotore.iron.decline.given
-import java.nio.file.{ Path, Paths }
+import com.monovore.decline.Opts
 
 /**
- * Top-level application configuration assembled from CLI options.
+ * Top-level application configuration assembled from the CLI.
  *
- * @param input Input path (file, directory, or glob pattern)
- * @param output Output directory (optional; defaults to sibling "processed" directory)
- * @param processLimit Maximum number of files to process (None = unlimited)
+ * @param global Options shared by every command
  * @param detectionConfig Algorithm thresholds and window sizes for flight stage detection
  * @param dataCutterConfig Settings for trimming output data around the jump
- * @param flags Boolean feature flags controlling output behaviour
- * @param parallelism Number of files to process concurrently (None = unbounded)
+ * @param command The command selected on the command line
  */
 final case class Config(
-  input: Path,
-  output: Option[Path],
-  processLimit: Option[ProcessLimit],
+  global: GlobalOptions,
   detectionConfig: BeesightConfig,
   dataCutterConfig: DataCutterConfig,
-  flags: ConfigFlags,
-  parallelism: Option[Parallelism],
+  command: Command,
 )
 
 object Config {
 
   val default: Config =
     Config(
-      input = Path.of("."),
-      output = None,
-      processLimit = None,
-      dataCutterConfig = DataCutterConfig.default,
+      global = GlobalOptions.default,
       detectionConfig = BeesightConfig.default,
-      flags = ConfigFlags.default,
-      parallelism = Parallelism(1).some,
+      dataCutterConfig = DataCutterConfig.default,
+      command = Command.default,
     )
 
   /**
@@ -48,56 +34,10 @@ object Config {
    */
   lazy val declineOpts: Opts[Config] =
     (
-      input,
-      output,
-      processLimit,
+      GlobalOptions.declineOpts,
       BeesightConfigCli.declineOpts,
       DataCutterConfig.declineOpts,
-      ConfigFlags.declineOpts,
-      parallelism,
+      Command.declineOpts,
     ).mapN(Config.apply)
-
-  private lazy val input: Opts[Path] =
-    Opts
-      .option[String](
-        long = "input",
-        short = "i",
-        help = "Input path (file or directory, supports glob patterns)",
-      )
-      .map(Paths.get(_))
-      .withDefault(default.input)
-
-  private lazy val output: Opts[Option[Path]] =
-    Opts
-      .option[String](
-        long = "output",
-        short = "o",
-        help = "Output directory where to place the produced CSV files.",
-      )
-      .map(Paths.get(_))
-      .orNone
-
-  private lazy val processLimit: Opts[Option[ProcessLimit]] =
-    Opts
-      .option[Int :| GreaterEqual[1]](
-        long = "limit",
-        short = "l",
-        help = s"The maximum amount of files to process (default: ${default.processLimit.show})",
-      )
-      .map(x => Option(ProcessLimit.apply(x)))
-      .withDefault(default.processLimit)
-
-  private lazy val parallelism: Opts[Option[Parallelism]] =
-    Opts
-      .option[Int :| GreaterEqual[1]](
-        long = "parallelism",
-        help = s"Number of concurrent files to process (default: ${default.parallelism.show})",
-      )
-      .map(x => Option(Parallelism.apply(x)))
-      .withDefault(default.parallelism)
-
-  private given showOption[A: Show]: Show[Option[A]] with
-    def show(t: Option[A]): String =
-      t.fold("Not configured")(Show[A].show)
 
 }

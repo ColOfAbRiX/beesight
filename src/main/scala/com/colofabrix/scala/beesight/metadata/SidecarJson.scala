@@ -13,7 +13,9 @@ given Encoder[Instant] =
 given Decoder[Instant] =
   Decoder.decodeString.emap(text => Try(Instant.parse(text)).toEither.left.map(_.getMessage))
 
-/** SHA-256 hashes used to invalidate sidecar sections when the configuration changes. */
+/**
+ * SHA-256 hashes used to invalidate sidecar sections when the configuration changes.
+ */
 object ConfigHash {
 
   def sha256(content: String): String =
@@ -25,7 +27,9 @@ object ConfigHash {
 
 }
 
-/** Encode/decode entry points for the sidecar. */
+/**
+ * Encode/decode entry points for the sidecar.
+ */
 object SidecarJson {
 
   /** JSON value of the sidecar, without nulls for absent optional fields. */

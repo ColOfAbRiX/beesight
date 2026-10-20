@@ -17,18 +17,33 @@ final private[beesight] class DataCutter private (config: Config) {
     stream =>
       stream
         .fold(Vector.empty[RichRow[A]])(_ :+ _)
-        .flatMap { allPoints =>
-          val cutResult     = applyCutting(allPoints)
-          val retainedRatio =
-            if allPoints.isEmpty then 1.0
-            else cutResult.size.toDouble / allPoints.size
-          if retainedRatio < config.dataCutterConfig.minRetainedPoints.value then
-            fs2.Stream.emits(allPoints)
-          else
-            fs2.Stream.emits(cutResult)
-        }
+        .flatMap(allPoints => fs2.Stream.emits(cutWithSummary(allPoints).retained))
 
-  private def applyCutting[A](points: Vector[RichRow[A]]): Vector[RichRow[A]] =
+  /**
+   * Cuts the given points and reports what was kept, for the metadata sidecar.
+   */
+  def cutWithSummary[A](points: Vector[RichRow[A]]): CutResult[A] = {
+    val cut     = applyCutting(points)
+    val ratio   = if points.isEmpty then 1.0 else cut.size.toDouble / points.size
+    val applied = ratio >= config.dataCutterConfig.minRetainedPoints.value
+
+    val retained =
+      if applied then cut
+      else points.zipWithIndex.map { case (row, index) => (index.toLong, row) }
+
+    CutResult(
+      summary = CutSummary(
+        applied = applied,
+        totalPoints = points.size.toLong,
+        retainedPoints = retained.size.toLong,
+        firstRetainedIndex = retained.headOption.fold(0L)(_._1),
+        lastRetainedIndex = retained.lastOption.fold(0L)(_._1),
+      ),
+      retained = retained.map(_._2),
+    )
+  }
+
+  private def applyCutting[A](points: Vector[RichRow[A]]): Vector[Retained[A]] =
     fs2.Stream
       .emits(points)
       .zipWithNext
@@ -47,7 +62,7 @@ final private[beesight] class DataCutter private (config: Config) {
     state.phase match {
       case CutterPhase.BeforeTakeoff => handleBeforeTakeoff(state, row, index)
       case CutterPhase.InFlight      => handleInFlight(state, row, index)
-      case CutterPhase.AfterLanding  => handleAfterLanding(state, row)
+      case CutterPhase.AfterLanding  => handleAfterLanding(state, row, index)
       case CutterPhase.Done          => (state, Vector.empty)
     }
 
@@ -71,14 +86,14 @@ final private[beesight] class DataCutter private (config: Config) {
       val keep       = config.dataCutterConfig.keepBeforeTakeoff.value
       val keptPoints = state.preBuffer.toVector.takeRight(keep)
       val newState   = CutterState[A](CutterPhase.InFlight, Queue.empty, afterLandingCount = 0)
-      (newState, keptPoints :+ row)
+      (newState, keptPoints :+ ((index, row)))
     else if landingPassed then
       val keptPoints                = state.preBuffer.toVector
       val newState                  = CutterState[A](CutterPhase.AfterLanding, Queue.empty, afterLandingCount = 0)
-      val (afterState, afterPoints) = handleAfterLanding(newState, row)
+      val (afterState, afterPoints) = handleAfterLanding(newState, row, index)
       (afterState, keptPoints ++ afterPoints)
     else
-      val updatedBuffer = state.preBuffer.enqueue(row)
+      val updatedBuffer = state.preBuffer.enqueue((index, row))
       val newState      = state.copy(preBuffer = updatedBuffer)
       (newState, Vector.empty)
 
@@ -92,17 +107,17 @@ final private[beesight] class DataCutter private (config: Config) {
 
     if isAfterLanding then
       val newState = CutterState[A](CutterPhase.AfterLanding, Queue.empty, 0)
-      handleAfterLanding(newState, row)
+      handleAfterLanding(newState, row, index)
     else
-      (state, Vector(row))
+      (state, Vector((index, row)))
 
-  private def handleAfterLanding[A](state: CutterState[A], row: RichRow[A]): StreamState[A] =
+  private def handleAfterLanding[A](state: CutterState[A], row: RichRow[A], index: Long): StreamState[A] =
     if state.afterLandingCount >= config.dataCutterConfig.keepAfterLanding.value then
       val newState = state.copy(phase = CutterPhase.Done)
       (newState, Vector.empty)
     else
       val newState = state.copy(afterLandingCount = state.afterLandingCount + 1)
-      (newState, Vector(row))
+      (newState, Vector((index, row)))
 
 }
 
@@ -110,8 +125,11 @@ private[beesight] object DataCutter {
 
   private type RichRow[A] = (FlightEvents, A)
 
+  /** A retained row together with its zero-based position in the input data. */
+  private type Retained[A] = (Long, RichRow[A])
+
   private type StreamState[A] =
-    (CutterState[A], Vector[RichRow[A]])
+    (CutterState[A], Vector[Retained[A]])
 
   private enum CutterPhase {
     case BeforeTakeoff, InFlight, AfterLanding, Done
@@ -119,8 +137,23 @@ private[beesight] object DataCutter {
 
   final private case class CutterState[A](
     phase: CutterPhase = CutterPhase.BeforeTakeoff,
-    preBuffer: Queue[RichRow[A]] = Queue.empty[RichRow[A]],
+    preBuffer: Queue[Retained[A]] = Queue.empty[Retained[A]],
     afterLandingCount: Long = 0,
+  )
+
+  /** What the cut operation kept from the input, reported to the metadata sidecar. */
+  final case class CutSummary(
+    applied: Boolean,
+    totalPoints: Long,
+    retainedPoints: Long,
+    firstRetainedIndex: Long,
+    lastRetainedIndex: Long,
+  )
+
+  /** The rows kept by the cut, with the summary of the operation. */
+  final case class CutResult[A](
+    summary: CutSummary,
+    retained: Vector[RichRow[A]],
   )
 
   def apply(config: Config): DataCutter =
