@@ -8,7 +8,7 @@ import java.time.Duration
 /**
  * Bidirectional conversions between detection-library models and their JSON-storage counterparts.
  */
-object StoredConversions:
+object StoredConversions {
 
   extension (point: EventPoint)
     def toStored: StoredPoint =
@@ -110,3 +110,5 @@ object StoredConversions:
   extension (speed: StoredSpeedAtAltitude)
     private def toSpeedAtAltitude: SpeedAtAltitude =
       SpeedAtAltitude(idx = speed.idx, speed = Speed(speed.speed), altitude = Altitude(speed.altitude))
+
+}

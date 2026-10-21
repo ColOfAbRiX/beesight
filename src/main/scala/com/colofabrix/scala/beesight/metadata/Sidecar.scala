@@ -1,11 +1,15 @@
 package com.colofabrix.scala.beesight.metadata
 
+import cats.effect.IO
 import cats.Eq
 import cats.syntax.eq.*
 import io.circe.{ Decoder, Encoder }
 import java.nio.file.{ Files, Path }
+import java.time.{ OffsetDateTime, ZoneOffset }
 
-/** Metadata sidecar `<base>.csv.meta`, a per-section analysis cache for one input file. */
+/**
+ * Metadata sidecar `<base>.csv.meta`, a per-section analysis cache for one input file.
+ */
 final case class Sidecar(
   beesightVersion: String,
   inputFingerprint: InputFingerprint,
@@ -15,7 +19,7 @@ final case class Sidecar(
 object Sidecar {
 
   def forInput(version: String, fingerprint: InputFingerprint): Sidecar =
-    Sidecar(version, fingerprint, SidecarSections())
+    Sidecar(version, fingerprint, SidecarSections.empty)
 
   extension (self: Sidecar) {
 
@@ -36,52 +40,12 @@ object Sidecar {
 
 }
 
-/** The analysis sections cached in the sidecar, each independently versioned by its configuration. */
-final case class SidecarSections(
-  jumpevents: Option[JumpEventsSection] = None,
-  swoop: Option[SwoopSection] = None,
-  cut: Option[CutSection] = None,
-) derives Encoder.AsObject, Decoder
-
-object SidecarSections {
-
-  extension (self: SidecarSections) {
-
-    def freshJumpevents(configHash: String): Option[JumpEventsSection] =
-      self.jumpevents.filter(_.configHash === configHash)
-
-    def freshSwoop(configHash: String): Option[SwoopSection] =
-      self.swoop.filter(_.configHash === configHash)
-
-    def freshCut(configHash: String): Option[CutSection] =
-      self.cut.filter(_.configHash === configHash)
-
-  }
-
-}
-
-/** Cached result of the jump-events detection. */
-final case class JumpEventsSection(
-  configHash: String,
-  events: StoredFlightEvents
-) derives Encoder.AsObject, Decoder
-
-/** Cached result of the swoop analysis. */
-final case class SwoopSection(
-  configHash: String,
-  result: StoredSwoopData
-) derives Encoder.AsObject, Decoder
-
-/** Cached result of the cut operation. */
-final case class CutSection(
-  configHash: String,
-  summary: StoredCutSummary
-) derives Encoder.AsObject, Decoder
-
-/** Fingerprint of the input file, used to invalidate the whole sidecar. */
+/**
+ * Fingerprint of the input file, used to invalidate the whole sidecar.
+ */
 final case class InputFingerprint(
   sizeBytes: Long,
-  lastModifiedMillis: Long
+  lastModified: OffsetDateTime
 ) derives Encoder.AsObject, Decoder
 
 object InputFingerprint {
@@ -89,7 +53,11 @@ object InputFingerprint {
   given Eq[InputFingerprint] =
     Eq.fromUniversalEquals
 
-  def of(file: Path): InputFingerprint =
-    InputFingerprint(Files.size(file), Files.getLastModifiedTime(file).toMillis)
+  def of(file: Path): IO[InputFingerprint] =
+    for {
+      size         <- IO.blocking(Files.size(file))
+      lastModified <- IO.blocking(OffsetDateTime.ofInstant(Files.getLastModifiedTime(file).toInstant, ZoneOffset.UTC))
+      result        = InputFingerprint(size, lastModified)
+    } yield result
 
 }

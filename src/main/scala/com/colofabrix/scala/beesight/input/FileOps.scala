@@ -64,16 +64,26 @@ private[beesight] object FileOps {
       val parent            = Option(inputBaseDir.getParent).getOrElse(Paths.get("."))
       val inputDirName      = inputBaseDir.getFileName
       val relativePath      = inputBaseDir.relativize(inputFile.toAbsolutePath.normalize)
+      val relativeDir       = Option(relativePath.getParent).getOrElse(Paths.get(""))
 
       config
         .global
         .output
         .getOrElse(parent.resolve("processed"))
         .resolve(inputDirName)
-        .resolve(relativePath)
+        .resolve(relativeDir)
+        .resolve(processedFileName(inputFile))
         .toAbsolutePath
         .normalize
     }
+
+  private def processedFileName(inputFile: Path): Path =
+    val name = inputFile.getFileName.toString
+    
+    if name.toLowerCase.endsWith(".zip") then 
+      Paths.get(name.substring(0, name.length - 4) + ".csv")
+    else 
+      inputFile.getFileName
 
   private def parseInputAsGlob(input: Path): (Path, String) =
     val absoluteInput = input.toAbsolutePath.normalize
@@ -83,7 +93,7 @@ private[beesight] object FileOps {
       val parent = Option(absoluteInput.getParent).getOrElse(Paths.get("."))
       (parent, absoluteInput.getFileName.toString)
     else if Files.isDirectory(absoluteInput) then
-      (absoluteInput, "{*.csv,**/*.csv}")
+      (absoluteInput, "{*.csv,*.zip,**/*.csv,**/*.zip}")
     else if inputStr.contains("*") || inputStr.contains("?") then
       val idx     = inputStr.indexWhere(c => c == '*' || c == '?')
       val lastSep = inputStr.lastIndexOf(FileSystems.getDefault.getSeparator, idx)

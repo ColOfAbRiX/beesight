@@ -16,7 +16,7 @@ final private[beesight] class ChartGenerator private (config: Config) {
   /**
    * Returns a pipe that generates an HTML chart from the stream of OutputFlightPoints
    */
-  def chartPipe[A: PointReader](outputFile: Path): fs2.Pipe[IOConfig, (FlightEvents, A), Nothing] =
+  def chartPipe[A: PointReader](chartHtml: Path): fs2.Pipe[IOConfig, (FlightEvents, A), Nothing] =
     stream =>
       if config.command.stages.contains(Stage.Charts) && !config.global.dryRun then
         stream
@@ -26,9 +26,9 @@ final private[beesight] class ChartGenerator private (config: Config) {
           }
           .evalMap { state =>
             for
-              outputPath <- computeChartPath(outputFile)
-              html        = createHtmlFromState(state)
-              _          <- writeHtmlFile(html, outputPath)
+              _   <- IOConfig.blocking(Files.createDirectories(chartHtml.getParent))
+              html = createHtmlFromState(state)
+              _   <- writeHtmlFile(html, chartHtml)
             yield ()
           }
           .drain
@@ -72,23 +72,6 @@ final private[beesight] class ChartGenerator private (config: Config) {
       canopy = events.canopy,
       landing = events.landing,
     )
-
-  private def computeChartPath(outputFile: Path): IOConfig[Path] =
-    val baseName =
-      outputFile
-        .getFileName
-        .toString
-        .replaceFirst("\\.[^.]+$", "")
-
-    val chartFilePath =
-      outputFile
-        .resolveSibling(s"$baseName.html")
-        .toAbsolutePath
-        .normalize
-
-    IOConfig
-      .blocking(Files.createDirectories(chartFilePath.getParent))
-      .as(chartFilePath)
 
   private def writeHtmlFile(html: String, outputPath: Path): IOConfig[Unit] =
     IOConfig.blocking {

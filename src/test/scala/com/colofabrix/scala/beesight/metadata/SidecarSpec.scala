@@ -1,11 +1,12 @@
 package com.colofabrix.scala.beesight.metadata
 
+import cats.syntax.eq.*
 import com.colofabrix.scala.beesight.detection.config.{ Altitude, Angle, Speed }
 import com.colofabrix.scala.beesight.detection.model.*
 import com.colofabrix.scala.beesight.metadata.StoredConversions.*
 import io.circe.Json
 import io.circe.syntax.*
-import java.time.{ Duration, Instant }
+import java.time.{ Duration, Instant, OffsetDateTime, ZoneOffset }
 import org.scalacheck.Arbitrary
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
@@ -22,7 +23,7 @@ class SidecarSpec extends AnyFreeSpec with Matchers with ScalaCheckPropertyCheck
   private given Arbitrary[InputFingerprint] = Arbitrary {
     for {
       size  <- org.scalacheck.Gen.chooseNum(0L, Long.MaxValue)
-      mtime <- org.scalacheck.Gen.chooseNum(0L, Long.MaxValue)
+      mtime <- Arbitrary.arbitrary[Instant].map(OffsetDateTime.ofInstant(_, ZoneOffset.UTC))
     } yield InputFingerprint(size, mtime)
   }
 
@@ -100,21 +101,21 @@ class SidecarSpec extends AnyFreeSpec with Matchers with ScalaCheckPropertyCheck
     for {
       hash   <- org.scalacheck.Gen.identifier
       events <- Arbitrary.arbitrary[StoredFlightEvents]
-    } yield JumpEventsSection(hash, events)
+    } yield JumpEventsSection(ConfigHash.of(hash), events)
   }
 
   private given Arbitrary[SwoopSection] = Arbitrary {
     for {
       hash   <- org.scalacheck.Gen.identifier
       result <- Arbitrary.arbitrary[StoredSwoopData]
-    } yield SwoopSection(hash, result)
+    } yield SwoopSection(ConfigHash.of(hash), result)
   }
 
   private given Arbitrary[CutSection] = Arbitrary {
     for {
       hash    <- org.scalacheck.Gen.identifier
       summary <- Arbitrary.arbitrary[StoredCutSummary]
-    } yield CutSection(hash, summary)
+    } yield CutSection(ConfigHash.of(hash), summary)
   }
 
   private given Arbitrary[SidecarSections] = Arbitrary {
@@ -134,7 +135,7 @@ class SidecarSpec extends AnyFreeSpec with Matchers with ScalaCheckPropertyCheck
   }
 
   private val at          = Instant.parse("2026-01-15T10:00:00Z")
-  private val fingerprint = InputFingerprint(1234L, 5678L)
+  private val fingerprint = InputFingerprint(1234L, OffsetDateTime.ofInstant(at, ZoneOffset.UTC))
   private val point       = EventPoint(7, 1200.5, at, GeoVector(1.5, -2.5, 40.0))
   private val events      = FlightEvents(
     takeoff = Some(point),
@@ -160,9 +161,9 @@ class SidecarSpec extends AnyFreeSpec with Matchers with ScalaCheckPropertyCheck
   private val cutSummary = StoredCutSummary(true, 5000, 2000, 1000, 2999)
   private val sidecar    = Sidecar
     .forInput("1.0.0", fingerprint)
-    .withJumpevents(JumpEventsSection("hash-a", events.toStored))
-    .withSwoop(SwoopSection("hash-b", swoop.toStored))
-    .withCut(CutSection("hash-c", cutSummary))
+    .withJumpevents(JumpEventsSection(ConfigHash.of("hash-a"), events.toStored))
+    .withSwoop(SwoopSection(ConfigHash.of("hash-b"), swoop.toStored))
+    .withCut(CutSection(ConfigHash.of("hash-c"), cutSummary))
 
   "Sidecar JSON codecs" - {
 
@@ -187,7 +188,7 @@ class SidecarSpec extends AnyFreeSpec with Matchers with ScalaCheckPropertyCheck
   "Sidecar" - {
 
     "merge replaces only the touched section" in {
-      val newSwoop = SwoopSection("hash-b2", swoop.toStored)
+      val newSwoop = SwoopSection(ConfigHash.of("hash-b2"), swoop.toStored)
 
       val actual = sidecar.withSwoop(newSwoop)
 
@@ -215,8 +216,8 @@ class SidecarSpec extends AnyFreeSpec with Matchers with ScalaCheckPropertyCheck
     }
 
     "fresh sections require a matching config hash" in {
-      val stale  = sidecar.sections.freshSwoop("wrong")
-      val actual = sidecar.sections.freshSwoop("hash-b")
+      val stale  = sidecar.sections.swoop.filter(_.configHash === ConfigHash.of("wrong"))
+      val actual = sidecar.sections.swoop.filter(_.configHash === ConfigHash.of("hash-b"))
 
       stale shouldBe None
       actual shouldBe sidecar.sections.swoop
@@ -231,7 +232,7 @@ class SidecarSpec extends AnyFreeSpec with Matchers with ScalaCheckPropertyCheck
 
       val actual = ConfigHash.sha256("abc")
 
-      actual shouldBe expected
+      actual.value shouldBe expected
     }
 
   }

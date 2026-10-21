@@ -1,47 +1,37 @@
 package com.colofabrix.scala.beesight.output
 
-import cats.effect.IO
-import cats.syntax.all.*
-import com.colofabrix.scala.beesight.detection.jumpevents.*
-import com.colofabrix.scala.beesight.detection.readers.*
-import com.colofabrix.scala.beesight.formats.*
-import com.colofabrix.scala.beesight.formats.convert.toFlySight
-import com.colofabrix.scala.beesight.formats.devices.*
-import com.colofabrix.scala.beesight.input.*
+import com.colofabrix.scala.beesight.*
 import com.colofabrix.scala.beesight.IOConfig
-import com.colofabrix.scala.beesight.output.*
+import com.colofabrix.scala.beesight.detection.readers.FlysightReader
+import com.colofabrix.scala.beesight.formats.convert.toFlySight
+import com.colofabrix.scala.beesight.formats.devices.FlysightPoint
+import com.colofabrix.scala.beesight.input.CsvFileReader
 import fs2.data.csv.*
 import fs2.io.file.{ Files, Path as Fs2Path }
-import java.nio.file.*
+import java.nio.file.Path
 
+/**
+ * Converts flight data files to the FlySight CSV format.
+ */
 object FileConverter {
 
-  def conversionPipeline[A](
-    csvStream: fs2.Stream[IOConfig, A],
-    ipnutCsvFile: Path,
+  /** Converts a flight data file to the FlySight CSV format */
+  def convertFile[A: FlysightReader](
+    inputFile: Path,
+    paths: OutputPaths,
     dryRun: Boolean,
   )(using
-    FlysightReader[A],
-    CsvRowEncoder[FlysightPoint, String],
-  ): fs2.Stream[IOConfig, Unit] =
-    if dryRun then
-      csvStream.drain
+    CsvRowDecoder[A, String],
+  ): IOConfig[Unit] =
+    if dryRun then IOConfig.unit
     else
-      val ouptutCsvPath = Fs2Path.fromNioPath(convertedFilePath(ipnutCsvFile))
-      csvStream
+      CsvFileReader
+        .readCsv[A](inputFile)
         .map(_.toFlySight())
         .through(encodeUsingFirstHeaders(fullRows = true))
         .through(fs2.text.utf8.encode)
-        .through(Files[IOConfig].writeAll(ouptutCsvPath))
+        .through(Files[IOConfig].writeAll(Fs2Path.fromNioPath(paths.flysightCsv)))
+        .compile
         .drain
-
-  private def convertedFilePath(processedFile: Path): Path =
-    val baseName =
-      processedFile
-        .getFileName
-        .toString
-        .replaceFirst("\\.[^.]+$", "")
-
-    processedFile.resolveSibling(s"$baseName.flysight.csv")
 
 }
