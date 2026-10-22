@@ -22,6 +22,10 @@ final case class OutputPaths(inputFile: Path, processedCsv: Path) {
   def metricsCsv: Path =
     sibling(processedCsv, ".metrics.csv")
 
+  /** Swoop landing analysis report as JSON */
+  def swoopJson: Path =
+    sibling(processedCsv, ".swoop.json")
+
   /** Metadata sidecar caching the analysis of the input file, keeping the full input name */
   def sidecar: Path =
     inputFile.resolveSibling(s"${inputFile.getFileName}.meta")

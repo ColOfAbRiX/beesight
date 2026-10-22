@@ -36,6 +36,14 @@ final class OutputPathsSpec extends AnyWordSpec, Matchers {
       actual shouldBe expected
     }
 
+    "name the swoop report after the processed CSV" in {
+      val expected = Paths.get("out", "jumps", "jump_1002.swoop.json")
+
+      val actual = paths.swoopJson
+
+      actual shouldBe expected
+    }
+
     "place the sidecar next to the input file keeping its full name" in {
       val expected = Paths.get("data", "jumps", "jump_1002.csv.meta")
 
