@@ -48,7 +48,7 @@ final private[beesight] class DataCutter private (config: Config) {
       .emits(points)
       .zipWithNext
       .zipWithIndex
-      .mapAccumulate(CutterState[A]()) {
+      .mapAccumulate(CutterState.empty[A]) {
         case (state, ((row, Some(_)), index)) =>
           processPoint(state, row, index)
         case (state, ((row, None), index)) =>
@@ -123,24 +123,6 @@ final private[beesight] class DataCutter private (config: Config) {
 
 private[beesight] object DataCutter {
 
-  private type RichRow[A] = (FlightEvents, A)
-
-  /** A retained row together with its zero-based position in the input data. */
-  private type Retained[A] = (Long, RichRow[A])
-
-  private type StreamState[A] =
-    (CutterState[A], Vector[Retained[A]])
-
-  private enum CutterPhase {
-    case BeforeTakeoff, InFlight, AfterLanding, Done
-  }
-
-  final private case class CutterState[A](
-    phase: CutterPhase = CutterPhase.BeforeTakeoff,
-    preBuffer: Queue[Retained[A]] = Queue.empty[Retained[A]],
-    afterLandingCount: Long = 0,
-  )
-
   /** What the cut operation kept from the input, reported to the metadata sidecar. */
   final case class CutSummary(
     applied: Boolean,
@@ -155,6 +137,36 @@ private[beesight] object DataCutter {
     summary: CutSummary,
     retained: Vector[RichRow[A]],
   )
+
+  private type RichRow[A] = 
+    (FlightEvents, A)
+
+  /** A retained row together with its zero-based position in the input data. */
+  private type Retained[A] = 
+    (Long, RichRow[A])
+
+  private type StreamState[A] =
+    (CutterState[A], Vector[Retained[A]])
+
+  private enum CutterPhase {
+    case BeforeTakeoff
+    case InFlight
+    case AfterLanding
+    case Done
+  }
+
+  final private case class CutterState[A](
+    phase: CutterPhase,
+    preBuffer: Queue[Retained[A]],
+    afterLandingCount: Long,
+  )
+
+  private object CutterState {
+
+    def empty[A]: CutterState[A] =
+      CutterState(CutterPhase.BeforeTakeoff, Queue.empty[Retained[A]], 0)
+
+  }
 
   def apply(config: Config): DataCutter =
     new DataCutter(config)

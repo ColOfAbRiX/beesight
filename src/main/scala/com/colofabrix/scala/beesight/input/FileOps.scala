@@ -4,6 +4,7 @@ import cats.effect.*
 import com.colofabrix.scala.beesight.*
 import java.nio.file.*
 import scala.jdk.CollectionConverters.*
+import com.colofabrix.scala.beesight.output.WorkingPaths
 
 /**
  * File system operations for discovering input files and creating output directories.
@@ -43,22 +44,15 @@ private[beesight] object FileOps {
   /**
    * Computes the output path and creates parent directories
    */
-  def createProcessedDirectory(inputFile: Path): IOConfig[Path] =
-    for
-      outputPath <- computeProcessedPath(inputFile)
-      _          <- IOConfig.blocking(Files.createDirectories(outputPath.getParent))
-    yield outputPath
+  def createOutputDirectory(paths: WorkingPaths): IOConfig[Unit] =
+    IOConfig
+      .blocking {
+        Files.createDirectories(paths.outputFile.getParent)
+      }
+      .map(_ => ())
 
-  /**
-   * Returns the base directory from the input configuration
-   */
-  private[beesight] def getInputBaseDir(): IOConfig[Path] =
-    IOConfig.ask.map { config =>
-      val (baseDir, _) = parseInputAsGlob(config.global.input)
-      baseDir
-    }
-
-  private def computeProcessedPath(inputFile: Path): IOConfig[Path] =
+  /** Computes the processed-CSV path for an input file, relative to the input base directory and the configured output directory */
+  def computeOutputPath(inputFile: Path): IOConfig[Path] =
     IOConfig.ask.map { config =>
       val (inputBaseDir, _) = parseInputAsGlob(config.global.input)
       val parent            = Option(inputBaseDir.getParent).getOrElse(Paths.get("."))
@@ -77,12 +71,21 @@ private[beesight] object FileOps {
         .normalize
     }
 
+  /**
+   * Returns the base directory from the input configuration
+   */
+  private[beesight] def getInputBaseDir(): IOConfig[Path] =
+    IOConfig.ask.map { config =>
+      val (baseDir, _) = parseInputAsGlob(config.global.input)
+      baseDir
+    }
+
   private def processedFileName(inputFile: Path): Path =
     val name = inputFile.getFileName.toString
-    
-    if name.toLowerCase.endsWith(".zip") then 
+
+    if name.toLowerCase.endsWith(".zip") then
       Paths.get(name.substring(0, name.length - 4) + ".csv")
-    else 
+    else
       inputFile.getFileName
 
   private def parseInputAsGlob(input: Path): (Path, String) =

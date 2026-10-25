@@ -4,13 +4,13 @@ import java.nio.file.Paths
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
-final class OutputPathsSpec extends AnyWordSpec, Matchers {
+final class WorkingPathsSpec extends AnyWordSpec, Matchers {
 
-  private val inputFile    = Paths.get("data", "jumps", "jump_1002.csv")
-  private val processedCsv = Paths.get("out", "jumps", "jump_1002.csv")
-  private val paths        = OutputPaths(inputFile, processedCsv)
+  private val inputFile  = Paths.get("data", "jumps", "jump_1002.csv")
+  private val outputFile = Paths.get("out", "jumps", "jump_1002.csv")
+  private val paths      = new WorkingPaths(inputFile, outputFile)
 
-  "OutputPaths" should {
+  "WorkingPaths" should {
 
     "place the chart next to the processed CSV" in {
       val expected = Paths.get("out", "jumps", "jump_1002.html")

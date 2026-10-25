@@ -1,6 +1,7 @@
 package com.colofabrix.scala.beesight.input
 
 import com.colofabrix.scala.beesight.*
+import com.colofabrix.scala.beesight.config.Config
 import fs2.data.csv.*
 import java.io.FileOutputStream
 import java.nio.charset.StandardCharsets
@@ -18,7 +19,7 @@ class CsvFileReaderSpec extends AnyFreeSpec with Matchers with IOConfigValues wi
 
       "should decode all data rows from a plain CSV file" in {
         val path   = writeCsv("header_and_data.csv", headerAndData)
-        val result = CsvFileReader.readCsv[TestRow](path).compile.toList.result()
+        val result = CsvFileReader.readCsv[TestRow](path).compile.toList.result(Config.default)
 
         result should have size 3
         result(0) shouldBe TestRow(1, 2.5, "hello")
@@ -28,7 +29,7 @@ class CsvFileReaderSpec extends AnyFreeSpec with Matchers with IOConfigValues wi
 
       "should decode CSV from a ZIP file" in {
         val path   = writeZip("data.zip", headerAndData)
-        val result = CsvFileReader.readCsv[TestRow](path).compile.toList.result()
+        val result = CsvFileReader.readCsv[TestRow](path).compile.toList.result(Config.default)
 
         result should have size 3
         result(0) shouldBe TestRow(1, 2.5, "hello")
@@ -42,7 +43,7 @@ class CsvFileReaderSpec extends AnyFreeSpec with Matchers with IOConfigValues wi
 
       "should skip a text units row after the header" in {
         val path   = writeCsv("header_units.csv", headerUnitsData)
-        val result = CsvFileReader.readCsv[TestRow](path).compile.toList.result()
+        val result = CsvFileReader.readCsv[TestRow](path).compile.toList.result(Config.default)
 
         result should have size 3
         result(0) shouldBe TestRow(1, 2.5, "hello")
@@ -54,13 +55,13 @@ class CsvFileReaderSpec extends AnyFreeSpec with Matchers with IOConfigValues wi
         val path = writeCsv("two_junk.csv", twoJunkRowsAfterHeader)
         val io   = CsvFileReader.readCsv[TestRow](path).compile.toList
 
-        io.isException() shouldBe true
-        io.exception() shouldBe a[DecoderError]
+        io.isException(Config.default) shouldBe true
+        io.exception(Config.default) shouldBe a[DecoderError]
       }
 
       "should keep data when first row after header is valid" in {
         val path   = writeCsv("no_units.csv", headerAndData)
-        val result = CsvFileReader.readCsv[TestRow](path).compile.toList.result()
+        val result = CsvFileReader.readCsv[TestRow](path).compile.toList.result(Config.default)
 
         result should have size 3
         result.head shouldBe TestRow(1, 2.5, "hello")
@@ -68,7 +69,7 @@ class CsvFileReaderSpec extends AnyFreeSpec with Matchers with IOConfigValues wi
 
       "should return empty stream for header-only CSV" in {
         val path   = writeCsv("header_only.csv", headerOnly)
-        val result = CsvFileReader.readCsv[TestRow](path).compile.toList.result()
+        val result = CsvFileReader.readCsv[TestRow](path).compile.toList.result(Config.default)
 
         result shouldBe empty
       }
@@ -79,7 +80,7 @@ class CsvFileReaderSpec extends AnyFreeSpec with Matchers with IOConfigValues wi
 
       "should filter out comment lines starting with #" in {
         val path   = writeCsv("comments.csv", withComments)
-        val result = CsvFileReader.readCsv[TestRow](path).compile.toList.result()
+        val result = CsvFileReader.readCsv[TestRow](path).compile.toList.result(Config.default)
 
         result should have size 2
         result(0) shouldBe TestRow(1, 2.5, "hello")
@@ -88,7 +89,7 @@ class CsvFileReaderSpec extends AnyFreeSpec with Matchers with IOConfigValues wi
 
       "should filter out empty lines" in {
         val path   = writeCsv("empty_lines.csv", withEmptyLines)
-        val result = CsvFileReader.readCsv[TestRow](path).compile.toList.result()
+        val result = CsvFileReader.readCsv[TestRow](path).compile.toList.result(Config.default)
 
         result should have size 2
         result(0) shouldBe TestRow(1, 2.5, "hello")
@@ -102,7 +103,7 @@ class CsvFileReaderSpec extends AnyFreeSpec with Matchers with IOConfigValues wi
       "should handle Windows CRLF line endings" in {
         val content = "a,b,c\r\n1,2.5,hello\r\n2,3.5,world\r\n"
         val path    = writeCsvBytes("crlf.csv", content.getBytes(StandardCharsets.UTF_8))
-        val result  = CsvFileReader.readCsv[TestRow](path).compile.toList.result()
+        val result  = CsvFileReader.readCsv[TestRow](path).compile.toList.result(Config.default)
 
         result should have size 2
         result(0) shouldBe TestRow(1, 2.5, "hello")
@@ -117,8 +118,8 @@ class CsvFileReaderSpec extends AnyFreeSpec with Matchers with IOConfigValues wi
         val path = writeCsv("bad_data.csv", badDataAfterRow2)
         val io   = CsvFileReader.readCsv[TestRow](path).compile.toList
 
-        io.isException() shouldBe true
-        io.exception() shouldBe a[DecoderError]
+        io.isException(Config.default) shouldBe true
+        io.exception(Config.default) shouldBe a[DecoderError]
       }
 
     }

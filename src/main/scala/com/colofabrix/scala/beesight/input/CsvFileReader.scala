@@ -35,8 +35,10 @@ private[beesight] object CsvFileReader {
    */
   def readCsv[A](filePath: Path)(using CsvRowDecoder[A, String]): fs2.Stream[IOConfig, A] =
     val rawLines =
-      if isZipFile(filePath) then readLinesFromZip(filePath)
-      else readLinesFromFile(filePath)
+      if isZipFile(filePath) then 
+        readLinesFromZip(filePath)
+      else 
+        readLinesFromFile(filePath)
 
     rawLines
       .filter { line =>

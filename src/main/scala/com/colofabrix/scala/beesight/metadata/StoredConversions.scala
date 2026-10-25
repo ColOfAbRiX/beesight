@@ -86,6 +86,72 @@ object StoredConversions {
         )
       }
 
+  extension (metric: FlightMetric)
+    def toStored: StoredMetric =
+      StoredMetric(
+        time = metric.time,
+        altitude = metric.altitude,
+        verticalSpeed = metric.verticalSpeed,
+        horizontalSpeed = metric.horizontalSpeed,
+        totalSpeed = metric.totalSpeed,
+        course = metric.course,
+        courseRate = metric.courseRate,
+        courseAccuracy = metric.courseAccuracy,
+        courseAccuracyEstimate = metric.courseAccuracyEstimate,
+        glideRatio = metric.glideRatio,
+        liftCoefficient = metric.liftCoefficient,
+        dragCoefficient = metric.dragCoefficient,
+        diveAngle = metric.diveAngle,
+        diveRate = metric.diveRate,
+        turnRate = metric.turnRate,
+        speedAccuracy = metric.speedAccuracy,
+        horizontalAccuracy = metric.horizontalAccuracy,
+        verticalAccuracy = metric.verticalAccuracy,
+        satellites = metric.satellites,
+        accelerationNorth = metric.acceleration.north,
+        accelerationEast = metric.acceleration.east,
+        accelerationVertical = metric.acceleration.vertical,
+        accelerationMagnitude = metric.accelerationMagnitude,
+        accelerationAlongTrack = metric.accelerationAlongTrack,
+        accelerationCrossTrack = metric.accelerationCrossTrack,
+        totalEnergy = metric.totalEnergy,
+        energyRate = metric.energyRate,
+        sphericalErrorProbably = metric.sphericalErrorProbably,
+        speedScoreAccuracy = metric.speedScoreAccuracy,
+      )
+
+  extension (metric: StoredMetric)
+    def toFlightMetric: FlightMetric =
+      FlightMetric(
+        time = metric.time,
+        altitude = metric.altitude,
+        verticalSpeed = metric.verticalSpeed,
+        horizontalSpeed = metric.horizontalSpeed,
+        totalSpeed = metric.totalSpeed,
+        course = metric.course,
+        courseRate = metric.courseRate,
+        courseAccuracy = metric.courseAccuracy,
+        courseAccuracyEstimate = metric.courseAccuracyEstimate,
+        glideRatio = metric.glideRatio,
+        liftCoefficient = metric.liftCoefficient,
+        dragCoefficient = metric.dragCoefficient,
+        diveAngle = metric.diveAngle,
+        diveRate = metric.diveRate,
+        turnRate = metric.turnRate,
+        speedAccuracy = metric.speedAccuracy,
+        horizontalAccuracy = metric.horizontalAccuracy,
+        verticalAccuracy = metric.verticalAccuracy,
+        satellites = metric.satellites,
+        acceleration = GeoVector(metric.accelerationNorth, metric.accelerationEast, metric.accelerationVertical),
+        accelerationMagnitude = metric.accelerationMagnitude,
+        accelerationAlongTrack = metric.accelerationAlongTrack,
+        accelerationCrossTrack = metric.accelerationCrossTrack,
+        totalEnergy = metric.totalEnergy,
+        energyRate = metric.energyRate,
+        sphericalErrorProbably = metric.sphericalErrorProbably,
+        speedScoreAccuracy = metric.speedScoreAccuracy,
+      )
+
   extension (summary: DataCutter.CutSummary)
     def toStored: StoredCutSummary =
       StoredCutSummary(

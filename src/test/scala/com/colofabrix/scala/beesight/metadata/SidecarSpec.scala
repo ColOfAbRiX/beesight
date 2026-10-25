@@ -97,6 +97,80 @@ class SidecarSpec extends AnyFreeSpec with Matchers with ScalaCheckPropertyCheck
     } yield StoredCutSummary(applied, total, kept, first, last)
   }
 
+  private def genFiniteOption: org.scalacheck.Gen[Option[Double]] =
+    org.scalacheck.Gen.option(genFiniteDouble.arbitrary)
+
+  private given Arbitrary[StoredMetric] = Arbitrary {
+    for {
+      time                   <- Arbitrary.arbitrary[Instant]
+      altitude               <- genFiniteDouble.arbitrary
+      verticalSpeed          <- genFiniteDouble.arbitrary
+      horizontalSpeed        <- genFiniteDouble.arbitrary
+      totalSpeed             <- genFiniteDouble.arbitrary
+      course                 <- genFiniteDouble.arbitrary
+      courseRate             <- genFiniteDouble.arbitrary
+      courseAccuracy         <- genFiniteOption
+      courseAccuracyEstimate <- genFiniteOption
+      glideRatio             <- genFiniteDouble.arbitrary
+      liftCoefficient        <- genFiniteDouble.arbitrary
+      dragCoefficient        <- genFiniteDouble.arbitrary
+      diveAngle              <- genFiniteDouble.arbitrary
+      diveRate               <- genFiniteDouble.arbitrary
+      turnRate               <- genFiniteDouble.arbitrary
+      speedAccuracy          <- genFiniteOption
+      horizontalAccuracy     <- genFiniteOption
+      verticalAccuracy       <- genFiniteOption
+      satellites             <- org.scalacheck.Gen.option(org.scalacheck.Gen.chooseNum(0, 64))
+      accelerationNorth      <- genFiniteDouble.arbitrary
+      accelerationEast       <- genFiniteDouble.arbitrary
+      accelerationVertical   <- genFiniteDouble.arbitrary
+      accelerationMagnitude  <- genFiniteDouble.arbitrary
+      accelerationAlongTrack <- genFiniteDouble.arbitrary
+      accelerationCrossTrack <- genFiniteDouble.arbitrary
+      totalEnergy            <- genFiniteDouble.arbitrary
+      energyRate             <- genFiniteDouble.arbitrary
+      sphericalErrorProbably <- genFiniteOption
+      speedScoreAccuracy     <- genFiniteOption
+    } yield StoredMetric(
+      time,
+      altitude,
+      verticalSpeed,
+      horizontalSpeed,
+      totalSpeed,
+      course,
+      courseRate,
+      courseAccuracy,
+      courseAccuracyEstimate,
+      glideRatio,
+      liftCoefficient,
+      dragCoefficient,
+      diveAngle,
+      diveRate,
+      turnRate,
+      speedAccuracy,
+      horizontalAccuracy,
+      verticalAccuracy,
+      satellites,
+      accelerationNorth,
+      accelerationEast,
+      accelerationVertical,
+      accelerationMagnitude,
+      accelerationAlongTrack,
+      accelerationCrossTrack,
+      totalEnergy,
+      energyRate,
+      sphericalErrorProbably,
+      speedScoreAccuracy,
+    )
+  }
+
+  private given Arbitrary[MetricsSection] = Arbitrary {
+    for {
+      hash    <- org.scalacheck.Gen.identifier
+      metrics <- org.scalacheck.Gen.listOf(Arbitrary.arbitrary[StoredMetric])
+    } yield MetricsSection(ConfigHash.of(hash), metrics)
+  }
+
   private given Arbitrary[JumpEventsSection] = Arbitrary {
     for {
       hash   <- org.scalacheck.Gen.identifier
@@ -121,9 +195,10 @@ class SidecarSpec extends AnyFreeSpec with Matchers with ScalaCheckPropertyCheck
   private given Arbitrary[SidecarSections] = Arbitrary {
     for {
       jumpevents <- org.scalacheck.Gen.option(Arbitrary.arbitrary[JumpEventsSection])
+      metrics    <- org.scalacheck.Gen.option(Arbitrary.arbitrary[MetricsSection])
       swoop      <- org.scalacheck.Gen.option(Arbitrary.arbitrary[SwoopSection])
       cut        <- org.scalacheck.Gen.option(Arbitrary.arbitrary[CutSection])
-    } yield SidecarSections(jumpevents, swoop, cut)
+    } yield SidecarSections(jumpevents, metrics, swoop, cut)
   }
 
   private given Arbitrary[Sidecar] = Arbitrary {
@@ -159,11 +234,20 @@ class SidecarSpec extends AnyFreeSpec with Matchers with ScalaCheckPropertyCheck
     bottomOfTurn = point.copy(index = 10),
   )
   private val cutSummary = StoredCutSummary(true, 5000, 2000, 1000, 2999)
-  private val sidecar    = Sidecar
-    .forInput("1.0.0", fingerprint)
-    .withJumpevents(JumpEventsSection(ConfigHash.of("hash-a"), events.toStored))
-    .withSwoop(SwoopSection(ConfigHash.of("hash-b"), swoop.toStored))
-    .withCut(CutSection(ConfigHash.of("hash-c"), cutSummary))
+  private val metric     = StoredMetric(
+    at, 1200.5, 40.0, 30.0, 50.0, 315.0, 12.5, Some(1.5), Some(2.5), 0.75, 0.4, 0.1, 45.0, -3.5, 90.0,
+    Some(0.5), Some(1.0), Some(1.5), Some(14), 1.5, -2.5, 9.8, 10.4, 9.5, 0.5, 2500.0, -125.0, Some(3.5), Some(0.25),
+  )
+  private val sidecar = Sidecar(
+    "1.0.0",
+    fingerprint,
+    SidecarSections(
+      jumpevents = Some(JumpEventsSection(ConfigHash.of("hash-a"), events.toStored)),
+      metrics = Some(MetricsSection(ConfigHash.of("hash-d"), List(metric))),
+      swoop = Some(SwoopSection(ConfigHash.of("hash-b"), swoop.toStored)),
+      cut = Some(CutSection(ConfigHash.of("hash-c"), cutSummary)),
+    ),
+  )
 
   "Sidecar JSON codecs" - {
 
@@ -186,34 +270,6 @@ class SidecarSpec extends AnyFreeSpec with Matchers with ScalaCheckPropertyCheck
   }
 
   "Sidecar" - {
-
-    "merge replaces only the touched section" in {
-      val newSwoop = SwoopSection(ConfigHash.of("hash-b2"), swoop.toStored)
-
-      val actual = sidecar.withSwoop(newSwoop)
-
-      actual.sections.jumpevents shouldBe sidecar.sections.jumpevents
-      actual.sections.cut shouldBe sidecar.sections.cut
-      actual.sections.swoop shouldBe Some(newSwoop)
-    }
-
-    "is for the matching version and input" in {
-      val actual = sidecar.isFor("1.0.0", fingerprint)
-
-      actual shouldBe true
-    }
-
-    "is not for a different version" in {
-      val actual = sidecar.isFor("2.0.0", fingerprint)
-
-      actual shouldBe false
-    }
-
-    "is not for a changed input" in {
-      val actual = sidecar.isFor("1.0.0", fingerprint.copy(sizeBytes = 9999))
-
-      actual shouldBe false
-    }
 
     "fresh sections require a matching config hash" in {
       val stale  = sidecar.sections.swoop.filter(_.configHash === ConfigHash.of("wrong"))

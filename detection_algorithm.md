@@ -360,20 +360,20 @@ point is used.
                 ┌─────────────────┐
                 │    dive point   │   max descent below the cap — no dive, no swoop
                 └────────┬────────┘
-              ┌───────────┴───────────┐
-              ▼                       ▼
-     ┌─────────────────┐     ┌─────────────────┐
-     │   top of turn   │     │       stop      │   slow point fixes the heading, then stop or turn-away
-     └────────┬────────┘     └────────┬────────┘
-              └───────────┬───────────┘
-                          ▼
-                 ┌─────────────────┐
-                 │ rollout start   │   max-descent walk inside the 100 ft band above the stop
-                 └────────┬────────┘
-                          ▼
-                 ┌─────────────────┐
-                 │ bottom of turn  │   end of the recovery
-                 └─────────────────┘
+             ┌───────────┴───────────┐
+             ▼                       ▼
+    ┌─────────────────┐     ┌─────────────────┐
+    │   top of turn   │     │       stop      │   slow point fixes the heading, then stop or turn-away
+    └────────┬────────┘     └────────┬────────┘
+             └───────────┬───────────┘
+                         ▼
+                ┌─────────────────┐
+                │ rollout start   │   max-descent walk inside the 100 ft band above the stop
+                └────────┬────────┘
+                         ▼
+                ┌─────────────────┐
+                │ bottom of turn  │   end of the recovery
+                └─────────────────┘
 ```
 
 **Stage 1 — Pattern entry.** The first point that crosses below the pattern-entry altitude (762 m / 2500 ft AGL).

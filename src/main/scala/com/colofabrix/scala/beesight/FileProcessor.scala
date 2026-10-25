@@ -38,21 +38,18 @@ private[beesight] object FileProcessor {
       result     <- detect.toIOConfig(new IllegalArgumentException(s"Unknown CSV format in '$filePath'"))
     yield result
 
-  private def processFileAs[A: PointReader: FlysightReader](
+  private def processFileAs[A: PointReader: FlysightReader: CsvRowDecoder[*, String]: CsvRowEncoder[*, String]](
     inputFile: Path,
-  )(using
-    CsvRowDecoder[A, String],
-    CsvRowEncoder[A, String],
   ): IOConfig[Unit] =
     for
-      cfg          <- IOConfig.ask[IO, Config]
-      processedCsv <- FileOps.createProcessedDirectory(inputFile)
-      paths         = OutputPaths(inputFile, processedCsv)
-      _            <- s"Processing: $inputFile -> $processedCsv".stdout
-      _            <- cfg.command match {
-        case Command.Convert => FileConverter.convertFile[A](inputFile, paths, cfg.global.dryRun)
-        case _               => StagesRunner.run[A](cfg, inputFile, paths)
-      }
+      cfg   <- IOConfig.ask[IO, Config]
+      paths <- WorkingPaths(inputFile)
+      _     <- FileOps.createOutputDirectory(paths)
+      _     <- s"Processing: $inputFile -> ${paths.outputFile}".stdout
+      _     <- cfg.command match {
+             case Command.Convert => FileConverter.convertFile[A](paths)
+             case _               => StagesRunner.run[A](paths)
+           }
     yield ()
 
 }

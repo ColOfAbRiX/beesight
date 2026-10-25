@@ -7,6 +7,7 @@ import io.circe.{ Decoder, Encoder }
  */
 final case class SidecarSections(
   jumpevents: Option[JumpEventsSection],
+  metrics: Option[MetricsSection],
   swoop: Option[SwoopSection],
   cut: Option[CutSection],
 ) derives Encoder.AsObject, Decoder
@@ -14,7 +15,7 @@ final case class SidecarSections(
 object SidecarSections {
 
   val empty: SidecarSections =
-    SidecarSections(None, None, None)
+    SidecarSections(None, None, None, None)
 
 }
 
@@ -24,6 +25,14 @@ object SidecarSections {
 final case class JumpEventsSection(
   configHash: ConfigHash,
   events: StoredFlightEvents
+) derives Encoder.AsObject, Decoder
+
+/**
+ * Cached result of the per-point flight metrics computation.
+ */
+final case class MetricsSection(
+  configHash: ConfigHash,
+  metrics: List[StoredMetric],
 ) derives Encoder.AsObject, Decoder
 
 /**

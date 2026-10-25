@@ -1,6 +1,8 @@
 package com.colofabrix.scala.beesight.metadata
 
 import cats.Eq
+import com.colofabrix.scala.beesight.config.DataCutterConfig
+import com.colofabrix.scala.beesight.detection.config.{ JumpEventsConfig, MetricsConfig, SwoopConfig }
 import io.circe.{ Decoder, Encoder }
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
@@ -22,6 +24,22 @@ object ConfigHash {
 
   def of(value: String): ConfigHash =
     value
+
+  extension (config: JumpEventsConfig)
+    def configHash: ConfigHash =
+      sha256(config.toString)
+
+  extension (config: MetricsConfig)
+    def configHash: ConfigHash =
+      sha256(config.toString)
+
+  extension (config: DataCutterConfig)
+    def configHash: ConfigHash =
+      sha256(config.toString)
+
+  extension (config: SwoopConfig)
+    def configHash(jumpevents: JumpEventsConfig): ConfigHash =
+      sha256(s"$config|$jumpevents")
 
   given Eq[ConfigHash] =
     Eq.fromUniversalEquals

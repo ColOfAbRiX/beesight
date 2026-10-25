@@ -1,89 +1,129 @@
 package com.colofabrix.scala.beesight.output
 
-import cats.syntax.all.*
 import com.colofabrix.scala.beesight.*
+import com.colofabrix.scala.beesight.IOConfig
 import com.colofabrix.scala.beesight.config.Config
 import com.colofabrix.scala.beesight.detection.model.*
-import com.colofabrix.scala.beesight.pipeline.Stage
 import com.colofabrix.scala.beesight.detection.readers.*
-import java.nio.file.*
+import com.colofabrix.scala.beesight.pipeline.Stage
+import java.nio.file.{ Files, Path }
+import java.time.{ Duration, Instant }
 
 /**
- * Generates interactive HTML charts showing flight data and detected stages.
+ * Generates an interactive HTML chart showing the flight traces with toggleable lines and the detected points.
  */
 final private[beesight] class ChartGenerator private (config: Config) {
 
   /**
-   * Returns a pipe that generates an HTML chart from the stream of OutputFlightPoints
-   */
-  def chartPipe[A: PointReader](chartHtml: Path): fs2.Pipe[IOConfig, (FlightEvents, A), Nothing] =
+    * Returns a pipe that generates an HTML chart from the stream of points, enriched with the flight metrics and the
+    * swoop analysis when they are available.
+    */
+  def chartPipe[A: PointReader](
+    chartHtml: Path,
+    metrics: Option[Vector[FlightMetric]],
+    swoop: Option[SwoopData],
+  ): fs2.Pipe[IOConfig, (FlightEvents, A), Nothing] =
     stream =>
       if config.command.stages.contains(Stage.Charts) && !config.global.dryRun then
         stream
-          .zipWithIndex
-          .fold(ChartState[A]()) {
-            case (state, (point, idx)) => updateChartState(state, point, idx)
-          }
+          .fold(ChartState.empty[A])(updateChartState[A])
           .evalMap { state =>
             for
               _   <- IOConfig.blocking(Files.createDirectories(chartHtml.getParent))
-              html = createHtmlFromState(state)
-              _   <- writeHtmlFile(html, chartHtml)
+              html = ChartHtml.build(state, metrics, swoop)
+              _   <- IOConfig.blocking(Files.writeString(chartHtml, html))
             yield ()
           }
           .drain
       else
         stream.drain
 
-  private def updateChartState[A: PointReader](
-    state: ChartState[A],
-    data: (FlightEvents, A),
-    idx: Long,
-  ): ChartState[A] =
+  private def updateChartState[A: PointReader](state: ChartState[A], data: (FlightEvents, A)): ChartState[A] =
     val (events, point) = data
-
-    val sep = if idx == 0 then "" else ","
-
-    // Update data builders
-    val newIndices   = state.indices.append(sep).append(idx)
-    val newAltitudes = state.altitudes.append(sep).append(point.altitude)
-    val newVelDs     = state.velDs.append(sep).append(point.speed.vertical)
-
-    // Detect phase transition
-    val transition =
-      if state.prevPhase != events.phase && events.phase != FlightPhase.BeforeTakeoff then
-        Some(PhaseTransition(events.phase, idx, point.altitude))
-      else
-        None
-
     ChartState(
-      indices = newIndices,
-      altitudes = newAltitudes,
-      velDs = newVelDs,
-      transitions = state.transitions ++ transition.toList,
-      prevPhase = events.phase,
-      lastStages = extractStages(events),
+      times = state.times :+ point.time,
+      altitudes = state.altitudes :+ point.altitude,
+      velDs = state.velDs :+ point.speed.vertical,
+      stages = events,
     )
 
-  private def extractStages[A](events: FlightEvents): FlightEvents =
-    FlightEvents(
-      takeoff = events.takeoff,
-      freefall = events.freefall,
-      canopy = events.canopy,
-      landing = events.landing,
-    )
+}
 
-  private def writeHtmlFile(html: String, outputPath: Path): IOConfig[Unit] =
-    IOConfig.blocking {
-      val _ = Files.writeString(outputPath, html)
-    }
+private[beesight] object ChartGenerator {
 
-  private def createHtmlFromState[A](state: ChartState[A]): String =
-    val indicesJs   = s"[${state.indices.result()}]"
-    val altitudesJs = s"[${state.altitudes.result()}]"
-    val velDsJs     = s"[${state.velDs.result()}]"
-    val stages      = state.lastStages
-    val markers     = createTransitionMarkersJs(state.transitions)
+  def apply(config: Config): ChartGenerator =
+    new ChartGenerator(config)
+
+}
+
+/**
+ * The data collected while streaming the points, enough to render the chart.
+ */
+final private[beesight] case class ChartState[A](
+  times: Vector[Instant],
+  altitudes: Vector[Double],
+  velDs: Vector[Double],
+  stages: FlightEvents,
+)
+
+private[beesight] object ChartState {
+
+  def empty[A]: ChartState[A] =
+    ChartState(Vector.empty, Vector.empty, Vector.empty, FlightEvents.empty)
+
+}
+
+/**
+ * Renders the chart HTML: one figure with all the available traces, a checkbox per trace, and the detected points
+ * marked on the plot.
+ */
+private[beesight] object ChartHtml {
+
+  final private case class TraceSpec(
+    name: String,
+    values: Vector[Double],
+    axis: Int,
+    color: String,
+    on: Boolean,
+  )
+
+  final private case class MarkerSpec(
+    name: String,
+    index: Long,
+    altitude: Double,
+    symbol: String,
+    color: String,
+  )
+
+  private val colors = Vector(
+    "rgb(31, 119, 180)",
+    "rgb(255, 127, 14)",
+    "rgb(44, 160, 44)",
+    "rgb(214, 39, 40)",
+    "rgb(148, 103, 189)",
+    "rgb(140, 86, 75)",
+    "rgb(227, 119, 194)",
+    "rgb(127, 127, 127)",
+    "rgb(188, 189, 34)",
+    "rgb(23, 190, 207)",
+    "rgb(102, 51, 153)",
+    "rgb(255, 215, 0)",
+    "rgb(0, 128, 128)",
+  )
+
+  def build[A](
+    state: ChartState[A],
+    metrics: Option[Vector[FlightMetric]],
+    swoop: Option[SwoopData],
+  ): String =
+    val t0   = state.times.headOption.getOrElse(Instant.EPOCH)
+    val xs   = state.times.map(t => Duration.between(t0, t).toMillis / 1000.0)
+    val xsJs = xs.mkString("[", ",", "]")
+
+    val traces     = traceSpecs(state, metrics)
+    val markers    = markerSpecs(state.stages, swoop)
+    val tracesJs   = lineTracesJs(traces, xsJs)
+    val markersJs = markerTracesJs(markers, xs)
 
     s"""<!DOCTYPE html>
        |<html>
@@ -95,6 +135,8 @@ final private[beesight] class ChartGenerator private (config: Config) {
        |    body { margin: 0; padding: 20px; font-family: sans-serif; background: #f5f5f5; }
        |    h1 { color: #333; }
        |    #plot { width: 100%; height: 80vh; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+       |    #controls { margin-top: 15px; display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 12px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+       |    #controls label { font-size: 14px; color: #333; white-space: nowrap; }
        |    .info { margin-top: 20px; padding: 15px; background: white; border-radius: 8px; }
        |    .info h3 { margin-top: 0; }
        |  </style>
@@ -102,43 +144,30 @@ final private[beesight] class ChartGenerator private (config: Config) {
        |<body>
        |  <h1>Flight Analysis</h1>
        |  <div id="plot"></div>
+       |  <div id="controls">
+       |${checkboxesJs(traces)}
+       |  </div>
        |  <div class="info">
        |    <h3>Detected Flight Stages</h3>
        |    <ul>
-       |      <li><strong>Takeoff:</strong> ${formatStage(stages.takeoff)}</li>
-       |      <li><strong>Freefall:</strong> ${formatStage(stages.freefall)}</li>
-       |      <li><strong>Canopy:</strong> ${formatStage(stages.canopy)}</li>
-       |      <li><strong>Landing:</strong> ${formatStage(stages.landing)}</li>
+       |      <li><strong>Takeoff:</strong> ${formatStage(state.stages.takeoff)}</li>
+       |      <li><strong>Freefall:</strong> ${formatStage(state.stages.freefall)}</li>
+       |      <li><strong>Canopy:</strong> ${formatStage(state.stages.canopy)}</li>
+       |      <li><strong>Landing:</strong> ${formatStage(state.stages.landing)}</li>
        |    </ul>
+       |${swoopInfoJs(swoop)}
        |  </div>
        |  <script>
-       |    var altitudeTrace = {
-       |      x: $indicesJs,
-       |      y: $altitudesJs,
-       |      name: 'Altitude (m)',
-       |      type: 'scatter',
-       |      mode: 'lines',
-       |      line: {color: 'rgb(31, 119, 180)', width: 1.5}
-       |    };
-       |
-       |    var velocityTrace = {
-       |      x: $indicesJs,
-       |      y: $velDsJs,
-       |      name: 'Velocity Down (m/s)',
-       |      type: 'scatter',
-       |      mode: 'lines',
-       |      line: {color: 'rgb(255, 127, 14)', width: 1},
-       |      yaxis: 'y2'
-       |    };
-       |
-       |    $markers
+       |    var traces = [
+       |${List(tracesJs, markersJs).filter(_.nonEmpty).mkString(",\n")}
+       |    ];
        |
        |    var layout = {
        |      title: 'Flight Data',
-       |      xaxis: {title: 'Data Point Index'},
+       |      xaxis: {title: 'Elapsed time (s)'},
        |      yaxis: {title: 'Altitude (m)'},
        |      yaxis2: {
-       |        title: 'Velocity Down (m/s)',
+       |        title: 'Speed / angle / coefficient',
        |        overlaying: 'y',
        |        side: 'right'
        |      },
@@ -148,62 +177,125 @@ final private[beesight] class ChartGenerator private (config: Config) {
        |
        |    var config = {responsive: true};
        |
-       |    Plotly.newPlot('plot', [altitudeTrace, velocityTrace].concat(transitionMarkers), layout, config);
+       |    Plotly.newPlot('plot', traces, layout, config);
+       |
+       |    document.querySelectorAll('#controls input[type="checkbox"]').forEach(function (checkbox) {
+       |      checkbox.addEventListener('change', function () {
+       |        Plotly.restyle('plot', {visible: checkbox.checked}, [[Number(checkbox.dataset.trace)]]);
+       |      });
+       |    });
        |  </script>
        |</body>
        |</html>
        |""".stripMargin
 
-  private def createTransitionMarkersJs(transitions: List[PhaseTransition]): String =
-    val colorMap = Map(
-      FlightPhase.Climbing      -> "rgb(44, 160, 44)",
-      FlightPhase.Freefall      -> "rgb(214, 39, 40)",
-      FlightPhase.UnderCanopy   -> "rgb(148, 103, 189)",
-      FlightPhase.Landed        -> "rgb(140, 86, 75)",
-      FlightPhase.BeforeTakeoff -> "rgb(128, 128, 128)",
-    )
+  private def traceSpecs[A](state: ChartState[A], metrics: Option[Vector[FlightMetric]]): List[TraceSpec] =
+    metrics match
+      case Some(m) =>
+        val pick = (f: FlightMetric => Double) => m.map(f)
+        List(
+          TraceSpec("Altitude (m)", pick(_.altitude), 1, colors(0), on = true),
+          TraceSpec("Vertical speed (m/s)", pick(_.verticalSpeed), 2, colors(1), on = true),
+          TraceSpec("Horizontal speed (m/s)", pick(_.horizontalSpeed), 2, colors(2), on = true),
+          TraceSpec("Total speed (m/s)", pick(_.totalSpeed), 2, colors(3), on = true),
+          TraceSpec("Glide ratio", pick(_.glideRatio), 2, colors(4), on = false),
+          TraceSpec("Lift coefficient", pick(_.liftCoefficient), 2, colors(5), on = false),
+          TraceSpec("Drag coefficient", pick(_.dragCoefficient), 2, colors(6), on = false),
+          TraceSpec("Dive angle (deg)", pick(_.diveAngle), 2, colors(7), on = false),
+          TraceSpec("Dive rate (deg/s)", pick(_.diveRate), 2, colors(8), on = false),
+          TraceSpec("Turn rate (deg/s)", pick(_.turnRate), 2, colors(9), on = false),
+          TraceSpec("Acceleration H (m/s²)", pick(_.acceleration.horizontal), 2, colors(10), on = false),
+          TraceSpec("Acceleration V (m/s²)", pick(_.acceleration.vertical), 2, colors(11), on = false),
+          TraceSpec("Total energy (J/kg)", pick(_.totalEnergy), 2, colors(12), on = false),
+        )
+      case None =>
+        List(
+          TraceSpec("Altitude (m)", state.altitudes, 1, colors(0), on = true),
+          TraceSpec("Vertical speed (m/s)", state.velDs, 2, colors(1), on = true),
+        )
 
-    val jsMarkers =
-      transitions.map { t =>
-        val color = colorMap.getOrElse(t.phase, "rgb(128, 128, 128)")
-        s"""{
-           |  x: [${t.index}],
-           |  y: [${t.altitude}],
-           |  name: '${t.phase}',
-           |  type: 'scatter',
-           |  mode: 'markers',
-           |  marker: {color: '$color', size: 14, symbol: 'diamond'}
-           |}""".stripMargin
-      }
+  private def markerSpecs(stages: FlightEvents, swoop: Option[SwoopData]): List[MarkerSpec] =
+    val jump = List(
+      stages.takeoff.map(p => MarkerSpec("Takeoff", p.index, p.altitude, "diamond", "rgb(44, 160, 44)")),
+      stages.freefall.map(p => MarkerSpec("Exit", p.index, p.altitude, "diamond", "rgb(214, 39, 40)")),
+      stages.canopy.map(p => MarkerSpec("Canopy", p.index, p.altitude, "diamond", "rgb(148, 103, 189)")),
+      stages.landing.map(p => MarkerSpec("Landing", p.index, p.altitude, "diamond", "rgb(140, 86, 75)")),
+    ).flatten
 
-    s"var transitionMarkers = [${jsMarkers.mkString(",\n")}];"
-
-  private def formatStage(point: Option[EventPoint]): String =
-    point match {
-      case Some(ep) => f"Point ${ep.index} at altitude ${ep.altitude}%.2fm"
-      case None     => "Not detected"
+    val swoopMarkers = swoop.toList.flatMap { data =>
+      val msl = (p: EventPoint) => p.altitude + data.ground.value
+      List(
+        MarkerSpec("Pattern entry", data.patternEntry.index, msl(data.patternEntry), "star", "rgb(31, 119, 180)"),
+        MarkerSpec("Dive point", data.divePoint.index, msl(data.divePoint), "star", "rgb(255, 127, 14)"),
+        MarkerSpec("Turn initiation", data.turnInitiation.index, msl(data.turnInitiation), "star", "rgb(214, 39, 40)"),
+        MarkerSpec("Rollout start", data.rolloutStart.index, msl(data.rolloutStart), "star", "rgb(44, 160, 44)"),
+        MarkerSpec("Bottom of turn", data.bottomOfTurn.index, msl(data.bottomOfTurn), "star", "rgb(148, 103, 189)"),
+        MarkerSpec("Stop", data.stop.index, msl(data.stop), "star", "rgb(140, 86, 75)"),
+      )
     }
 
-  final private case class PhaseTransition(
-    phase: FlightPhase,
-    index: Long,
-    altitude: Double,
-  )
+    jump ++ swoopMarkers
 
-  final private case class ChartState[A](
-    indices: StringBuilder = StringBuilder(),
-    altitudes: StringBuilder = StringBuilder(),
-    velDs: StringBuilder = StringBuilder(),
-    transitions: List[PhaseTransition] = Nil,
-    prevPhase: FlightPhase = FlightPhase.BeforeTakeoff,
-    lastStages: FlightEvents = FlightEvents.empty,
-  )
+  private def lineTracesJs(traces: List[TraceSpec], xsJs: String): String =
+    traces
+      .map { t =>
+        s"""{
+           |  x: $xsJs,
+           |  y: [${t.values.mkString(",")}],
+           |  name: '${t.name}',
+           |  type: 'scatter',
+           |  mode: 'lines',
+           |  line: {color: '${t.color}', width: 1.5},
+           |  yaxis: 'y${t.axis}',
+           |  visible: ${if t.on then "true" else "'legendonly'"},
+           |}""".stripMargin
+      }
+      .mkString(",\n")
 
-}
+  private def markerTracesJs(markers: List[MarkerSpec], xs: Vector[Double]): String =
+    markers
+      .map { m =>
+        val label = m.name
+        s"""{
+           |  x: [${xs(m.index.toInt)}],
+           |  y: [${m.altitude}],
+           |  name: '$label',
+           |  type: 'scatter',
+           |  mode: 'markers+text',
+           |  text: ['$label'],
+           |  textposition: 'top right',
+           |  marker: {color: '${m.color}', size: 12, symbol: '${m.symbol}'},
+           |}""".stripMargin
+      }
+      .mkString(",\n")
 
-private[beesight] object ChartGenerator {
+  private def checkboxesJs(traces: List[TraceSpec]): String =
+    traces
+      .zipWithIndex
+      .map { (trace, index) =>
+        val checked = if trace.on then " checked" else ""
+        s"""    <label><input type="checkbox" data-trace="$index"$checked> ${trace.name}</label>"""
+      }
+      .mkString("\n")
 
-  def apply(config: Config): ChartGenerator =
-    new ChartGenerator(config)
+  private def swoopInfoJs(swoop: Option[SwoopData]): String =
+    swoop.fold("") { data =>
+      s"""    <h3>Swoop Analysis</h3>
+         |    <ul>
+         |      <li><strong>Pattern entry:</strong> ${formatPoint(data.patternEntry)}</li>
+         |      <li><strong>Dive point:</strong> ${formatPoint(data.divePoint)}</li>
+         |      <li><strong>Turn initiation:</strong> ${formatPoint(data.turnInitiation)}</li>
+         |      <li><strong>Rollout start:</strong> ${formatPoint(data.rolloutStart)}</li>
+         |      <li><strong>Bottom of turn:</strong> ${formatPoint(data.bottomOfTurn)}</li>
+         |      <li><strong>Stop:</strong> ${formatPoint(data.stop)}</li>
+         |      <li><strong>Degrees of rotation:</strong> ${data.degreesOfRotation.value}° ${data.turnDirection.productPrefix}</li>
+         |    </ul>"""
+    }
+
+  private def formatStage(point: Option[EventPoint]): String =
+    point.fold("Not detected")(formatPoint)
+
+  private def formatPoint(point: EventPoint): String =
+    f"Point ${point.index} at altitude ${point.altitude}%.2fm"
 
 }
