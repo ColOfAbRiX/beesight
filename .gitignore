@@ -38,13 +38,9 @@ processed/
 /*.log
 /*.csv
 __pycache__
-
-# AI
-.roo/
-plans/
+TODO.md
 
 
 # FIXME: These are temporary until problems fixed
 gswoop/
-
-TODO.md
+.gitignore: target-wsl/.

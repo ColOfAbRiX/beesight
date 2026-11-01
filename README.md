@@ -1,55 +1,35 @@
 # Beesight
 
-**Beesight** is a Scala 3 command-line tool that automatically detects the key flight stages of a skydive from GPS
-data recorded by [Flysight](https://flysight.ca/) and [Airlog One](https://airlog.one/) devices. It identifies
-takeoff, freefall exit, canopy deployment, and landing points, then outputs trimmed CSV files, interactive HTML charts,
-and batch summary reports.
+**Beesight** is a Scala 3 command-line tool that analyses skydiving flight data recorded by
+[FlySight](https://flysight.ca/), [Airlog One](https://airlog.one/) and [Dekunu](https://dekunu.tech/) devices.
+It detects the key flight stages of a jump — takeoff, freefall exit, canopy deployment and landing — computes
+per-point flight metrics, analyses swoop landings, and produces trimmed CSV files, per-point metrics exports,
+swoop landing reports and interactive HTML charts.
 
-Built on [fs2](https://fs2.io/), [Cats Effect](https://typelevel.org/cats-effect/), and
-[Decline](https://ben.kirw.in/decline/), Beesight processes flight data as a streaming pipeline with parallel batch
-support and optional GraalVM native image compilation.
+Built on [fs2](https://fs2.io/), [Cats Effect](https://typelevel.org/cats-effect/) and
+[Decline](https://ben.kirw.in/decline/), Beesight processes flight data as a streaming pipeline of composable
+stages with parallel batch support and optional GraalVM native image compilation.
 
 ## Features
 
-- **Automatic Stage Detection** — Detects takeoff, freefall, canopy, and landing transitions from GPS telemetry
-- **Streaming Pipeline** — Processes files as fs2 streams with constant memory usage
-- **Parallel Batch Processing** — Processes multiple jump files concurrently
-- **Multi-Format Support** — Reads Flysight CSV and Airlog One data formats (both plain and zipped)
-- **Data Trimming** — Cuts output to retain only flight-relevant data points around the jump
-- **Interactive Charts** — Generates HTML charts with altitude and velocity plots using Plotly
-- **Summary Reports** — Produces a CSV summary of detected stages across all processed files
-- **GraalVM Native Image** — Compiles to a standalone native binary for fast startup
-
-## How It Works
-
-Beesight uses a three-step detection algorithm for each flight stage transition:
-
-| Step              | Description                                                                                         |
-|-------------------|-----------------------------------------------------------------------------------------------------|
-| **Trigger**       | Threshold-based checks on speed, acceleration, and altitude to identify candidate transition points |
-| **Validation**    | Forward-looking check that confirms the trajectory after the trigger matches the expected behaviour |
-| **Inflection**    | Backward-looking two-segment linear regression to pinpoint the exact transition point               |
-
-The detection operates on a sliding window of data points. Data is preprocessed with median smoothing and spike
-removal (interpolation-based despiking) before the detection algorithm runs. Each flight stage has its own handler
-with stage-specific thresholds and validation logic.
-
-### Detected Flight Phases
-
-| Phase             | Description                               |
-|-------------------|------------------------------------------ |
-| `BeforeTakeoff`   | On the ground or preparing for the jump   |
-| `Climbing`        | In the aircraft, gaining altitude         |
-| `Freefall`        | After exit, in free fall                  |
-| `UnderCanopy`     | After deployment, descending under canopy |
-| `Landed`          | On the ground after landing               |
+- **Pipeline of stages** — `JumpEvents → Cut → Metrics → Swoop → Charts`, exposed as composable CLI commands
+- **Automatic stage detection** — Detects takeoff, freefall, canopy and landing transitions from GPS telemetry
+- **Per-point flight metrics** — Speeds, course, glide ratio, aerodynamic coefficients, dive and turn rates, energy
+- **Swoop landing analysis** — Pattern entry, dive point, turn initiation, rollout start, bottom of turn, stop,
+  degrees of rotation, turn direction and duration
+- **Interactive charts** — Single-figure HTML chart with toggleable traces, elapsed-time axis and detected points
+- **Metadata file cache** — The detection results are cached per file and invalidated independently by the
+  configuration that produced it, so repeated or chained commands skip recomputation
+- **Multi-format support** — FlySight, Airlog One and Dekunu data, plain or zipped, with conversion to FlySight CSV
+- **Parallel batch processing** — Processes multiple files concurrently, with optional limits
+- **GraalVM native image** — Compiles to a standalone native binary for fast startup
 
 ## Installation
 
 ### Prerequisites
 
 - **JDK 21+** (GraalVM required for native image builds)
-- **sbt 1.12+**
+- **sbt 2.x**
 
 ### Build from Source
 
@@ -58,10 +38,10 @@ with stage-specific thresholds and validation logic.
 sbt compile
 
 # Run directly
-sbt run -- -i /path/to/flysight/data
+sbt --server -batch "run --input /path/to/data analyse"
 
 # Run tests
-sbt test
+sbt --server -batch "beesight/Test/testOnly *Spec"
 ```
 
 ### Native Image Build
@@ -76,88 +56,125 @@ The binary will be placed in `dist/beesight.bin`.
 
 ## Usage
 
-### Basic Usage
+### Commands
 
-Process all CSV/ZIP files in a directory:
+Beesight exposes a pipeline of stages as decline subcommands. When no subcommand is given, `jumpevents` runs.
 
-```bash
-sbt "run -i /path/to/flysight/data"
-```
+| Command      | Description                                                              |
+|--------------|--------------------------------------------------------------------------|
+| `jumpevents` | Detect the jump events and write the processed CSV (default command)     |
+| `analyse`    | Run the full analysis: jump events, metrics, swoop and charts            |
+| `convert`    | Convert the input files to FlySight CSV format                           |
+| `metrics`    | Export the flight metrics of each file as CSV                            |
+| `swoop`      | Produce the swoop landing analysis report                                |
+| `charts`     | Generate the interactive HTML charts                                     |
+| `cut`        | Write the processed CSV trimmed around the detected jump                 |
 
-Process a single file:
+The `metrics`, `swoop` and `charts` commands automatically run the jump-events detection they depend on. The
+`analyse` command runs everything.
 
-```bash
-sbt "run -i /path/to/flysight/Jump\ 1234.zip"
-```
-
-Use glob patterns:
-
-```bash
-sbt "run -i /path/to/data/**/*.csv"
-```
-
-### CLI Options
-
-| Option                    | Short | Description                                           | Default         |
-|---------------------------|-------|-------------------------------------------------------|-----------------|
-| `--input`                 | `-i`  | Input path (file, directory, or glob pattern)         | `.`             |
-| `--output`                | `-o`  | Output directory for produced files                   | `../processed/` |
-| `--limit`                 | `-l`  | Maximum number of files to process                    | No limit        |
-| `--parallelism`           |       | Number of concurrent threads for batch processing     | No limit        |
-| `--keep-before-takeoff`   |       | Number of data points to keep before detected takeoff | `500`           |
-| `--keep-after-landing`    |       | Number of data points to keep after detected landing  | `500`           |
-| `--min-retain-points`     |       | Minimum percentage of data points to retain (0.0–1.0) | `0.1`           |
-| `--dry-run`               | `-n`  | Run without creating output files                     | `false`         |
-| `--toggle-write-csv`      |       | Toggle CSV output writing                             | Enabled         |
-| `--toggle-create-graph`   |       | Toggle HTML chart generation                          | Disabled        |
-| `--toggle-create-summary` |       | Toggle summary CSV creation                           | Disabled        |
-
-### Examples
-
-Process with chart generation enabled:
+The command line is structured as `beesight <global options> <command> <command options>`: global options go
+before the command, and each command has its own options after its name — an option given to a command that does
+not accept it is an error.
 
 ```bash
-sbt "run -i /path/to/data --toggle-create-graph --toggle-create-summary"
+# Full analysis of a whole directory
+sbt --server -batch "run --input /path/to/data analyse"
+
+# Only the swoop report of a single jump
+sbt --server -batch "run --input '/path/to/Jump 1234.zip' swoop"
+
+# Convert every file to the FlySight CSV format
+sbt --server -batch "run --input '/path/to/data/**/*.csv' convert"
+
+# Trimmed CSV with tuned cut margins
+sbt --server -batch "run --input /path/to/data cut --keep-before-takeoff 200 --min-retain-points 0.3"
 ```
 
-Process first 10 files with limited parallelism:
+### Global Options
 
-```bash
-sbt "run -i /path/to/data -l 10 --parallelism 4"
-```
+Global options apply to every command and go before the command name.
 
-Dry run to preview detection without writing files:
+| Option          | Short | Description                                   | Default |
+|-----------------|-------|-----------------------------------------------|---------|
+| `--input`       | `-i`  | Input path (file, directory, or glob pattern) | `.`     |
+| `--output`      | `-o`  | Output directory for produced files           | The input directory |
+| `--limit`       | `-l`  | Maximum number of files to process            | No limit |
+| `--parallelism` |       | Number of concurrent files to process         | `1` |
+| `--dry-run`     | `-n`  | Run the pipeline without writing any file     | `false` |
 
-```bash
-sbt "run -i /path/to/data -n"
-```
+### Command Options
 
-## Output
+Cut options are accepted by `jumpevents`, `analyse` and `cut` — the commands that write the processed CSV.
 
-### Processed CSV
+| Option                   | Description                                                        | Default |
+|--------------------------|--------------------------------------------------------------------|---------|
+| `--keep-before-takeoff`  | Number of points to keep before a detected takeoff                 | `500`   |
+| `--keep-after-landing`   | Number of points to keep after a detected landing                  | `500`   |
+| `--min-retain-points`    | Minimum fraction of data points to retain (0.0–1.0)                | `0.1`   |
 
-Each input file produces a corresponding CSV in the output directory with an added `phase` column indicating the
-detected flight phase for each data point. The CSV is trimmed to include only the jump-relevant portion of the data.
+Detection options are accepted by `jumpevents`, `analyse`, `cut`, `metrics` and `swoop`.
 
-### HTML Chart
+| Option                      | Description                                                        | Default |
+|-----------------------------|--------------------------------------------------------------------|---------|
+| `--detection-config-path`   | Path to a HOCON file overriding the detection configuration        | —       |
+| `--detection-config-string` | HOCON string overriding the detection configuration                | —       |
 
-When enabled with `--toggle-create-graph`, an interactive HTML chart is generated for each file showing:
+`charts` and `convert` take no options.
 
-- Altitude over time
-- Vertical velocity over time
-- Detected stage transition markers
+## Output Files
 
-### Summary CSV
+Every input file produces its outputs next to the processed CSV; the metadata file is written next to the input,
+keeping its full name (e.g. `jump_1002.zip.meta`).
 
-When enabled with `--toggle-create-summary`, a single `summary.csv` is generated containing the detected stage
-points (index and altitude) for all processed files.
+| Output            | File                          | Produced by            |
+|-------------------|-------------------------------|------------------------|
+| Processed CSV     | `<base>.csv`                  | `jumpevents`, `cut`    |
+| FlySight CSV      | `<base>.flysight.csv`         | `convert`              |
+| Metrics CSV       | `<base>.metrics.csv`          | `metrics`              |
+| Swoop report      | `<base>.swoop.json`           | `swoop`                |
+| Interactive chart | `<base>.html`                 | `charts`               |
+| Metadata file     | `<input-full-name>.meta`      | every command          |
+
+### The Metadata File
+
+Each metadata file caches the detection results of its input file: the jump-event points and the cut summary,
+together with the SHA-256 hash of the configuration that produced them. A section is reused only when its
+configuration is unchanged; stale or corrupt files degrade to an empty cache and are rebuilt. The metrics, swoop
+and chart outputs are always recomputed from the input, so the metadata file never duplicates the output files.
+
+## The Chart
+
+The interactive chart is a single Plotly figure over an elapsed-time axis with a checkbox per trace: altitude and
+the three speed components are enabled on load; glide ratio, lift/drag coefficients, dive angle and rate, turn
+rate, horizontal/vertical acceleration and total energy are rendered only when metrics are available and are off
+until ticked. Detected points — takeoff, exit, canopy, landing, and the six swoop points — are marked on the
+plot, each group toggleable from the legend.
 
 ## Supported Data Formats
 
-| Format        | File Types       | Description                                                   |
-|---------------|------------------|---------------------------------------------------------------|
-| **Flysight**  | `.csv`, `.zip`   | [Flysight GPS](https://flysight.ca/) data with velocity data  |
-| **Airlog One**| `.csv`, `.zip`   | [Airlog One](https://airlog.one/) altimeter data              |
+| Format        | File types      | Description                                                    |
+|---------------|-----------------|----------------------------------------------------------------|
+| **FlySight**  | `.csv`, `.zip`  | [FlySight GPS](https://flysight.ca/) data with velocity        |
+| **Airlog One**| `.csv`, `.zip`  | [Airlog One](https://airlog.one/) altimeter data               |
+| **Dekunu**    | `.csv`, `.zip`  | [Dekunu](https://dekunu.tech/) altimeter data                  |
+
+Input discovery accepts single files, directories, and glob patterns (`*.csv`, `*.zip`, `**/*.csv`, `**/*.zip`).
+Zip archives are transparently unarchived.
+
+## Project Structure
+
+```
+├── beesight/                # The CLI application (this module)
+│   ├── config/              # CLI and detection configuration
+│   ├── input/               # CSV/ZIP file reading and discovery
+│   ├── metadata/            # Metadata file cache: hashes, JSON codecs
+│   ├── output/              # Writers (CSV, chart, report), data cutter, path handling
+│   └── pipeline/            # Stage orchestration: runner and per-stage executors
+├── beesight-detection/      # Detection library: jump events, metrics, swoop analysis
+├── beesight-formats/        # Device formats library: readers, writers, converters
+└── beesight-benchmarks/     # JMH benchmarks
+```
 
 ## Development
 
@@ -169,23 +186,6 @@ sbt styleApply
 
 # Check formatting and linting
 sbt styleCheck
-```
-
-### Project Structure
-
-```
-src/main/scala/com/colofabrix/scala/beesight/
-├── collections/       # NonEmptyWindow sliding window data structure
-├── config/            # CLI and detection configuration
-├── jumpevents/        # Jump event point detection engine
-│   ├── handlers/      # Per-event detection handlers (takeoff, freefall, canopy, landing)
-│   └── model/         # Detector state and config actions
-├── math/              # Interpolation, kinematics, statistics
-├── model/             # Domain types (flight phases, events, vectors)
-├── preprocess/        # Data smoothing and despiking
-├── input/             # CSV/ZIP file reading
-├── output/            # CSV writing, chart generation, result printing
-└── utils/             # Stream utilities and helpers
 ```
 
 ## License
@@ -205,5 +205,6 @@ Beesight is released under the MIT license. See [LICENSE](LICENSE) for details.
 - [Flysight](https://flysight.ca/) — GPS logger for skydivers
 - [Flysight File Format](https://flysight.ca/wiki/index.php/File_format) — CSV format documentation
 - [Airlog One](https://airlog.one/) — Digital altimeter for skydivers
+- [Dekunu](https://dekunu.tech/) — Digital altimeter for skydivers
 - [fs2](https://fs2.io/) — Functional streams for Scala
 - [Cats Effect](https://typelevel.org/cats-effect/) — Pure asynchronous runtime for Scala

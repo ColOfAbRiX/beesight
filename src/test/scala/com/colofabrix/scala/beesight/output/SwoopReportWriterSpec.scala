@@ -21,7 +21,7 @@ class SwoopReportWriterSpec extends AnyFreeSpec with Matchers {
       actual shouldBe expected
     }
 
-    "round-trips through the sidecar codecs" in {
+    "round-trips through the metadata file codecs" in {
       val expected = Right(swoop)
 
       val actual = parser.decode[StoredSwoopData](SwoopReportWriter.toJson(swoop)).flatMap(_.toSwoopData)

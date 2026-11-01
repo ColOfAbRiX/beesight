@@ -37,39 +37,6 @@ final case class StoredCutSummary(
   lastRetainedIndex: Long,
 ) derives Encoder.AsObject, Decoder
 
-/** Per-point flight metrics flattened for JSON storage. */
-final case class StoredMetric(
-  time: Instant,
-  altitude: Double,
-  verticalSpeed: Double,
-  horizontalSpeed: Double,
-  totalSpeed: Double,
-  course: Double,
-  courseRate: Double,
-  courseAccuracy: Option[Double],
-  courseAccuracyEstimate: Option[Double],
-  glideRatio: Double,
-  liftCoefficient: Double,
-  dragCoefficient: Double,
-  diveAngle: Double,
-  diveRate: Double,
-  turnRate: Double,
-  speedAccuracy: Option[Double],
-  horizontalAccuracy: Option[Double],
-  verticalAccuracy: Option[Double],
-  satellites: Option[Int],
-  accelerationNorth: Double,
-  accelerationEast: Double,
-  accelerationVertical: Double,
-  accelerationMagnitude: Double,
-  accelerationAlongTrack: Double,
-  accelerationCrossTrack: Double,
-  totalEnergy: Double,
-  energyRate: Double,
-  sphericalErrorProbably: Option[Double],
-  speedScoreAccuracy: Option[Double],
-) derives Encoder.AsObject, Decoder
-
 /** A flight point flattened for JSON storage. */
 final case class StoredPoint(
   index: Long,

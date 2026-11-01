@@ -11,28 +11,27 @@ import com.colofabrix.scala.beesight.metadata.ConfigHash.*
 import com.colofabrix.scala.beesight.metadata.StoredConversions.*
 
 /**
- * Runs the jump-events detection stage, reusing the cached detection when the sidecar section is fresh.
+ * Runs the jump-events detection stage, reusing the cached detection when the metadata file section is fresh.
  */
 object JumpEventsStage {
 
-  final case class Result[A](
+  final case class DetectedEvents[A](
     rows: Vector[(FlightEvents, A)],
     finalEvents: FlightEvents,
-    section: JumpEventsSection,
+    configHash: ConfigHash,
+    storedEvents: StoredFlightEvents,
   )
 
-  def run[A: PointReader](points: Vector[A], sidecar: Sidecar): IOConfig[Result[A]] =
+  def run[A: PointReader](points: Vector[A], metadataFile: MetadataFile): IOConfig[DetectedEvents[A]] =
     IOConfig
       .ask
       .flatMap { config =>
-        val configHash = config.detectionConfig.jumpevents.configHash
+        val configHash = config.configHash
 
-        sidecar
-          .sections
-          .jumpevents
-          .filter(_.configHash === configHash)
-          .fold(runDetection[A](config, points, configHash)) { section =>
-            loadFromSidecar[A](section, points).pure[IOConfig]
+        metadataFile.jumpevents
+          .filter(_ => metadataFile.configHash === configHash)
+          .fold(runDetection[A](config, points, configHash)) { events =>
+            loadFromMetadataFile[A](events, points, configHash).pure[IOConfig]
           }
       }
 
@@ -40,7 +39,7 @@ object JumpEventsStage {
     cfg: Config,
     points: Vector[A],
     configHash: ConfigHash,
-  ): IOConfig[Result[A]] =
+  ): IOConfig[DetectedEvents[A]] =
     val detector    = JumpEventsDetector(cfg.detectionConfig.jumpevents)
     val pointStream = fs2.Stream.emits[IOConfig, A](points)
 
@@ -49,20 +48,24 @@ object JumpEventsStage {
       .toVector
       .map { zipped =>
         val finalEvents = zipped.lastOption.fold(FlightEvents.empty)(_._1)
-        Result(zipped, finalEvents, JumpEventsSection(configHash, finalEvents.toStored))
+        DetectedEvents(zipped, finalEvents, configHash, finalEvents.toStored)
       }
 
-  private def loadFromSidecar[A](section: JumpEventsSection, points: Vector[A]): Result[A] =
-    val events = section.events.toFlightEvents
-    val rows   =
+  private def loadFromMetadataFile[A](
+    events: StoredFlightEvents,
+    points: Vector[A],
+    configHash: ConfigHash,
+  ): DetectedEvents[A] =
+    val detected = events.toFlightEvents
+    val rows     =
       points
         .zipWithIndex
         .map {
           case (point, index) =>
-            (flightEventsAt(events, index.toLong), point)
+            (flightEventsAt(detected, index.toLong), point)
         }
 
-    Result(rows, events, section)
+    DetectedEvents(rows, detected, configHash, events)
 
   private def flightEventsAt(events: FlightEvents, index: Long): FlightEvents =
     FlightEvents(

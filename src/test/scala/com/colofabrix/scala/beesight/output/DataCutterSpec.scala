@@ -29,7 +29,7 @@ class DataCutterSpec extends AnyFreeSpec with Matchers {
       val config   = DataCutterConfig(KeepPoints(0), KeepPoints(0), Percent(0.1))
       val expected = DataCutter.CutSummary(true, 10, 3, 4, 6)
 
-      val actual = cutter(config).cutWithSummary(rows)
+      val actual = cutter(config).cutVector(rows)
 
       actual.summary shouldBe expected
       actual.retained shouldBe Vector(rows(4), rows(5), rows(6))
@@ -39,7 +39,7 @@ class DataCutterSpec extends AnyFreeSpec with Matchers {
       val config   = DataCutterConfig(KeepPoints(2), KeepPoints(0), Percent(0.1))
       val expected = DataCutter.CutSummary(true, 10, 5, 2, 6)
 
-      val actual = cutter(config).cutWithSummary(rows)
+      val actual = cutter(config).cutVector(rows)
 
       actual.summary shouldBe expected
       actual.retained shouldBe Vector(rows(2), rows(3), rows(4), rows(5), rows(6))
@@ -49,17 +49,17 @@ class DataCutterSpec extends AnyFreeSpec with Matchers {
       val config   = DataCutterConfig(KeepPoints(0), KeepPoints(0), Percent(0.5))
       val expected = DataCutter.CutSummary(false, 10, 10, 0, 9)
 
-      val actual = cutter(config).cutWithSummary(rows)
+      val actual = cutter(config).cutVector(rows)
 
       actual.summary shouldBe expected
       actual.retained shouldBe rows
     }
 
-    "converts the summary to the sidecar format" in {
+    "converts the summary to the metadata file format" in {
       val config   = DataCutterConfig(KeepPoints(0), KeepPoints(0), Percent(0.1))
       val expected = StoredCutSummary(true, 10, 3, 4, 6)
 
-      val actual = cutter(config).cutWithSummary(rows).summary.toStored
+      val actual = cutter(config).cutVector(rows).summary.toStored
 
       actual shouldBe expected
     }

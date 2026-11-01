@@ -121,31 +121,3 @@ addCommandAlias(
   "nativeImage",
   "GraalVMNativeImage / packageBin"
 )
-addCommandAlias(
-  "bench",
-  "beesightBenchmarks/Jmh/run -i 10 -wi 5 -f 2 -t 1"
-)
-addCommandAlias(
-  "benchPipeline",
-  "beesightBenchmarks/runMain com.colofabrix.scala.beesight.detection.bench.PipelineBenchmark"
-)
-addCommandAlias(
-  "benchSaveBaseline",
-  "beesightBenchmarks/runMain com.colofabrix.scala.beesight.detection.bench.PipelineBenchmark --save-baseline"
-)
-addCommandAlias(
-  "benchCompare",
-  "beesightBenchmarks/runMain com.colofabrix.scala.beesight.detection.bench.PipelineBenchmark --compare"
-)
-addCommandAlias(
-  "benchSwoop",
-  "beesightBenchmarks/runMain com.colofabrix.scala.beesight.detection.bench.SwoopBenchmark"
-)
-addCommandAlias(
-  "benchSwoopSaveBaseline",
-  "beesightBenchmarks/runMain com.colofabrix.scala.beesight.detection.bench.SwoopBenchmark --save-baseline"
-)
-addCommandAlias(
-  "benchSwoopCompare",
-  "beesightBenchmarks/runMain com.colofabrix.scala.beesight.detection.bench.SwoopBenchmark --compare"
-)

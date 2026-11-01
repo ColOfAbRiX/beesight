@@ -29,15 +29,9 @@ object Config {
       command = Command.default,
     )
 
-  /**
-   * Decline-style CLI options assembling a [[Config]], falling back to [[default]] for omitted options.
-   */
   lazy val declineOpts: Opts[Config] =
-    (
-      GlobalOptions.declineOpts,
-      BeesightConfigCli.declineOpts,
-      DataCutterConfig.declineOpts,
-      Command.declineOpts,
-    ).mapN(Config.apply)
+    (GlobalOptions.declineOpts, Command.declineOpts).mapN { (global, options) =>
+      Config(global, options.detectionConfig, options.dataCutterConfig, options.command)
+    }
 
 }

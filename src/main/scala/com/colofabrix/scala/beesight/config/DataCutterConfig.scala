@@ -29,9 +29,6 @@ object DataCutterConfig {
       minRetainedPoints = 0.1,
     )
 
-  /**
-   * Decline-style CLI options assembling a [[DataCutterConfig]].
-   */
   lazy val declineOpts: Opts[DataCutterConfig] =
     (keepBeforeTakeoff, keepAfterLanding, minRetainedPoints).mapN(DataCutterConfig.apply)
 

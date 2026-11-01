@@ -16,7 +16,7 @@ private[beesight] object FileOps {
    */
   def discoverCsvFiles(): IOConfig[List[Path]] =
     IOConfig.ask.flatMap { config =>
-      val (baseDir, glob) = parseInputAsGlob(config.global.input)
+      val (baseDir, glob) = WorkingPaths.parseInputAsGlob(config.global.input)
       val matcher         = FileSystems.getDefault.getPathMatcher(s"glob:${glob.toLowerCase}")
 
       IOConfig
@@ -42,7 +42,7 @@ private[beesight] object FileOps {
     }
 
   /**
-   * Computes the output path and creates parent directories
+   * Creates the parent directory of the processed CSV
    */
   def createOutputDirectory(paths: WorkingPaths): IOConfig[Unit] =
     IOConfig
@@ -50,63 +50,4 @@ private[beesight] object FileOps {
         Files.createDirectories(paths.outputFile.getParent)
       }
       .map(_ => ())
-
-  /** Computes the processed-CSV path for an input file, relative to the input base directory and the configured output directory */
-  def computeOutputPath(inputFile: Path): IOConfig[Path] =
-    IOConfig.ask.map { config =>
-      val (inputBaseDir, _) = parseInputAsGlob(config.global.input)
-      val parent            = Option(inputBaseDir.getParent).getOrElse(Paths.get("."))
-      val inputDirName      = inputBaseDir.getFileName
-      val relativePath      = inputBaseDir.relativize(inputFile.toAbsolutePath.normalize)
-      val relativeDir       = Option(relativePath.getParent).getOrElse(Paths.get(""))
-
-      config
-        .global
-        .output
-        .getOrElse(parent.resolve("processed"))
-        .resolve(inputDirName)
-        .resolve(relativeDir)
-        .resolve(processedFileName(inputFile))
-        .toAbsolutePath
-        .normalize
-    }
-
-  /**
-   * Returns the base directory from the input configuration
-   */
-  private[beesight] def getInputBaseDir(): IOConfig[Path] =
-    IOConfig.ask.map { config =>
-      val (baseDir, _) = parseInputAsGlob(config.global.input)
-      baseDir
-    }
-
-  private def processedFileName(inputFile: Path): Path =
-    val name = inputFile.getFileName.toString
-
-    if name.toLowerCase.endsWith(".zip") then
-      Paths.get(name.substring(0, name.length - 4) + ".csv")
-    else
-      inputFile.getFileName
-
-  private def parseInputAsGlob(input: Path): (Path, String) =
-    val absoluteInput = input.toAbsolutePath.normalize
-    val inputStr      = absoluteInput.toString
-
-    if Files.isRegularFile(absoluteInput) then
-      val parent = Option(absoluteInput.getParent).getOrElse(Paths.get("."))
-      (parent, absoluteInput.getFileName.toString)
-    else if Files.isDirectory(absoluteInput) then
-      (absoluteInput, "{*.csv,*.zip,**/*.csv,**/*.zip}")
-    else if inputStr.contains("*") || inputStr.contains("?") then
-      val idx     = inputStr.indexWhere(c => c == '*' || c == '?')
-      val lastSep = inputStr.lastIndexOf(FileSystems.getDefault.getSeparator, idx)
-
-      if lastSep >= 0 then
-        (Paths.get(inputStr.substring(0, lastSep)), inputStr.substring(lastSep + 1))
-      else
-        (Paths.get(".").toAbsolutePath.normalize, inputStr)
-    else
-      val parent = Option(absoluteInput.getParent).getOrElse(Paths.get("."))
-      (parent, absoluteInput.getFileName.toString)
-
 }

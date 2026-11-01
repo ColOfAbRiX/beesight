@@ -36,9 +36,6 @@ object GlobalOptions {
       dryRun = false,
     )
 
-  /**
-   * Decline-style CLI options assembling a [[GlobalOptions]], falling back to [[default]] for omitted options.
-   */
   lazy val declineOpts: Opts[GlobalOptions] =
     (input, output, processLimit, parallelism, dryRun).mapN(GlobalOptions.apply)
 

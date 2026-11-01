@@ -33,37 +33,6 @@ class StoredConversionsSpec extends AnyFreeSpec with Matchers {
     bottomOfTurn = point.copy(index = 10),
   )
 
-  private val metricTime = Instant.parse("2026-01-15T10:00:00Z")
-  private val metric     = FlightMetric(
-    time = metricTime,
-    altitude = 1200.5,
-    verticalSpeed = 40.0,
-    horizontalSpeed = 30.0,
-    totalSpeed = 50.0,
-    course = 315.0,
-    courseRate = 12.5,
-    courseAccuracy = Some(1.5),
-    courseAccuracyEstimate = Some(2.5),
-    glideRatio = 0.75,
-    liftCoefficient = 0.4,
-    dragCoefficient = 0.1,
-    diveAngle = 45.0,
-    diveRate = -3.5,
-    turnRate = 90.0,
-    speedAccuracy = Some(0.5),
-    horizontalAccuracy = Some(1.0),
-    verticalAccuracy = Some(1.5),
-    satellites = Some(14),
-    acceleration = GeoVector(1.5, -2.5, 9.8),
-    accelerationMagnitude = 10.4,
-    accelerationAlongTrack = 9.5,
-    accelerationCrossTrack = 0.5,
-    totalEnergy = 2500.0,
-    energyRate = -125.0,
-    sphericalErrorProbably = Some(3.5),
-    speedScoreAccuracy = Some(0.25),
-  )
-
   "StoredConversions" - {
 
     "round-trips an event point" in {
@@ -82,12 +51,6 @@ class StoredConversionsSpec extends AnyFreeSpec with Matchers {
       val actual = swoop.toStored.toSwoopData
 
       actual shouldBe Right(swoop)
-    }
-
-    "round-trips flight metrics" in {
-      val actual = metric.toStored.toFlightMetric
-
-      actual shouldBe metric
     }
 
     "accepts turn directions in any casing" in {

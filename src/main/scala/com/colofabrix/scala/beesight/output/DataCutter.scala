@@ -4,6 +4,7 @@ import com.colofabrix.scala.beesight.config.*
 import com.colofabrix.scala.beesight.detection.model.*
 import com.colofabrix.scala.beesight.output.DataCutter.*
 import scala.collection.immutable.Queue
+import com.colofabrix.scala.beesight.IOConfig
 
 /**
  * Cuts flight data streams to retain only flight-relevant points from takeoff to landing.
@@ -17,12 +18,14 @@ final private[beesight] class DataCutter private (config: Config) {
     stream =>
       stream
         .fold(Vector.empty[RichRow[A]])(_ :+ _)
-        .flatMap(allPoints => fs2.Stream.emits(cutWithSummary(allPoints).retained))
+        .flatMap { allPoints => 
+          fs2.Stream.emits(cutVector(allPoints).retained)
+        }
 
   /**
-   * Cuts the given points and reports what was kept, for the metadata sidecar.
+   * Cuts the given points and reports what was kept, for the metadata file.
    */
-  def cutWithSummary[A](points: Vector[RichRow[A]]): CutResult[A] = {
+  def cutVector[A](points: Vector[RichRow[A]]): CutResult[A] = {
     val cut     = applyCutting(points)
     val ratio   = if points.isEmpty then 1.0 else cut.size.toDouble / points.size
     val applied = ratio >= config.dataCutterConfig.minRetainedPoints.value
@@ -123,7 +126,7 @@ final private[beesight] class DataCutter private (config: Config) {
 
 private[beesight] object DataCutter {
 
-  /** What the cut operation kept from the input, reported to the metadata sidecar. */
+  /** What the cut operation kept from the input, reported to the metadata file. */
   final case class CutSummary(
     applied: Boolean,
     totalPoints: Long,
@@ -170,5 +173,8 @@ private[beesight] object DataCutter {
 
   def apply(config: Config): DataCutter =
     new DataCutter(config)
+
+  def apply(): IOConfig[DataCutter] =
+    IOConfig.ask.map(config => new DataCutter(config))
 
 }
