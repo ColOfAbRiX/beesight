@@ -17,7 +17,7 @@ echo "native-image: $(native-image --version 2>&1 | head -1)"
 echo ""
 
 cd "$PROJECT_DIR"
-sbt --no-colors nativeImage
+sbt --no-colors "; set graalVMNativeImageCommand := \"$GRAALVM_HOME/bin/native-image\"; nativeImage"
 
 echo ""
 echo "=== Installing to dist/ ==="

@@ -39,6 +39,22 @@ class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
     bottomOfTurn = point.copy(index = 2),
   )
 
+  private val cutState = ChartState(
+    times = Vector(at.plusSeconds(100), at.plusSeconds(101), at.plusSeconds(102)),
+    altitudes = Vector(1000.0, 990.0, 980.0),
+    velDs = Vector(40.0, 42.0, 44.0),
+    stages = FlightEvents(
+      takeoff = Some(point.copy(index = 1000, time = at.plusSeconds(100))),
+      freefall = Some(point.copy(index = 4072, time = at.plusSeconds(101))),
+      canopy = Some(point.copy(index = 4103, time = at.plusSeconds(101))),
+      landing = Some(point.copy(index = 5148, time = at.plusSeconds(102))),
+    ),
+  )
+  private val cutSwoop = swoop.copy(
+    patternEntry = point.copy(index = 4000, time = at.plusSeconds(101)),
+    divePoint = point.copy(index = 4500, time = at.plusSeconds(102)),
+  )
+
   "ChartHtml" - {
 
     "renders every metric trace when metrics are available" in {
@@ -73,8 +89,8 @@ class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
       val full  = ChartHtml.build(state, Some(metrics), None)
       val basic = ChartHtml.build(state, None, None)
 
-      """data-trace="\d+" checked>""".r.findAllIn(full).size shouldBe 4
-      """data-trace="\d+" checked>""".r.findAllIn(basic).size shouldBe 2
+      """'[^']+': true""".r.findAllIn(full).size shouldBe 4
+      """'[^']+': true""".r.findAllIn(basic).size shouldBe 2
     }
 
     "marks the detected jump events" in {
@@ -94,6 +110,13 @@ class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
       val html = ChartHtml.build(state, Some(metrics), None)
 
       html should not include "Pattern entry"
+    }
+
+    "locates markers by timestamp when the data is cut" in {
+      val html = ChartHtml.build(cutState, None, Some(cutSwoop))
+
+      List("value: [0.0, 1200.0]", "value: [1.0, 1200.0]", "value: [2.0, 1200.0]")
+        .foreach(markerValue => html should include(markerValue))
     }
 
     "plots against elapsed time" in {

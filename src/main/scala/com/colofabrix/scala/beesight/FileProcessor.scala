@@ -26,10 +26,13 @@ private[beesight] object FileProcessor {
         case FileFormat.Generic  => processFileAs[GenericPoint](inputFile)
       }
       .handleErrorWith { error =>
-        s"ERROR processing $inputFile: ${error.getMessage}"
+        s"ERROR processing ${relative(inputFile)}: ${error.getMessage}"
           .stderr
           .as(())
       }
+
+  private def relative(path: Path): String =
+    Path.of("").toAbsolutePath.relativize(path.toAbsolutePath).toString
 
   private def detectFormat(filePath: Path): IOConfig[FileFormat] =
     for
@@ -45,7 +48,7 @@ private[beesight] object FileProcessor {
       cfg   <- IOConfig.ask[IO, Config]
       paths <- WorkingPaths(inputFile)
       _     <- FileOps.createOutputDirectory(paths)
-      _     <- s"Processing: $inputFile -> ${paths.outputFile}".stdout
+      _     <- s"Processing: ${relative(inputFile)} -> ${relative(paths.outputFile)}".stdout
       _     <- cfg.command match {
              case Command.Convert => FileConverter.convertFile[A](paths)
              case _               => StagesRunner.run[A](paths)

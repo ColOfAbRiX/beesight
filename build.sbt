@@ -12,6 +12,15 @@ Global / tpolecatExcludeOptions ++=
     ScalacOptions.privateKindProjector,
   )
 
+Global / excludeLintKeys ++=
+  Set(
+    com.typesafe.sbt.packager.Keys.daemonStdoutLogFile,
+    com.typesafe.sbt.packager.Keys.executableScriptName,
+    com.typesafe.sbt.packager.Keys.rpmScriptsDirectory,
+    name,
+    sourceDirectory,
+  )
+
 lazy val commonSettings =
   Seq(
     organization                 := "com.colofabrix.scala",
@@ -58,7 +67,7 @@ lazy val beesight =
         "--no-fallback",
         "--initialize-at-build-time",
         "-H:+UnlockExperimentalVMOptions",
-        "-H:IncludeResources=reference.conf",
+        "-H:IncludeResources=reference.conf|chart/.*",
         "-H:ConfigurationFileDirectories=src/main/resources/META-INF/native-image",
       ),
       // In-process tests: the forked-test event protocol leaks oversized JSON notifications to the console

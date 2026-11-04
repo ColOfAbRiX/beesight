@@ -74,10 +74,17 @@ private[beesight] object ChartState {
 }
 
 /**
- * Renders the chart HTML: one figure with all the available traces, a checkbox per trace, and the detected points
+ * Renders the chart HTML: one figure with all the available traces, a legend to toggle them, and the detected points
  * marked on the plot.
  */
 private[beesight] object ChartHtml {
+
+  private lazy val echartsLib: String = {
+    val stream = Option(getClass.getResourceAsStream("/chart/echarts.min.js"))
+      .getOrElse(sys.error("chart/echarts.min.js is missing from the classpath"))
+    try scala.io.Source.fromInputStream(stream, "UTF-8").mkString
+    finally stream.close()
+  }
 
   final private case class TraceSpec(
     name: String,
@@ -89,7 +96,7 @@ private[beesight] object ChartHtml {
 
   final private case class MarkerSpec(
     name: String,
-    index: Long,
+    time: Instant,
     altitude: Double,
     symbol: String,
     color: String,
@@ -116,27 +123,22 @@ private[beesight] object ChartHtml {
     metrics: Option[Vector[FlightMetric]],
     swoop: Option[SwoopData],
   ): String =
-    val t0   = state.times.headOption.getOrElse(Instant.EPOCH)
-    val xs   = state.times.map(t => Duration.between(t0, t).toMillis / 1000.0)
-    val xsJs = xs.mkString("[", ",", "]")
-
-    val traces     = traceSpecs(state, metrics)
-    val markers    = markerSpecs(state.stages, swoop)
-    val tracesJs   = lineTracesJs(traces, xsJs)
-    val markersJs = markerTracesJs(markers, xs)
+    val t0        = state.times.headOption.getOrElse(Instant.EPOCH)
+    val xs        = state.times.map(t => Duration.between(t0, t).toMillis / 1000.0)
+    val traces    = traceSpecs(state, metrics)
+    val markers   = markerSpecs(state.stages, swoop)
+    val seriesJs = List(lineSeriesJs(traces, xs), markerSeriesJs(markers, t0)).filter(_.nonEmpty).mkString(",\n")
+    val legend   = legendOptJs(traces)
 
     s"""<!DOCTYPE html>
        |<html>
        |<head>
        |  <meta charset="utf-8">
        |  <title>Flight Analysis</title>
-       |  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
        |  <style>
        |    body { margin: 0; padding: 20px; font-family: sans-serif; background: #f5f5f5; }
        |    h1 { color: #333; }
        |    #plot { width: 100%; height: 80vh; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-       |    #controls { margin-top: 15px; display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 12px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-       |    #controls label { font-size: 14px; color: #333; white-space: nowrap; }
        |    .info { margin-top: 20px; padding: 15px; background: white; border-radius: 8px; }
        |    .info h3 { margin-top: 0; }
        |  </style>
@@ -144,9 +146,6 @@ private[beesight] object ChartHtml {
        |<body>
        |  <h1>Flight Analysis</h1>
        |  <div id="plot"></div>
-       |  <div id="controls">
-       |${checkboxesJs(traces)}
-       |  </div>
        |  <div class="info">
        |    <h3>Detected Flight Stages</h3>
        |    <ul>
@@ -158,32 +157,29 @@ private[beesight] object ChartHtml {
        |${swoopInfoJs(swoop)}
        |  </div>
        |  <script>
-       |    var traces = [
-       |${List(tracesJs, markersJs).filter(_.nonEmpty).mkString(",\n")}
-       |    ];
-       |
-       |    var layout = {
-       |      title: 'Flight Data',
-       |      xaxis: {title: 'Elapsed time (s)'},
-       |      yaxis: {title: 'Altitude (m)'},
-       |      yaxis2: {
-       |        title: 'Speed / angle / coefficient',
-       |        overlaying: 'y',
-       |        side: 'right'
-       |      },
-       |      legend: {x: 0.01, y: 0.99},
-       |      hovermode: 'closest'
+       |$echartsLib
+       |  </script>
+       |  <script>
+       |    var option = {
+       |      animation: false,
+       |      title: { text: 'Flight Data' },
+       |      tooltip: { trigger: 'axis', axisPointer: { type: 'crosshair' } },
+       |      legend: $legend,
+       |      grid: { left: 60, right: 90, containLabel: true },
+       |      xAxis: { type: 'value', name: 'Elapsed time (s)' },
+       |      yAxis: [
+       |        { type: 'value', name: 'Altitude (m)' },
+       |        { type: 'value', name: 'Speed / angle / coefficient', position: 'right', offset: 40, scale: true }
+       |      ],
+       |      dataZoom: [{ type: 'inside' }],
+       |      series: [
+       |$seriesJs
+       |      ]
        |    };
        |
-       |    var config = {responsive: true};
-       |
-       |    Plotly.newPlot('plot', traces, layout, config);
-       |
-       |    document.querySelectorAll('#controls input[type="checkbox"]').forEach(function (checkbox) {
-       |      checkbox.addEventListener('change', function () {
-       |        Plotly.restyle('plot', {visible: checkbox.checked}, [[Number(checkbox.dataset.trace)]]);
-       |      });
-       |    });
+       |    var chart = echarts.init(document.getElementById('plot'));
+       |    chart.setOption(option);
+       |    window.addEventListener('resize', function () { chart.resize(); });
        |  </script>
        |</body>
        |</html>
@@ -216,67 +212,69 @@ private[beesight] object ChartHtml {
 
   private def markerSpecs(stages: FlightEvents, swoop: Option[SwoopData]): List[MarkerSpec] =
     val jump = List(
-      stages.takeoff.map(p => MarkerSpec("Takeoff", p.index, p.altitude, "diamond", "rgb(44, 160, 44)")),
-      stages.freefall.map(p => MarkerSpec("Exit", p.index, p.altitude, "diamond", "rgb(214, 39, 40)")),
-      stages.canopy.map(p => MarkerSpec("Canopy", p.index, p.altitude, "diamond", "rgb(148, 103, 189)")),
-      stages.landing.map(p => MarkerSpec("Landing", p.index, p.altitude, "diamond", "rgb(140, 86, 75)")),
+      stages.takeoff.map(p => MarkerSpec("Takeoff", p.time, p.altitude, "diamond", "rgb(44, 160, 44)")),
+      stages.freefall.map(p => MarkerSpec("Exit", p.time, p.altitude, "diamond", "rgb(214, 39, 40)")),
+      stages.canopy.map(p => MarkerSpec("Canopy", p.time, p.altitude, "diamond", "rgb(148, 103, 189)")),
+      stages.landing.map(p => MarkerSpec("Landing", p.time, p.altitude, "diamond", "rgb(140, 86, 75)")),
     ).flatten
 
     val swoopMarkers = swoop.toList.flatMap { data =>
       val msl = (p: EventPoint) => p.altitude + data.ground.value
       List(
-        MarkerSpec("Pattern entry", data.patternEntry.index, msl(data.patternEntry), "star", "rgb(31, 119, 180)"),
-        MarkerSpec("Dive point", data.divePoint.index, msl(data.divePoint), "star", "rgb(255, 127, 14)"),
-        MarkerSpec("Turn initiation", data.turnInitiation.index, msl(data.turnInitiation), "star", "rgb(214, 39, 40)"),
-        MarkerSpec("Rollout start", data.rolloutStart.index, msl(data.rolloutStart), "star", "rgb(44, 160, 44)"),
-        MarkerSpec("Bottom of turn", data.bottomOfTurn.index, msl(data.bottomOfTurn), "star", "rgb(148, 103, 189)"),
-        MarkerSpec("Stop", data.stop.index, msl(data.stop), "star", "rgb(140, 86, 75)"),
+        MarkerSpec("Pattern entry", data.patternEntry.time, msl(data.patternEntry), "star", "rgb(31, 119, 180)"),
+        MarkerSpec("Dive point", data.divePoint.time, msl(data.divePoint), "star", "rgb(255, 127, 14)"),
+        MarkerSpec(
+          "Turn initiation",
+          data.turnInitiation.time,
+          msl(data.turnInitiation),
+          "star",
+          "rgb(214, 39, 40)",
+        ),
+        MarkerSpec("Rollout start", data.rolloutStart.time, msl(data.rolloutStart), "star", "rgb(44, 160, 44)"),
+        MarkerSpec("Bottom of turn", data.bottomOfTurn.time, msl(data.bottomOfTurn), "star", "rgb(148, 103, 189)"),
+        MarkerSpec("Stop", data.stop.time, msl(data.stop), "star", "rgb(140, 86, 75)"),
       )
     }
 
     jump ++ swoopMarkers
 
-  private def lineTracesJs(traces: List[TraceSpec], xsJs: String): String =
+  private def lineSeriesJs(traces: List[TraceSpec], xs: Vector[Double]): String =
     traces
       .map { t =>
+        val data = xs.zip(t.values).map((x, y) => s"[$x, $y]").mkString("[", ", ", "]")
         s"""{
-           |  x: $xsJs,
-           |  y: [${t.values.mkString(",")}],
            |  name: '${t.name}',
-           |  type: 'scatter',
-           |  mode: 'lines',
-           |  line: {color: '${t.color}', width: 1.5},
-           |  yaxis: 'y${t.axis}',
-           |  visible: ${if t.on then "true" else "'legendonly'"},
+           |  type: 'line',
+           |  showSymbol: false,
+           |  yAxisIndex: ${t.axis - 1},
+           |  lineStyle: { color: '${t.color}', width: 1.5 },
+           |  data: $data
            |}""".stripMargin
       }
       .mkString(",\n")
 
-  private def markerTracesJs(markers: List[MarkerSpec], xs: Vector[Double]): String =
-    markers
-      .map { m =>
-        val label = m.name
-        s"""{
-           |  x: [${xs(m.index.toInt)}],
-           |  y: [${m.altitude}],
-           |  name: '$label',
-           |  type: 'scatter',
-           |  mode: 'markers+text',
-           |  text: ['$label'],
-           |  textposition: 'top right',
-           |  marker: {color: '${m.color}', size: 12, symbol: '${m.symbol}'},
-           |}""".stripMargin
-      }
-      .mkString(",\n")
+  private def markerSeriesJs(markers: List[MarkerSpec], t0: Instant): String =
+    if markers.isEmpty then ""
+    else
+      val points = markers
+        .map { m =>
+          val x = Duration.between(t0, m.time).toMillis / 1000.0
+          s"{ name: '${m.name}', value: [$x, ${m.altitude}], symbol: '${m.symbol}', itemStyle: { color: '${m.color}' } }"
+        }
+        .mkString("[", ", ", "]")
 
-  private def checkboxesJs(traces: List[TraceSpec]): String =
-    traces
-      .zipWithIndex
-      .map { (trace, index) =>
-        val checked = if trace.on then " checked" else ""
-        s"""    <label><input type="checkbox" data-trace="$index"$checked> ${trace.name}</label>"""
-      }
-      .mkString("\n")
+      s"""{
+         |  name: 'Detected points',
+         |  type: 'scatter',
+         |  symbolSize: 12,
+         |  label: { show: true, formatter: '{b}', position: 'top' },
+         |  data: $points
+         |}""".stripMargin
+
+  private def legendOptJs(traces: List[TraceSpec]): String =
+    val names    = traces.map(t => s"'${t.name}'").mkString("[", ", ", "]")
+    val selected = traces.map(t => s"'${t.name}': ${t.on}").mkString("{", ", ", "}")
+    s"{ data: $names, selected: $selected }"
 
   private def swoopInfoJs(swoop: Option[SwoopData]): String =
     swoop.fold("") { data =>
