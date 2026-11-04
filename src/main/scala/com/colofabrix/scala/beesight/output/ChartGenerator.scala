@@ -6,6 +6,8 @@ import com.colofabrix.scala.beesight.config.Config
 import com.colofabrix.scala.beesight.detection.model.*
 import com.colofabrix.scala.beesight.detection.readers.*
 import com.colofabrix.scala.beesight.pipeline.Stage
+import io.circe.Json
+import io.circe.syntax.*
 import java.nio.file.{ Files, Path }
 import java.time.{ Duration, Instant }
 
@@ -15,9 +17,9 @@ import java.time.{ Duration, Instant }
 final private[beesight] class ChartGenerator private (config: Config) {
 
   /**
-    * Returns a pipe that generates an HTML chart from the stream of points, enriched with the flight metrics and the
-    * swoop analysis when they are available.
-    */
+   * Returns a pipe that generates an HTML chart from the stream of points, enriched with the flight metrics and the
+   * swoop analysis when they are available.
+   */
   def chartPipe[A: PointReader](
     chartHtml: Path,
     metrics: Option[Vector[FlightMetric]],
@@ -123,13 +125,6 @@ private[beesight] object ChartHtml {
     metrics: Option[Vector[FlightMetric]],
     swoop: Option[SwoopData],
   ): String =
-    val t0        = state.times.headOption.getOrElse(Instant.EPOCH)
-    val xs        = state.times.map(t => Duration.between(t0, t).toMillis / 1000.0)
-    val traces    = traceSpecs(state, metrics)
-    val markers   = markerSpecs(state.stages, swoop)
-    val seriesJs = List(lineSeriesJs(traces, xs), markerSeriesJs(markers, t0)).filter(_.nonEmpty).mkString(",\n")
-    val legend   = legendOptJs(traces)
-
     s"""<!DOCTYPE html>
        |<html>
        |<head>
@@ -138,14 +133,16 @@ private[beesight] object ChartHtml {
        |  <style>
        |    body { margin: 0; padding: 20px; font-family: sans-serif; background: #f5f5f5; }
        |    h1 { color: #333; }
-       |    #plot { width: 100%; height: 80vh; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+       |    #chart { width: 100%; height: 80vh; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
        |    .info { margin-top: 20px; padding: 15px; background: white; border-radius: 8px; }
        |    .info h3 { margin-top: 0; }
        |  </style>
        |</head>
        |<body>
        |  <h1>Flight Analysis</h1>
-       |  <div id="plot"></div>
+       |  <div id="badge"></div>
+       |  <div id="chart"></div>
+       |  <div id="stats"></div>
        |  <div class="info">
        |    <h3>Detected Flight Stages</h3>
        |    <ul>
@@ -156,34 +153,48 @@ private[beesight] object ChartHtml {
        |    </ul>
        |${swoopInfoJs(swoop)}
        |  </div>
+       |  <script>__ECHARTS__</script>
        |  <script>
-       |$echartsLib
-       |  </script>
-       |  <script>
-       |    var option = {
-       |      animation: false,
-       |      title: { text: 'Flight Data' },
-       |      tooltip: { trigger: 'axis', axisPointer: { type: 'crosshair' } },
-       |      legend: $legend,
-       |      grid: { left: 60, right: 90, containLabel: true },
-       |      xAxis: { type: 'value', name: 'Elapsed time (s)' },
-       |      yAxis: [
-       |        { type: 'value', name: 'Altitude (m)' },
-       |        { type: 'value', name: 'Speed / angle / coefficient', position: 'right', offset: 40, scale: true }
-       |      ],
-       |      dataZoom: [{ type: 'inside' }],
-       |      series: [
-       |$seriesJs
-       |      ]
-       |    };
-       |
-       |    var chart = echarts.init(document.getElementById('plot'));
+       |    var option = ${option(state, metrics, swoop).noSpaces};
+       |    var chart = echarts.init(document.getElementById('chart'));
        |    chart.setOption(option);
        |    window.addEventListener('resize', function () { chart.resize(); });
        |  </script>
        |</body>
        |</html>
-       |""".stripMargin
+       |""".stripMargin.replace("__ECHARTS__", echartsLib)
+
+  def option[A](
+    state: ChartState[A],
+    metrics: Option[Vector[FlightMetric]],
+    swoop: Option[SwoopData],
+  ): Json =
+    val t0      = state.times.headOption.getOrElse(Instant.EPOCH)
+    val xs      = state.times.map(t => Duration.between(t0, t).toMillis / 1000.0)
+    val traces  = traceSpecs(state, metrics)
+    val markers = markerSpecs(state.stages, swoop)
+
+    Json.obj(
+      "animation" -> Json.False,
+      "title"     -> Json.obj("text" -> "Flight Data".asJson),
+      "tooltip"   -> Json.obj("trigger" -> "axis".asJson, "axisPointer" -> Json.obj("type" -> "crosshair".asJson)),
+      "legend"    -> legendJson(traces),
+      "grid"      -> Json.obj("left" -> 60.asJson, "right" -> 90.asJson, "containLabel" -> Json.True),
+      "xAxis"     -> Json.obj("type" -> "value".asJson, "name" -> "Elapsed time (s)".asJson),
+      "yAxis"     -> Json.arr(
+        Json.obj("type" -> "value".asJson, "name" -> "Altitude (m)".asJson),
+        Json.obj(
+          "type"     -> "value".asJson,
+          "name"     -> "Speed / angle / coefficient".asJson,
+          "position" -> "right".asJson,
+          "offset"   -> 40.asJson,
+          "scale"    -> Json.True,
+        ),
+      ),
+      "dataZoom" -> Json.arr(Json.obj("type" -> "inside".asJson)),
+      "brush"    -> Json.obj("brushType" -> Json.arr("lineX".asJson), "xAxisIndex" -> Json.arr(0.asJson)),
+      "series"   -> Json.fromValues(seriesJson(traces, markers, xs, t0)),
+    )
 
   private def traceSpecs[A](state: ChartState[A], metrics: Option[Vector[FlightMetric]]): List[TraceSpec] =
     metrics match
@@ -221,60 +232,72 @@ private[beesight] object ChartHtml {
     val swoopMarkers = swoop.toList.flatMap { data =>
       val msl = (p: EventPoint) => p.altitude + data.ground.value
       List(
-        MarkerSpec("Pattern entry", data.patternEntry.time, msl(data.patternEntry), "star", "rgb(31, 119, 180)"),
-        MarkerSpec("Dive point", data.divePoint.time, msl(data.divePoint), "star", "rgb(255, 127, 14)"),
+        MarkerSpec("Pattern entry", data.patternEntry.time, msl(data.patternEntry), "pin", "rgb(31, 119, 180)"),
+        MarkerSpec("Dive point", data.divePoint.time, msl(data.divePoint), "pin", "rgb(255, 127, 14)"),
         MarkerSpec(
           "Turn initiation",
           data.turnInitiation.time,
           msl(data.turnInitiation),
-          "star",
+          "pin",
           "rgb(214, 39, 40)",
         ),
-        MarkerSpec("Rollout start", data.rolloutStart.time, msl(data.rolloutStart), "star", "rgb(44, 160, 44)"),
-        MarkerSpec("Bottom of turn", data.bottomOfTurn.time, msl(data.bottomOfTurn), "star", "rgb(148, 103, 189)"),
-        MarkerSpec("Stop", data.stop.time, msl(data.stop), "star", "rgb(140, 86, 75)"),
+        MarkerSpec("Rollout start", data.rolloutStart.time, msl(data.rolloutStart), "pin", "rgb(44, 160, 44)"),
+        MarkerSpec("Bottom of turn", data.bottomOfTurn.time, msl(data.bottomOfTurn), "pin", "rgb(148, 103, 189)"),
+        MarkerSpec("Stop", data.stop.time, msl(data.stop), "pin", "rgb(140, 86, 75)"),
       )
     }
 
     jump ++ swoopMarkers
 
-  private def lineSeriesJs(traces: List[TraceSpec], xs: Vector[Double]): String =
-    traces
-      .map { t =>
-        val data = xs.zip(t.values).map((x, y) => s"[$x, $y]").mkString("[", ", ", "]")
-        s"""{
-           |  name: '${t.name}',
-           |  type: 'line',
-           |  showSymbol: false,
-           |  yAxisIndex: ${t.axis - 1},
-           |  lineStyle: { color: '${t.color}', width: 1.5 },
-           |  data: $data
-           |}""".stripMargin
-      }
-      .mkString(",\n")
+  private def legendJson(traces: List[TraceSpec]): Json =
+    Json.obj(
+      "data"     -> Json.fromValues(traces.map(_.name.asJson)),
+      "selected" -> Json.fromFields(traces.map(t => t.name -> t.on.asJson)),
+    )
 
-  private def markerSeriesJs(markers: List[MarkerSpec], t0: Instant): String =
-    if markers.isEmpty then ""
-    else
-      val points = markers
-        .map { m =>
-          val x = Duration.between(t0, m.time).toMillis / 1000.0
-          s"{ name: '${m.name}', value: [$x, ${m.altitude}], symbol: '${m.symbol}', itemStyle: { color: '${m.color}' } }"
-        }
-        .mkString("[", ", ", "]")
+  private def seriesJson(
+    traces: List[TraceSpec],
+    markers: List[MarkerSpec],
+    xs: Vector[Double],
+    t0: Instant,
+  ): List[Json] =
+    traces.map { t =>
+      val data =
+        if t.axis == 1 then altitudeDataJson(t, markers, xs, t0)
+        else Json.fromValues(xs.zip(t.values).map((x, y) => Json.arr(x.asJson, y.asJson)))
 
-      s"""{
-         |  name: 'Detected points',
-         |  type: 'scatter',
-         |  symbolSize: 12,
-         |  label: { show: true, formatter: '{b}', position: 'top' },
-         |  data: $points
-         |}""".stripMargin
+      Json.obj(
+        "name"       -> t.name.asJson,
+        "type"       -> "line".asJson,
+        "symbol"     -> "none".asJson,
+        "yAxisIndex" -> (t.axis - 1).asJson,
+        "lineStyle"  -> Json.obj("color" -> t.color.asJson, "width" -> 1.5.asJson),
+        "data"       -> data,
+      )
+    }
 
-  private def legendOptJs(traces: List[TraceSpec]): String =
-    val names    = traces.map(t => s"'${t.name}'").mkString("[", ", ", "]")
-    val selected = traces.map(t => s"'${t.name}': ${t.on}").mkString("{", ", ", "}")
-    s"{ data: $names, selected: $selected }"
+  private def altitudeDataJson(
+    trace: TraceSpec,
+    markers: List[MarkerSpec],
+    xs: Vector[Double],
+    t0: Instant,
+  ): Json =
+    val pairs = xs.zip(trace.values)
+    val lines = pairs.map((x, y) => x -> Json.arr(x.asJson, y.asJson))
+    val marks = markers.map { m =>
+      val x = Duration.between(t0, m.time).toMillis / 1000.0
+      val y = pairs.collectFirst { case (`x`, altitude) => altitude }.getOrElse(m.altitude)
+      x -> Json.obj(
+        "name"       -> m.name.asJson,
+        "value"      -> Json.arr(x.asJson, y.asJson),
+        "symbol"     -> m.symbol.asJson,
+        "symbolSize" -> 12.asJson,
+        "itemStyle"  -> Json.obj("color" -> m.color.asJson),
+        "label"      -> Json.obj("show" -> Json.True, "formatter" -> "{b}".asJson, "position" -> "top".asJson),
+      )
+    }
+
+    Json.fromValues((lines ++ marks).sortBy(_._1).map(_._2))
 
   private def swoopInfoJs(swoop: Option[SwoopData]): String =
     swoop.fold("") { data =>

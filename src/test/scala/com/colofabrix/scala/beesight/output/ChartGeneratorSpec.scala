@@ -8,8 +8,8 @@ import org.scalatest.matchers.should.Matchers
 
 class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
 
-  private val at    = Instant.parse("2026-01-15T10:00:00Z")
-  private val point = EventPoint(0, 1200.0, at, GeoVector(0.0, 0.0, 40.0))
+  private val at     = Instant.parse("2026-01-15T10:00:00Z")
+  private val point  = EventPoint(0, 1200.0, at, GeoVector(0.0, 0.0, 40.0))
   private val events = FlightEvents(
     takeoff = Some(point.copy(index = 0)),
     freefall = Some(point.copy(index = 1)),
@@ -23,7 +23,7 @@ class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
     stages = events,
   )
   private val metrics = Vector(metricAt(0), metricAt(1), metricAt(2))
-  private val swoop = SwoopData(
+  private val swoop   = SwoopData(
     turnInitiation = point.copy(index = 1),
     rolloutStart = point.copy(index = 2),
     maxVerticalSpeed = SpeedAtAltitude(3, Speed(60.0), Altitude(1800.0)),
@@ -85,12 +85,12 @@ class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
       html should not include "Glide ratio"
     }
 
-    "ticks only the minimal set of traces on load" in {
-      val full  = ChartHtml.build(state, Some(metrics), None)
-      val basic = ChartHtml.build(state, None, None)
+    "enables only the minimal set of traces on load" in {
+      val full  = ChartHtml.option(state, Some(metrics), None).noSpaces
+      val basic = ChartHtml.option(state, None, None).noSpaces
 
-      """'[^']+': true""".r.findAllIn(full).size shouldBe 4
-      """'[^']+': true""".r.findAllIn(basic).size shouldBe 2
+      """:true""".r.findAllIn(selectedOf(full)).size shouldBe 4
+      """:true""".r.findAllIn(selectedOf(basic)).size shouldBe 2
     }
 
     "marks the detected jump events" in {
@@ -113,10 +113,10 @@ class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
     }
 
     "locates markers by timestamp when the data is cut" in {
-      val html = ChartHtml.build(cutState, None, Some(cutSwoop))
+      val option = ChartHtml.option(cutState, None, Some(cutSwoop)).noSpaces
 
-      List("value: [0.0, 1200.0]", "value: [1.0, 1200.0]", "value: [2.0, 1200.0]")
-        .foreach(markerValue => html should include(markerValue))
+      List("\"value\":[0.0,1000.0]", "\"value\":[1.0,990.0]", "\"value\":[2.0,980.0]")
+        .foreach(markerValue => option should include(markerValue))
     }
 
     "plots against elapsed time" in {
@@ -126,6 +126,9 @@ class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
     }
 
   }
+
+  private def selectedOf(option: String): String =
+    option.split("\"selected\":")(1).takeWhile(_ != '}')
 
   private def metricAt(second: Int): FlightMetric =
     FlightMetric(
