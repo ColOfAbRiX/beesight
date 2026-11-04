@@ -125,6 +125,13 @@ class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
       html should include("Elapsed time (s)")
     }
 
+    "embeds the interaction script and hands it the option" in {
+      val html = ChartHtml.build(state, Some(metrics), None)
+
+      html should include("<script>function initChart(option)")
+      html should include("initChart(option);")
+    }
+
   }
 
   private def selectedOf(option: String): String =

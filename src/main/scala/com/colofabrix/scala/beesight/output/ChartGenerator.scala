@@ -81,12 +81,15 @@ private[beesight] object ChartState {
  */
 private[beesight] object ChartHtml {
 
-  private lazy val echartsLib: String = {
-    val stream = Option(getClass.getResourceAsStream("/chart/echarts.min.js"))
-      .getOrElse(sys.error("chart/echarts.min.js is missing from the classpath"))
+  private def resource(name: String): String = {
+    val stream = Option(getClass.getResourceAsStream(name))
+      .getOrElse(sys.error(s"$name is missing from the classpath"))
     try scala.io.Source.fromInputStream(stream, "UTF-8").mkString
     finally stream.close()
   }
+
+  private lazy val echartsLib   = resource("/chart/echarts.min.js")
+  private lazy val chartInitJs = resource("/chart/chart-init.js")
 
   final private case class TraceSpec(
     name: String,
@@ -134,6 +137,11 @@ private[beesight] object ChartHtml {
        |    body { margin: 0; padding: 20px; font-family: sans-serif; background: #f5f5f5; }
        |    h1 { color: #333; }
        |    #chart { width: 100%; height: 80vh; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+       |    #badge { display: inline-block; padding: 4px 12px; margin-bottom: 10px; border-radius: 12px; background: #333; color: white; font-size: 13px; }
+       |    #stats table { border-collapse: collapse; margin-top: 12px; }
+       |    #stats th, #stats td { border: 1px solid #ddd; padding: 4px 10px; font-size: 13px; text-align: right; }
+       |    #stats th:first-child, #stats td:first-child { text-align: left; }
+       |    #stats p { margin: 8px 0 0; color: #555; font-size: 13px; }
        |    .info { margin-top: 20px; padding: 15px; background: white; border-radius: 8px; }
        |    .info h3 { margin-top: 0; }
        |  </style>
@@ -154,15 +162,14 @@ private[beesight] object ChartHtml {
        |${swoopInfoJs(swoop)}
        |  </div>
        |  <script>__ECHARTS__</script>
+       |  <script>__CHART_INIT__</script>
        |  <script>
        |    var option = ${option(state, metrics, swoop).noSpaces};
-       |    var chart = echarts.init(document.getElementById('chart'));
-       |    chart.setOption(option);
-       |    window.addEventListener('resize', function () { chart.resize(); });
+       |    initChart(option);
        |  </script>
        |</body>
        |</html>
-       |""".stripMargin.replace("__ECHARTS__", echartsLib)
+       |""".stripMargin.replace("__ECHARTS__", echartsLib).replace("__CHART_INIT__", chartInitJs)
 
   def option[A](
     state: ChartState[A],
@@ -192,7 +199,16 @@ private[beesight] object ChartHtml {
         ),
       ),
       "dataZoom" -> Json.arr(Json.obj("type" -> "inside".asJson)),
-      "brush"    -> Json.obj("brushType" -> Json.arr("lineX".asJson), "xAxisIndex" -> Json.arr(0.asJson)),
+      "brush" -> Json.obj(
+        "xAxisIndex"    -> Json.arr(0.asJson),
+        "brushMode"     -> "single".asJson,
+        "transformable" -> Json.False,
+        "brushStyle"    -> Json.obj(
+          "color"       -> "rgba(85, 85, 85, 0.08)".asJson,
+          "borderColor" -> "#555".asJson,
+          "borderWidth" -> 1.asJson,
+        ),
+      ),
       "series"   -> Json.fromValues(seriesJson(traces, markers, xs, t0)),
     )
 
