@@ -11,7 +11,7 @@ import com.colofabrix.scala.beesight.detection.utils.*
 /**
  * Computes per-point flight metrics.
  */
-final class FlightMetricsCalculator private (config: MetricsConfig, groundElevation: Altitude) {
+final class FlightMetricsCalculator private (config: MetricsConfig, knownGround: Altitude) {
 
   private val windowCapacity: Int =
     2 * config.slopeHalfWindow + 1
@@ -64,7 +64,7 @@ final class FlightMetricsCalculator private (config: MetricsConfig, groundElevat
   private def metric[A: PointReader: GpsReader](centerIndex: Int, window: Vector[A]): FlightMetric =
     val center    = window(centerIndex)
     val speed     = center.speed
-    val elevation = center.altitude - groundElevation.value
+    val elevation = center.altitude - knownGround.value
 
     val horizontalAccuracy = center.horizontalAccuracy
     val verticalAccuracy   = center.verticalAccuracy
@@ -124,10 +124,10 @@ object FlightMetricsCalculator {
   def apply(config: MetricsConfig): FlightMetricsCalculator =
     new FlightMetricsCalculator(config, Altitude(0.0))
 
-  def apply(config: MetricsConfig, groundElevation: Altitude): FlightMetricsCalculator =
-    new FlightMetricsCalculator(config, groundElevation)
+  def apply(config: MetricsConfig, knownGround: Altitude): FlightMetricsCalculator =
+    new FlightMetricsCalculator(config, knownGround)
 
-  def apply(config: MetricsConfig, groundElevation: Option[Altitude]): FlightMetricsCalculator =
-    new FlightMetricsCalculator(config, groundElevation.getOrElse(Altitude(0.0)))
+  def apply(config: MetricsConfig, knownGround: Option[Altitude]): FlightMetricsCalculator =
+    new FlightMetricsCalculator(config, knownGround.getOrElse(Altitude(0.0)))
 
 }

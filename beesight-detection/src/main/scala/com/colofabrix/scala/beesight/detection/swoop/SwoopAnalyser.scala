@@ -28,7 +28,7 @@ import java.time.Duration
  *
  * All reported altitudes are AGL relative to the detected ground.
  */
-final class SwoopAnalyser private (config: SwoopConfig) {
+final class SwoopAnalyser private (config: SwoopConfig, knownGround: Option[Altitude]) {
 
   private val groundDetector =
     SwoopGround(config)
@@ -61,7 +61,7 @@ final class SwoopAnalyser private (config: SwoopConfig) {
   private def computeSwoopMetrics(dataPoints: Vector[IndexedPoint], events: FlightEvents): Option[SwoopData] =
     for
       series       <- Option.unless(dataPoints.length < 2)(PointSeries(dataPoints))
-      ground        = groundDetector.detect(series, events.landing)
+      ground        = knownGround.getOrElse(groundDetector.detect(series, events.landing))
       patternEntry <- SwoopPatternEntry.find(series, ground, config)
       dive         <- SwoopDivePoint.find(series, patternEntry, ground, config)
       topOfTurn     = SwoopTopOfTurn.find(series, dive, patternEntry, config)
@@ -147,6 +147,9 @@ final class SwoopAnalyser private (config: SwoopConfig) {
 object SwoopAnalyser {
 
   def apply(config: SwoopConfig): SwoopAnalyser =
-    new SwoopAnalyser(config)
+    new SwoopAnalyser(config, None)
+
+  def apply(config: SwoopConfig, knownGround: Option[Altitude]): SwoopAnalyser =
+    new SwoopAnalyser(config, knownGround)
 
 }

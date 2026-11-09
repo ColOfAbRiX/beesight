@@ -2,6 +2,7 @@ package com.colofabrix.scala.beesight.detection.metrics.computations
 
 import com.colofabrix.scala.beesight.detection.config.MetricsConfig
 import com.colofabrix.scala.beesight.detection.model.EventPoint
+import com.colofabrix.scala.beesight.detection.config.Altitude
 
 /**
  * Ground elevation resolution for metrics computation.
@@ -25,7 +26,7 @@ object MetricsGround {
     new MetricsGround(config)
 
   /** Convenience: resolve ground elevation without constructing a [[MetricsGround]] instance. */
-  def detect(landing: Option[EventPoint], config: MetricsConfig): Double =
-    new MetricsGround(config).detect(landing)
+  def detect(landing: Option[EventPoint], config: MetricsConfig): Altitude =
+    Altitude(new MetricsGround (config).detect(landing))
 
 }

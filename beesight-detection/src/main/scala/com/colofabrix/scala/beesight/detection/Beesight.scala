@@ -17,13 +17,13 @@ import com.colofabrix.scala.beesight.detection.swoop.SwoopAnalyser
  */
 final class Beesight private (config: BeesightConfig) {
 
-  private val jumpEventsDetector =
+  private val defaultJumpEventsDetector =
     JumpEventsDetector(config.jumpevents)
 
-  private val swoopAnalyser =
+  private val defaultSwoopAnalyser =
     SwoopAnalyser(config.swoop)
 
-  private val flightMetricsCalculator =
+  private val defaultFlightMetricsCalculator =
     FlightMetricsCalculator(config.metrics)
 
   /**
@@ -31,7 +31,7 @@ final class Beesight private (config: BeesightConfig) {
    */
   def jumpPoints[F[_]: Concurrent, A: PointReader](stream: fs2.Stream[F, A]): F[FlightEvents] =
     stream
-      .through(jumpEventsDetector.detect[F, A])
+      .through(defaultJumpEventsDetector.detect[F, A])
       .last
       .compile
       .toList
@@ -45,55 +45,39 @@ final class Beesight private (config: BeesightConfig) {
   def swoopMetrics[F[_]: Concurrent, A: PointReader](stream: fs2.Stream[F, A]): F[Option[SwoopData]] =
     for
       events <- jumpPoints(stream)
-      result <- swoopAnalyser.analyse[F, A](events, stream)
+      result <- defaultSwoopAnalyser.analyse[F, A](events, stream)
     yield result
 
   /**
    * Computes the per-point flight metrics of a stream of GPS points.
    */
   def flightMetrics[F[_], A: PointReader: GpsReader]: fs2.Pipe[F, A, FlightMetric] =
-    flightMetricsCalculator.compute[F, A]
+    defaultFlightMetricsCalculator.compute[F, A]
 
   /**
-   * Processes a jump end-to-end, emitting per-point metrics with the detected flight events and, when the jump
-   * includes a swoop, its swoop data. The flight events are detected for the whole jump up front, so each point
-   * carries the final events and its metric altitude is above ground level, resolved from the landing point.
+   * Processes a jump end-to-end, emitting per-point metrics with the detected flight events and, when the jump includes
+   * a swoop, its swoop data. The flight events are detected for the whole jump up front, so each point carries the
+   * final events and its metric altitude is above ground level, resolved from the landing point.
    */
   def enrichedPoints[F[_]: Concurrent, A: PointReader: GpsReader]: fs2.Pipe[F, A, EnrichedPoint] =
     stream =>
-      fs2.Stream
-        .eval {
-          jumpPoints(stream).map { events =>
-            val ground     = MetricsGround.detect(events.landing, config.metrics)
-            val calculator = FlightMetricsCalculator(config.metrics, Altitude(ground))
-
-            (events, calculator)
-          }
-        }
-        .flatMap {
-          case (events, calculator) =>
-            stream
-              .through(calculator.compute[F, A])
-              .zipWithIndex
-              .evalMap {
-                case (metrics, idx) =>
-                  OptionT
-                    .fromOption[F](events.canopy)
-                    .flatMapF { _ =>
-                      swoopAnalyser.analyse[F, A](events, stream.take(idx + 1))
-                    }
-                    .value
-                    .map(EnrichedPoint(events, metrics, _))
-              }
-        }
-
+      for
+        events           <- fs2.Stream.eval(jumpPoints(stream))
+        ground            = MetricsGround.detect(events.landing, config.metrics)
+        metricsCalculator = FlightMetricsCalculator(config.metrics, ground)
+        swoopAnalyser     = SwoopAnalyser(config.swoop, ground.some)
+        (metrics, idx)   <- stream.through(metricsCalculator.compute[F, A]).zipWithIndex
+        swoopData        <- fs2.Stream.eval(swoopAnalyser.analyse[F, A](events, stream.take(idx + 1)))
+        result            = EnrichedPoint(events, metrics, swoopData)
+      yield result
+      
 }
 
 object Beesight {
 
   /**
-   * All the information Beesight provides for each point: the flight events detected so far, the per-point metrics
-   * and, when a swoop has been detected, its data.
+   * All the information Beesight provides for each point: the flight events detected so far, the per-point metrics and,
+   * when a swoop has been detected, its data.
    */
   final case class EnrichedPoint(
     events: FlightEvents,

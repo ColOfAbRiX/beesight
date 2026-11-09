@@ -19,7 +19,7 @@ class MetricsGroundSpec extends AnyFreeSpec with Matchers {
 
       val ground = MetricsGround.detect(Some(landing), defaultConfig)
 
-      ground shouldBe 35.0
+      ground shouldBe Altitude(35.0)
     }
 
     "falls back to config groundElevation when no landing is provided" in {
@@ -27,13 +27,13 @@ class MetricsGroundSpec extends AnyFreeSpec with Matchers {
 
       val ground = MetricsGround.detect(None, config)
 
-      ground shouldBe 42.0
+      ground shouldBe Altitude(42.0)
     }
 
     "falls back to sea level (0.0) when neither landing nor config is set" in {
       val ground = MetricsGround.detect(None, defaultConfig)
 
-      ground shouldBe 0.0
+      ground shouldBe Altitude(0.0)
     }
 
     "landing takes priority over config groundElevation" in {
@@ -42,7 +42,7 @@ class MetricsGroundSpec extends AnyFreeSpec with Matchers {
 
       val ground = MetricsGround.detect(Some(landing), config)
 
-      ground shouldBe 35.0
+      ground shouldBe Altitude(35.0)
     }
 
     "handles None landing and None groundElevation" in {
@@ -50,7 +50,7 @@ class MetricsGroundSpec extends AnyFreeSpec with Matchers {
 
       val ground = MetricsGround.detect(None, config)
 
-      ground shouldBe 0.0
+      ground shouldBe Altitude(0.0)
     }
   }
 

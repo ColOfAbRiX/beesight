@@ -79,7 +79,7 @@ class FlightMetricsBulkSpec extends AnyWordSpec with Matchers with IOValues with
       events         <- detectEvents(inputPath)
       config          = BeesightConfig.default.metrics
       detectedGround  = MetricsGround.detect(events.landing, config)
-      groundElevation = Altitude(detectedGround + residual.getOrElse(0.0))
+      groundElevation = Altitude(detectedGround.value + residual.getOrElse(0.0))
       metrics        <- TestFilesHandler
                    .readCsv[GpsCsvPoint](inputPath)
                    .through(FlightMetricsCalculator(config, groundElevation).compute[IO, GpsCsvPoint])
