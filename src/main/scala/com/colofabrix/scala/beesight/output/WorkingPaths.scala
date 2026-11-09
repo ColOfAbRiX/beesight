@@ -1,8 +1,11 @@
 package com.colofabrix.scala.beesight.output
 
 import com.colofabrix.scala.beesight.IOConfig
+import com.colofabrix.scala.beesight.config.Config
 import java.nio.file.{ FileSystems, Files, Path, Paths }
 import scala.jdk.CollectionConverters.*
+
+// FIXME: This class should be moved to `com.colofabrix.scala.beesight.model` package
 
 /**
  * Paths involved in the processing of a single input file.
@@ -86,6 +89,31 @@ object WorkingPaths {
       Paths.get(name.substring(0, name.length - 4) + ".csv")
     else
       inputFile.getFileName
+
+  /** True when the outputs are written into the input directory itself */
+  private[beesight] def writesInPlace(config: Config): Boolean = {
+    val (baseDir, _) = parseInputAsGlob(config.global.input)
+    val outputRoot   = config.global.output.getOrElse(Option(baseDir.getParent).getOrElse(Paths.get(".")))
+    val normalized   = outputRoot.toAbsolutePath.normalize
+
+    normalized == baseDir.toAbsolutePath.normalize ||
+    normalized.resolve(baseDir.getFileName).toAbsolutePath.normalize == baseDir.toAbsolutePath.normalize
+  }
+
+  /** True when the CSV matches an artefact the tool writes next to its inputs */
+  private[beesight] def isKnownOutput(file: Path): Boolean = {
+    val lower = file.getFileName.toString.toLowerCase
+
+    if !lower.endsWith(".csv") then false
+    else {
+      val stem = file.getFileName.toString.replaceFirst("\\.[^.]+$", "")
+
+      lower.endsWith(".metrics.csv") ||
+      lower.endsWith(".flysight.csv") ||
+      stem.toLowerCase.endsWith("_output") ||
+      Files.isRegularFile(file.resolveSibling(s"$stem.zip"))
+    }
+  }
 
   private[beesight] def parseInputAsGlob(input: Path): (Path, String) =
     val absoluteInput = input.toAbsolutePath.normalize

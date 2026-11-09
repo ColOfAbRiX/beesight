@@ -18,6 +18,8 @@ private[beesight] object FileOps {
     IOConfig.ask.flatMap { config =>
       val (baseDir, glob) = WorkingPaths.parseInputAsGlob(config.global.input)
       val matcher         = FileSystems.getDefault.getPathMatcher(s"glob:${glob.toLowerCase}")
+      val inputIsFile     = Files.isRegularFile(config.global.input.toAbsolutePath.normalize)
+      val skipOwnOutputs  = WorkingPaths.writesInPlace(config) && !inputIsFile
 
       IOConfig
         .blocking {
@@ -30,6 +32,7 @@ private[beesight] object FileOps {
               val rel = baseDir.relativize(p)
               matcher.matches(Paths.get(rel.toString.toLowerCase))
             }
+            .filterNot(p => skipOwnOutputs && WorkingPaths.isKnownOutput(p))
             .toList
             .sorted
         }

@@ -106,4 +106,93 @@ final class WorkingPathsSpec extends AnyFreeSpec with Matchers with IOConfigValu
 
   }
 
+  "Detecting in-place output" - {
+
+    "is in place when no output is configured" in {
+      val (dir, inputDir, _) = inTempWorkspace("in-place-default")
+      val config             = Config.default.copy(global = GlobalOptions.default.copy(input = inputDir, output = None))
+
+      val actual = WorkingPaths.writesInPlace(config)
+
+      actual shouldBe true
+      dir should not be null
+    }
+
+    "is in place when the output is the input directory" in {
+      val (dir, inputDir, _) = inTempWorkspace("in-place-same")
+      val config             = Config.default.copy(global = GlobalOptions.default.copy(input = inputDir, output = Some(inputDir)))
+
+      val actual = WorkingPaths.writesInPlace(config)
+
+      actual shouldBe true
+      dir should not be null
+    }
+
+    "is in place when the output is the parent of the input directory" in {
+      val (dir, inputDir, _) = inTempWorkspace("in-place-parent")
+      val config             = Config.default.copy(global = GlobalOptions.default.copy(input = inputDir, output = Some(dir)))
+
+      val actual = WorkingPaths.writesInPlace(config)
+
+      actual shouldBe true
+      dir should not be null
+    }
+
+    "is not in place when the output goes to another directory" in {
+      val (dir, inputDir, _) = inTempWorkspace("in-place-other")
+      val outputDir          = Files.createDirectories(dir.resolve("out"))
+      val config             = Config.default.copy(global = GlobalOptions.default.copy(input = inputDir, output = Some(outputDir)))
+
+      val actual = WorkingPaths.writesInPlace(config)
+
+      actual shouldBe false
+      dir should not be null
+    }
+
+  }
+
+  "Recognising the tool's own outputs" - {
+
+    "flags the metrics and conversion exports" in {
+      val dir       = Files.createTempDirectory("known-exports")
+      val metrics   = Files.writeString(dir.resolve("jump_1002.metrics.csv"), "data")
+      val converted = Files.writeString(dir.resolve("jump_1002.flysight.csv"), "data")
+
+      val actual = List(WorkingPaths.isKnownOutput(metrics), WorkingPaths.isKnownOutput(converted))
+
+      actual shouldBe List(true, true)
+    }
+
+    "flags the suffixed in-place conversions" in {
+      val dir = Files.createTempDirectory("known-suffixed")
+      val out = Files.writeString(dir.resolve("jump_1002_output.CSV"), "data")
+
+      val actual = WorkingPaths.isKnownOutput(out)
+
+      actual shouldBe true
+    }
+
+    "flags the CSV extracted from an archive" in {
+      val dir = Files.createTempDirectory("known-extracted")
+      Files.writeString(dir.resolve("jump_1002.zip"), "data")
+      val extracted = Files.writeString(dir.resolve("jump_1002.csv"), "data")
+
+      val actual = WorkingPaths.isKnownOutput(extracted)
+
+      actual shouldBe true
+    }
+
+    "keeps plain inputs and archives" in {
+      val dir = Files.createTempDirectory("known-inputs")
+      val csv = Files.writeString(dir.resolve("jump_1002.csv"), "data")
+
+      val csvIsOutput = WorkingPaths.isKnownOutput(csv)
+      val zip          = Files.writeString(dir.resolve("jump_1002.zip"), "data")
+      val zipIsOutput  = WorkingPaths.isKnownOutput(zip)
+
+      (csvIsOutput, zipIsOutput) shouldBe (false, false)
+    }
+
+  }
+
 }
