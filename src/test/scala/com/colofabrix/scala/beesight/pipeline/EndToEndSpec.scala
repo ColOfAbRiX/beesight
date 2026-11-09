@@ -59,7 +59,7 @@ class EndToEndSpec extends AnyFreeSpec with Matchers {
       Files.isRegularFile(expectedMetadataFile) shouldBe true
 
       val html = Files.readString(outputDir.resolve("in").resolve("flysight_sample.html"))
-      html should include("Elapsed time (s)")
+      html should include("var optionGz = ")
 
       val metrics = Files.readString(outputDir.resolve("in").resolve("flysight_sample.metrics.csv"))
       metrics.linesIterator.next() should startWith("time,altitude,vertical_speed,")

@@ -76,17 +76,17 @@ class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
   private val metricNames: List[(String, Int)] = List(
     ("Altitude (m)", 0),
     ("Vertical speed (m/s)", 1),
-    ("Horizontal speed (m/s)", 1),
-    ("Total speed (m/s)", 1),
-    ("Glide ratio", 1),
-    ("Lift coefficient", 1),
-    ("Drag coefficient", 1),
-    ("Dive angle (deg)", 1),
-    ("Dive rate (deg/s)", 1),
-    ("Turn rate (deg/s)", 1),
-    ("Acceleration H (m/s²)", 1),
-    ("Acceleration V (m/s²)", 1),
-    ("Total energy (J/kg)", 1),
+    ("Horizontal speed (m/s)", 2),
+    ("Total speed (m/s)", 3),
+    ("Glide ratio", 4),
+    ("Lift coefficient", 5),
+    ("Drag coefficient", 6),
+    ("Dive angle (deg)", 7),
+    ("Dive rate (deg/s)", 8),
+    ("Turn rate (deg/s)", 9),
+    ("Acceleration H (m/s²)", 10),
+    ("Acceleration V (m/s²)", 11),
+    ("Total energy (J/kg)", 12),
   )
 
   private val basicNames: List[(String, Int)] = List(
@@ -115,7 +115,7 @@ class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
     }
 
     "selects only the minimal set of traces on load" in {
-      val expectedFull  = legendOf(metricNames.map(_._1), metricNames.take(4).map(_._1))
+      val expectedFull  = legendOf(metricNames.map(_._1), metricNames.take(2).map(_._1))
       val expectedBasic = legendOf(basicNames.map(_._1), basicNames.map(_._1))
 
       val full  = field(ChartHtml.option(state, Some(metrics), None), "legend")
@@ -126,29 +126,89 @@ class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
     }
 
     "keeps the core option shape" in {
+      val xMax = 2.0 + math.max(2.0 * 0.02, 0.1)
+      val acc  = metricAt(0).acceleration
+      val traceBounds = List(
+        boundsOf(Vector(1200.5, 1199.5, 1198.5)),
+        boundsOf(Vector.fill(3)(40.0)),
+        boundsOf(Vector.fill(3)(30.0)),
+        boundsOf(Vector.fill(3)(50.0)),
+        boundsOf(Vector.fill(3)(0.75)),
+        boundsOf(Vector.fill(3)(0.4)),
+        boundsOf(Vector.fill(3)(0.1)),
+        boundsOf(Vector(45.0)),
+        boundsOf(Vector(-3.5)),
+        boundsOf(Vector(90.0)),
+        boundsOf(Vector(acc.horizontal)),
+        boundsOf(Vector(acc.vertical)),
+        boundsOf(Vector(2500.0)),
+      )
+      val traceUnits = List(
+        "m",
+        "m/s",
+        "m/s",
+        "m/s",
+        "ratio / coeff",
+        "ratio / coeff",
+        "ratio / coeff",
+        "deg",
+        "deg/s",
+        "deg/s",
+        "m/s²",
+        "m/s²",
+        "J/kg",
+      )
+      val traceOn = List(true, true) ++ List.fill(11)(false)
       val expected = Json.obj(
         "animation" -> Json.False,
-        "title"     -> Json.obj("text" -> "Flight Data".asJson),
-        "tooltip"   -> Json.obj("trigger" -> "axis".asJson, "axisPointer" -> Json.obj("type" -> "crosshair".asJson)),
-        "grid"      -> Json.obj("left" -> 60.asJson, "right" -> 90.asJson, "containLabel" -> Json.True),
-        "xAxis"     -> Json.obj("type" -> "value".asJson, "name" -> "Elapsed time (s)".asJson),
-        "yAxis"     -> Json.arr(
-          Json.obj("type" -> "value".asJson, "name" -> "Altitude (m)".asJson),
+        "tooltip" -> Json.obj(
+          "trigger" -> "axis".asJson,
+          "axisPointer" -> Json.obj("type" -> "cross".asJson, "label" -> Json.obj("show" -> Json.False)),
+          "extraCssText" -> "font-size: 11px; padding: 4px 8px;".asJson,
+        ),
+        "grid" -> Json.obj("left" -> 40.asJson, "right" -> 30.asJson, "top" -> 64.asJson, "bottom" -> 22.asJson, "containLabel" -> Json.False),
+        "toolbox" -> Json.obj("show" -> Json.False),
+        "xAxis" -> Json.arr(
           Json.obj(
-            "type"     -> "value".asJson,
-            "name"     -> "Speed / angle / coefficient".asJson,
-            "position" -> "right".asJson,
-            "offset"   -> 40.asJson,
-            "scale"    -> Json.True,
+            "type" -> "value".asJson,
+            "name" -> "Elapsed time (s)".asJson,
+            "min" -> 0.0.asJson,
+            "max" -> xMax.asJson,
+            "axisLabel" -> Json.obj("color" -> "#555".asJson),
+            "axisTick" -> Json.obj("show" -> Json.False),
+            "axisPointer" -> Json.obj("label" -> Json.obj("show" -> Json.False)),
+          ),
+          Json.obj(
+            "type" -> "value".asJson,
+            "position" -> "top".asJson,
+            "min" -> 0.0.asJson,
+            "max" -> xMax.asJson,
+            "axisLabel" -> Json.obj("color" -> "#555".asJson),
+            "axisTick" -> Json.obj("show" -> Json.False),
+            "axisPointer" -> Json.obj("label" -> Json.obj("show" -> Json.False)),
           ),
         ),
-        "dataZoom"  -> Json.arr(Json.obj("type" -> "inside".asJson)),
-        "brush"     -> Json.obj(
-          "xAxisIndex"    -> Json.arr(0.asJson),
-          "brushMode"     -> "single".asJson,
+        "yAxis" -> Json.arr(
+          traceUnits
+            .zip(traceBounds)
+            .zip(traceOn)
+            .zip(palette)
+            .map { case (((unit, bound), on), color) => traceAxis(unit, bound, on, color) }*
+        ),
+        "dataZoom" -> Json.arr(
+          Json.obj(
+            "type" -> "inside".asJson,
+            "xAxisIndex" -> Json.arr(0.asJson, 1.asJson),
+            "moveOnMouseMove" -> Json.False,
+            "moveOnMouseWheel" -> "shift".asJson,
+          ),
+        ),
+        "brush" -> Json.obj(
+          "xAxisIndex" -> Json.arr(0.asJson),
+          "brushMode" -> "single".asJson,
           "transformable" -> Json.False,
-          "brushStyle"    -> Json.obj(
-            "color"       -> "rgba(85, 85, 85, 0.08)".asJson,
+          "brushStyle" -> Json.obj(
+            "color" -> "rgba(85, 85, 85, 0.08)".asJson,
             "borderColor" -> "#555".asJson,
             "borderWidth" -> 1.asJson,
           ),
@@ -182,13 +242,13 @@ class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
       val actual = markersOf(option)
 
       actual shouldBe expected
+      option.noSpaces should include("\"position\":\"bottom\"")
     }
 
     "marks the swoop points when the swoop analysis is available" in {
       val expected = List(
         ("Takeoff", 0.0, 1200.5),
         ("Exit", 1.0, 1199.5),
-        ("Pattern entry", 1.0, 1199.5),
         ("Turn initiation", 1.0, 1199.5),
         ("Canopy", 2.0, 1198.5),
         ("Landing", 2.0, 1198.5),
@@ -213,6 +273,13 @@ class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
       actual shouldBe expected
     }
 
+    "omits the pattern entry marker from the chart" in {
+      val option = ChartHtml.option(state, Some(metrics), Some(swoop))
+      val actual = markersOf(option).map(_._1)
+
+      actual should not contain "Pattern entry"
+    }
+
     "locates markers by timestamp when the data is cut" in {
       val expected = List(
         ("Turn initiation", -99.0, 1300.0),
@@ -222,7 +289,6 @@ class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
         ("Takeoff", 0.0, 1000.0),
         ("Exit", 1.0, 990.0),
         ("Canopy", 1.0, 990.0),
-        ("Pattern entry", 1.0, 990.0),
         ("Landing", 2.0, 980.0),
         ("Dive point", 2.0, 980.0),
       )
@@ -238,36 +304,120 @@ class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
   "ChartHtml page" - {
 
     "inlines the chart library and the interaction script" in {
-      val page = ChartHtml.build(state, Some(metrics), None)
+      val page = pageOf(state, Some(metrics), None)
 
       List(
         "Licensed to the Apache Software Foundation",
-        "<script>function initChart(option)",
+        "function initChart(option)",
         "initChart(option);",
+        "function compact(value)",
+        "function applyAxes()",
+        "axisSignificantDigits = 4",
+        "var chartDefaults = ",
+        "var optionGz = ",
       ).foreach(fragment => page should include(fragment))
     }
 
     "works offline without any cdn reference" in {
-      val page = ChartHtml.build(state, Some(metrics), None)
+      val page = pageOf(state, Some(metrics), None)
 
       page.toLowerCase should not include "cdn."
       page.toLowerCase should not include "plotly"
     }
 
-    "renders the chart, stats and badge containers" in {
-      val page = ChartHtml.build(state, Some(metrics), None)
+    "renders the chart, toolbar and info containers" in {
+      val page = pageOf(state, Some(metrics), None)
 
-      List("id=\"chart\"", "id=\"stats\"", "id=\"badge\"").foreach(container => page should include(container))
+      List(
+        "id=\"chart\"",
+        "id=\"pill-zoom\"",
+        "id=\"pill-measure\"",
+        "id=\"pill-exit\"",
+        "id=\"pill-ground\"",
+        "<input type=\"checkbox\" id=\"points-toggle\">",
+      )
+        .foreach(container => page should include(container))
+      page should not include "id=\"stats\""
     }
 
-    "injects the option as a single assignment" in {
-      val page = ChartHtml.build(state, Some(metrics), None)
+    "titles the page with the charted file" in {
+      val page = pageOf(state, Some(metrics), None)
 
-      "var option = ".r.findAllIn(page).size shouldBe 1
-      page should include("""var option = {"animation":false""")
+      List("<title>Flight Analysis - flysight_sample.csv</title>", "<h1>Flight Analysis - flysight_sample.csv</h1>")
+        .foreach(fragment => page should include(fragment))
+    }
+
+    "renders the flight information as tables" in {
+      val page = pageOf(state, Some(metrics), Some(swoop))
+
+      List(
+        "Detected Flight Stages",
+        "Swoop Analysis",
+        "<th>Altitude (m)</th>",
+        "<tr><td>Pattern entry</td><td>1</td><td>1,200.00</td></tr>",
+        "1,200.00",
+        "315.00° Right",
+      ).foreach(fragment => page should include(fragment))
+      val info = page.slice(page.indexOf("Detected Flight Stages"), page.indexOf("<script>"))
+      "<table>".r.findAllIn(info).size shouldBe 2
+      page should not include "<li>"
+    }
+
+    "reports the undetected stages" in {
+      val empty = state.copy(stages = FlightEvents.empty)
+      val page  = pageOf(empty, None, None)
+
+      List("<td colspan=\"2\">Not detected</td>", "Takeoff", "Landing").foreach(fragment => page should include(fragment))
+    }
+
+    "embeds the compressed option payload" in {
+      val page     = pageOf(state, Some(metrics), None)
+      val captured = "var optionGz = \"([A-Za-z0-9+/=]+)\"".r.findFirstMatchIn(page)
+
+      captured.isDefined shouldBe true
+      ChartHtml.gunzipBase64(captured.get.group(1)) shouldBe ChartHtml.roundNumbers(
+        ChartHtml.option(state, Some(metrics), None),
+      ).noSpaces
+    }
+
+    "states the default exit time and ground level" in {
+      val page     = pageOf(state, Some(metrics), None)
+      val captured = "var chartDefaults = (\\{[^}]+\\})".r.findFirstMatchIn(page)
+
+      captured.isDefined shouldBe true
+      captured.get.group(1) shouldBe """{"exit":1.0,"ground":1198.5}"""
     }
 
   }
+
+  private def pageOf[A](
+    state: ChartState[A],
+    metrics: Option[Vector[FlightMetric]],
+    swoop: Option[SwoopData],
+  ): String =
+    ChartHtml.build(state, metrics, swoop, "flysight_sample.csv")
+
+  private def boundsOf(values: Vector[Double]): (Double, Double) =
+    val pad = math.max((values.max - values.min) * 0.02, 0.1)
+    (values.min - pad, values.max + pad)
+
+  private def traceAxis(unit: String, bound: (Double, Double), on: Boolean, color: String): Json =
+    Json.obj(
+      "type" -> "value".asJson,
+      "name" -> unit.asJson,
+      "nameLocation" -> "start".asJson,
+      "position" -> "left".asJson,
+      "offset" -> 0.asJson,
+      "show" -> on.asJson,
+      "min" -> bound._1.asJson,
+      "max" -> bound._2.asJson,
+      "axisLine" -> Json.obj("lineStyle" -> Json.obj("color" -> color.asJson)),
+      "axisLabel" -> Json.obj("color" -> color.asJson),
+      "axisTick" -> Json.obj("show" -> Json.False),
+      "axisPointer" -> Json.obj("label" -> Json.obj("show" -> Json.False)),
+      "nameTextStyle" -> Json.obj("color" -> color.asJson, "fontSize" -> 10.asJson),
+      "splitLine" -> Json.obj("show" -> Json.False),
+    )
 
   private def field(option: Json, name: String): Json =
     option.hcursor.downField(name).focus.getOrElse(Json.Null)
