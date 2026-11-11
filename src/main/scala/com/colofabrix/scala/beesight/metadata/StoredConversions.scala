@@ -2,7 +2,7 @@ package com.colofabrix.scala.beesight.metadata
 
 import com.colofabrix.scala.beesight.detection.config.{ Altitude, Angle, Speed }
 import com.colofabrix.scala.beesight.detection.model.*
-import com.colofabrix.scala.beesight.output.DataCutter
+import com.colofabrix.scala.beesight.output.CsvFileCutter
 import java.time.Duration
 
 /**
@@ -86,7 +86,7 @@ object StoredConversions {
         )
       }
 
-  extension (summary: DataCutter.CutSummary)
+  extension (summary: CsvFileCutter.CutSummary)
     def toStored: StoredCutSummary =
       StoredCutSummary(
         applied = summary.applied,

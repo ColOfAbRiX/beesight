@@ -11,7 +11,7 @@ import scala.io.AnsiColor.*
 /**
  * Prints detected flight stage summary to standard output.
  */
-final private[beesight] class ResultPrinter private (config: Config) {
+final private[beesight] class SummaryOutput private (config: Config) {
 
   /**
    * Streaming pipe that collects the last detection state and prints a human-readable summary.
@@ -62,9 +62,9 @@ final private[beesight] class ResultPrinter private (config: Config) {
 
 }
 
-private[beesight] object ResultPrinter {
+private[beesight] object SummaryOutput {
 
-  def apply(config: Config): ResultPrinter =
-    new ResultPrinter(config)
+  def apply(config: Config): SummaryOutput =
+    new SummaryOutput(config)
 
 }

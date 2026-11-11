@@ -11,7 +11,7 @@ import java.time.Instant
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
-class BulkDataCutterSpec extends AnyWordSpec with Matchers {
+class BulkCsvFileCutterSpec extends AnyWordSpec with Matchers {
 
   private val resultsFile =
     Paths.get("src/test/resources/data_cutter_results.csv").toFile
@@ -28,7 +28,7 @@ class BulkDataCutterSpec extends AnyWordSpec with Matchers {
   private val minRetained: Double =
     config.dataCutterConfig.minRetainedPoints.value
 
-  "DataCutter" should {
+  "CsvFileCutter" should {
     val testRows = loadTestRows(resultsFile)
 
     testRows.foreach { row =>
@@ -94,7 +94,7 @@ class BulkDataCutterSpec extends AnyWordSpec with Matchers {
     }.toVector
 
   private def runCutter(points: Vector[(FlightEvents, Int)]): Vector[(FlightEvents, Int)] =
-    val cutter = DataCutter(config)
+    val cutter = CsvFileCutter(config)
     fs2.Stream
       .emits[IO, (FlightEvents, Int)](points)
       .through(cutter.cutPipe[IO, Int])

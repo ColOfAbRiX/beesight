@@ -1,4 +1,5 @@
 package com.colofabrix.scala.beesight.pipeline
+import com.colofabrix.scala.beesight.model.WorkingPaths
 
 import com.colofabrix.scala.beesight.*
 import com.colofabrix.scala.beesight.IOConfig
@@ -24,7 +25,7 @@ object StagesRunner {
       events       <- JumpEventsStage.run[A](dataPoints, metadataFile)
       metrics      <- MetricsStage.run[A](dataPoints)
       swoop        <- SwoopStage.run[A](dataPoints, events.finalEvents)
-      cutDataset   <- DataCutter().map(_.cutVector(events.rows))
+      cutDataset   <- CsvFileCutter().map(_.cutVector(events.rows))
       _            <- StageOutputs.run[A](cutDataset.retained, events.finalEvents, metrics.metrics, swoop.swoop, paths)
       _            <- MetadataFileStore.save(events, cutDataset, paths)
     yield ()

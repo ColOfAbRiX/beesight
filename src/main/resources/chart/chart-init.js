@@ -8,6 +8,8 @@ function initChart(option) {
   var groundPill = document.getElementById('pill-ground');
   var tooltipToggle = document.getElementById('tooltip-toggle');
   var pointsToggle = document.getElementById('points-toggle');
+  var heightSelect = document.getElementById('unit-height');
+  var speedSelect = document.getElementById('unit-speed');
   var visible = {};
   var tooltipOn = true;
   var mode = 'z';
@@ -41,6 +43,43 @@ function initChart(option) {
     return (series.data || []).filter(Array.isArray);
   });
   var pristine = (option.yAxis || []).map(function (axis) { return [axis.min, axis.max]; });
+  var axisUnits = (option.yAxis || []).map(function (axis) { return axis.name; });
+  var heightUnit = 'ft';
+  var speedUnit = 'mph';
+  var heightFactors = { m: 1, ft: 3.28084 };
+  var speedFactors = { 'm/s': 1, 'km/h': 3.6, mph: 2.23694 };
+
+  function categoryOf(index) {
+    var unit = axisUnits[index];
+    if (unit === 'm') return 'height';
+    if (unit === 'm/s') return 'speed';
+    return 'raw';
+  }
+
+  function convert(index, value) {
+    var category = categoryOf(index);
+    if (category === 'height') return (value - groundOffset) * heightFactors[heightUnit];
+    if (category === 'speed') return value * speedFactors[speedUnit];
+    return value;
+  }
+
+  function seriesLabel(index, name) {
+    var category = categoryOf(index);
+    if (category === 'raw') return name;
+    return name.replace(/\s*\([^)]*\)\s*$/, '') + ' (' + unitLabel(index) + ')';
+  }
+
+  function edgeLabel(value) {
+    if (Math.abs(value) >= 1e5) return compact(value);
+    return Math.abs(value) >= 10 ? String(Math.round(value)) : String(Number(value.toFixed(2)));
+  }
+
+  function unitLabel(index) {
+    var category = categoryOf(index);
+    if (category === 'height') return heightUnit;
+    if (category === 'speed') return speedUnit;
+    return axisUnits[index];
+  }
 
   function compact(value) {
     var abs = Math.abs(value);
@@ -80,14 +119,44 @@ function initChart(option) {
       exit: exitZero,
       ground: groundOffset,
       defaults: { exit: defaultExit, ground: defaultGround },
+      heightUnit: heightUnit,
+      speedUnit: speedUnit,
     };
   };
 
-  function applyXFormatters() {
+  var seriesIndexByName = {};
+  (option.series || []).forEach(function (series, index) {
+    seriesIndexByName[series.name] = index;
+  });
+
+  function applyXAxisLayout() {
+    var rect = chart.getModel().getComponent('grid', 0).coordinateSystem.getRect();
+    var bottom = rect.y + rect.height;
+    var point = chart.convertToPixel({ xAxisIndex: 0, yAxisIndex: 0 }, [0, groundOffset]);
+    var offset = 0;
+    if (point && point[1] !== null && point[1] !== undefined) {
+      offset = Math.max(-(rect.height - 12), Math.min(0, point[1] - bottom));
+    }
     chart.setOption({
       xAxis: [
-        { axisLabel: { formatter: xFormat } },
-        { axisLabel: { formatter: timeFormatter } },
+        { offset: offset },
+        { axisLabel: { formatter: timeFormatter }, offset: offset },
+      ],
+    });
+  }
+
+  function updateExitLine() {
+    chart.setOption({
+      series: [
+        {
+          markLine: {
+            silent: true,
+            symbol: 'none',
+            label: { show: false },
+            lineStyle: { type: 'dashed', color: '#999', width: 1 },
+            data: [{ xAxis: exitZero }],
+          },
+        },
       ],
     });
   }
@@ -132,21 +201,36 @@ function initChart(option) {
 
     var axes = (option.yAxis || []).map(function (axis, index) {
       var column = shown.indexOf(index);
-      var formatter =
-        index === 0
-          ? function (value) { return compact(value - groundOffset); }
-          : compact;
       return {
         show: column >= 0,
-        offset: (column < 0 ? 0 : column) * 20,
+        offset: (column < 0 ? 0 : column) * 60,
+        name: unitLabel(index),
         min: pristine[index][0],
         max: pristine[index][1],
         splitLine: { show: column === 0 },
-        axisLabel: { formatter: formatter },
+        axisLabel: {
+          formatter: (function (i) {
+            return function (value) {
+              var raw = convert(i, value);
+              var edge = Math.abs(value - pristine[i][0]) <= 1e-9 || Math.abs(value - pristine[i][1]) <= 1e-9;
+              return edge ? edgeLabel(raw) : compact(raw);
+            };
+          })(index),
+        },
       };
     });
 
-    chart.setOption({ yAxis: axes, grid: { left: shown.length * 20 } });
+    chart.setOption({
+      yAxis: axes,
+      grid: { left: shown.length * 60 },
+      legend: {
+        formatter: function (name) {
+          var index = seriesIndexByName[name];
+          return index === undefined ? name : seriesLabel(index, name);
+        },
+      },
+    });
+    applyXAxisLayout();
   }
 
   window.applyAxes = applyAxes;
@@ -183,17 +267,13 @@ function initChart(option) {
     return rows;
   }
 
-  function displayValue(name, value) {
-    if (option.series[0] && name === option.series[0].name) return value - groundOffset;
-    return value;
-  }
-
   function statsHtml() {
     if (!mStats) return '<div>Select an interval</div>';
     var rows = mStats.rows.map(function (row) {
-      return '<tr><td>' + row[0] + '</td>' + row
+      var index = (option.series || []).findIndex(function (series) { return series.name === row[0]; });
+      return '<tr><td>' + seriesLabel(index, row[0]) + '</td>' + row
         .slice(1)
-        .map(function (value) { return '<td>' + compact(displayValue(row[0], value)) + '</td>'; })
+        .map(function (value) { return '<td>' + compact(convert(index, value)) + '</td>'; })
         .join('') + '</tr>';
     }).join('');
     return (
@@ -206,13 +286,17 @@ function initChart(option) {
 
   function axisTooltipHtml(params) {
     if (!params || params.length === 0) return '';
-    var header = Array.isArray(params[0].value) ? xFormat(params[0].value[0]) : '';
+    var xValue = Array.isArray(params[0].value) ? params[0].value[0] : null;
+    var header =
+      xValue === null
+        ? ''
+        : '<div>Time (s): ' + xFormat(xValue) + '</div>' +
+          '<div>From exit: ' + timeFormat(xValue - exitZero) + '</div>';
     var rows = params.map(function (p) {
       var raw = Array.isArray(p.value) ? p.value[1] : p.value;
-      var shown = p.seriesIndex === 0 ? raw - groundOffset : raw;
-      return '<div>' + (p.marker || '') + p.seriesName + ': <b>' + compact(shown) + '</b></div>';
+      return '<div>' + (p.marker || '') + seriesLabel(p.seriesIndex, p.seriesName) + ': <b>' + compact(convert(p.seriesIndex, raw)) + '</b></div>';
     });
-    return '<div>' + header + '</div>' + rows.join('');
+    return header + rows.join('');
   }
 
   function baseTooltip() {
@@ -284,7 +368,8 @@ function initChart(option) {
 
   function resetExit() {
     exitZero = defaultExit;
-    applyXFormatters();
+    applyXAxisLayout();
+    updateExitLine();
   }
 
   function resetGround() {
@@ -295,7 +380,7 @@ function initChart(option) {
   function resetAll() {
     exitZero = defaultExit;
     groundOffset = defaultGround;
-    applyXFormatters();
+    updateExitLine();
     applyAxes();
   }
 
@@ -304,7 +389,8 @@ function initChart(option) {
     if (!point || point[0] === null || point[1] === null) return false;
     if (pendingSet === 'exit') {
       exitZero = point[0];
-      applyXFormatters();
+      applyXAxisLayout();
+      updateExitLine();
     } else if (pendingSet === 'ground') {
       groundOffset = point[1];
       applyAxes();
@@ -496,6 +582,16 @@ function initChart(option) {
 
   pointsToggle.addEventListener('change', applyPoints);
 
+  heightSelect.addEventListener('change', function () {
+    heightUnit = heightSelect.value;
+    applyAxes();
+  });
+
+  speedSelect.addEventListener('change', function () {
+    speedUnit = speedSelect.value;
+    applyAxes();
+  });
+
   document.addEventListener('keydown', function (event) {
     var key = (event.key || '').toLowerCase();
     if (key === 'z') setMode('z');
@@ -528,7 +624,7 @@ function initChart(option) {
   });
 
   applyPoints();
-  applyXFormatters();
   applyAxes();
+  updateExitLine();
   setMode('z');
 }

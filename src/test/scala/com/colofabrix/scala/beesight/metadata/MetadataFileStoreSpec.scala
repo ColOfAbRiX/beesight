@@ -2,7 +2,7 @@ package com.colofabrix.scala.beesight.metadata
 
 import cats.effect.unsafe.implicits.global
 import com.colofabrix.scala.beesight.config.Config
-import com.colofabrix.scala.beesight.output.WorkingPaths
+import com.colofabrix.scala.beesight.model.WorkingPaths
 import java.nio.file.Files
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec

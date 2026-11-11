@@ -7,7 +7,8 @@ import com.colofabrix.scala.beesight.metadata.StoredConversions.*
 import com.colofabrix.scala.beesight.pipeline.JumpEventsStage
 import java.nio.charset.StandardCharsets
 import java.nio.file.{ Files, Path }
-import com.colofabrix.scala.beesight.output.{ DataCutter, WorkingPaths }
+import com.colofabrix.scala.beesight.model.WorkingPaths
+import com.colofabrix.scala.beesight.output.CsvFileCutter
 
 /**
  * Loads and saves metadata files, treating missing, stale or corrupt files as an empty cache.
@@ -33,7 +34,7 @@ object MetadataFileStore {
 
   def save(
     events: JumpEventsStage.DetectedEvents[?],
-    cut: DataCutter.CutResult[?],
+    cut: CsvFileCutter.CutResult[?],
     allPaths: WorkingPaths,
   ): IOConfig[Unit] =
     IOConfig.ask.flatMap { config =>

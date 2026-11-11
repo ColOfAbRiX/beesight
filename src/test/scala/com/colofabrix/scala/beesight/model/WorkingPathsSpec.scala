@@ -1,4 +1,4 @@
-package com.colofabrix.scala.beesight.output
+package com.colofabrix.scala.beesight.model
 
 import cats.effect.unsafe.implicits.global
 import com.colofabrix.scala.beesight.IOConfigValues

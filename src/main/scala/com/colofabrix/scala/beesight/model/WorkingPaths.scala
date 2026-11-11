@@ -1,11 +1,10 @@
-package com.colofabrix.scala.beesight.output
+package com.colofabrix.scala.beesight.model
 
 import com.colofabrix.scala.beesight.IOConfig
 import com.colofabrix.scala.beesight.config.Config
 import java.nio.file.{ FileSystems, Files, Path, Paths }
 import scala.jdk.CollectionConverters.*
 
-// FIXME: This class should be moved to `com.colofabrix.scala.beesight.model` package
 
 /**
  * Paths involved in the processing of a single input file.
@@ -13,7 +12,7 @@ import scala.jdk.CollectionConverters.*
  * @param inputFile The file being processed
  * @param outputFile The processed CSV produced next to the input data
  */
-final class WorkingPaths private[output] (val inputFile: Path, val outputFile: Path)
+final class WorkingPaths private[beesight] (val inputFile: Path, val outputFile: Path)
 
 object WorkingPaths {
 

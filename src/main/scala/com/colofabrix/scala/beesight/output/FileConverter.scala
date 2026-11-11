@@ -1,4 +1,5 @@
 package com.colofabrix.scala.beesight.output
+import com.colofabrix.scala.beesight.model.WorkingPaths
 
 import com.colofabrix.scala.beesight.*
 import com.colofabrix.scala.beesight.config.Config

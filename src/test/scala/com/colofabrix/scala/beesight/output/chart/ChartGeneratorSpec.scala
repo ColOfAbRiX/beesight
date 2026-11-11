@@ -1,4 +1,4 @@
-package com.colofabrix.scala.beesight.output
+package com.colofabrix.scala.beesight.output.chart
 
 import com.colofabrix.scala.beesight.detection.config.{ Altitude, Angle, Speed }
 import com.colofabrix.scala.beesight.detection.model.*
@@ -94,12 +94,12 @@ class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
     ("Vertical speed (m/s)", 1),
   )
 
-  "ChartHtml option" - {
+  "ChartOption option" - {
 
     "renders every metric trace as a line series" in {
       val expected = configsOf(metricNames)
 
-      val option = ChartHtml.option(state, Some(metrics), None)
+      val option = ChartOption.option(state, Some(metrics), None)
       val actual = seriesOf(option).map(configOf)
 
       actual shouldBe expected
@@ -108,7 +108,7 @@ class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
     "renders only the basic traces when metrics are missing" in {
       val expected = configsOf(basicNames)
 
-      val option = ChartHtml.option(state, None, None)
+      val option = ChartOption.option(state, None, None)
       val actual = seriesOf(option).map(configOf)
 
       actual shouldBe expected
@@ -118,8 +118,8 @@ class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
       val expectedFull  = legendOf(metricNames.map(_._1), metricNames.take(2).map(_._1))
       val expectedBasic = legendOf(basicNames.map(_._1), basicNames.map(_._1))
 
-      val full  = field(ChartHtml.option(state, Some(metrics), None), "legend")
-      val basic = field(ChartHtml.option(state, None, None), "legend")
+      val full  = field(ChartOption.option(state, Some(metrics), None), "legend")
+      val basic = field(ChartOption.option(state, None, None), "legend")
 
       full shouldBe expectedFull
       basic shouldBe expectedBasic
@@ -166,24 +166,23 @@ class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
           "axisPointer" -> Json.obj("type" -> "cross".asJson, "label" -> Json.obj("show" -> Json.False)),
           "extraCssText" -> "font-size: 11px; padding: 4px 8px;".asJson,
         ),
-        "grid" -> Json.obj("left" -> 40.asJson, "right" -> 30.asJson, "top" -> 64.asJson, "bottom" -> 22.asJson, "containLabel" -> Json.False),
+        "grid" -> Json.obj("left" -> 120.asJson, "right" -> 30.asJson, "top" -> 64.asJson, "bottom" -> 36.asJson, "containLabel" -> Json.False),
         "toolbox" -> Json.obj("show" -> Json.False),
         "xAxis" -> Json.arr(
           Json.obj(
             "type" -> "value".asJson,
-            "name" -> "Elapsed time (s)".asJson,
             "min" -> 0.0.asJson,
             "max" -> xMax.asJson,
-            "axisLabel" -> Json.obj("color" -> "#555".asJson),
+            "axisLabel" -> Json.obj("show" -> Json.False),
             "axisTick" -> Json.obj("show" -> Json.False),
             "axisPointer" -> Json.obj("label" -> Json.obj("show" -> Json.False)),
           ),
           Json.obj(
             "type" -> "value".asJson,
-            "position" -> "top".asJson,
+            "position" -> "bottom".asJson,
             "min" -> 0.0.asJson,
             "max" -> xMax.asJson,
-            "axisLabel" -> Json.obj("color" -> "#555".asJson),
+            "axisLabel" -> Json.obj("color" -> "#555".asJson, "showMinLabel" -> Json.False),
             "axisTick" -> Json.obj("show" -> Json.False),
             "axisPointer" -> Json.obj("label" -> Json.obj("show" -> Json.False)),
           ),
@@ -215,7 +214,7 @@ class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
         ),
       )
 
-      val option = ChartHtml.option(state, Some(metrics), None)
+      val option = ChartOption.option(state, Some(metrics), None)
       val actual = option.asObject.map(_.remove("series").remove("legend").asJson).getOrElse(Json.Null)
 
       actual shouldBe expected
@@ -224,7 +223,7 @@ class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
     "keeps the speed data as coordinate pairs" in {
       val expected = List(List(0.0, 40.0), List(1.0, 40.0), List(2.0, 40.0))
 
-      val option = ChartHtml.option(state, Some(metrics), None)
+      val option = ChartOption.option(state, Some(metrics), None)
       val actual = seriesOf(option)(1).hcursor.downField("data").as[List[List[Double]]].getOrElse(Nil)
 
       actual shouldBe expected
@@ -238,7 +237,7 @@ class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
         ("Landing", 2.0, 1198.5),
       )
 
-      val option = ChartHtml.option(state, Some(metrics), None)
+      val option = ChartOption.option(state, Some(metrics), None)
       val actual = markersOf(option)
 
       actual shouldBe expected
@@ -258,7 +257,7 @@ class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
         ("Stop", 2.0, 1198.5),
       )
 
-      val option = ChartHtml.option(state, Some(metrics), Some(swoop))
+      val option = ChartOption.option(state, Some(metrics), Some(swoop))
       val actual = markersOf(option)
 
       actual shouldBe expected
@@ -267,14 +266,14 @@ class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
     "omits the swoop points when no swoop is detected" in {
       val expected = List("Takeoff", "Exit", "Canopy", "Landing")
 
-      val option = ChartHtml.option(state, Some(metrics), None)
+      val option = ChartOption.option(state, Some(metrics), None)
       val actual = markersOf(option).map(_._1)
 
       actual shouldBe expected
     }
 
     "omits the pattern entry marker from the chart" in {
-      val option = ChartHtml.option(state, Some(metrics), Some(swoop))
+      val option = ChartOption.option(state, Some(metrics), Some(swoop))
       val actual = markersOf(option).map(_._1)
 
       actual should not contain "Pattern entry"
@@ -293,7 +292,7 @@ class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
         ("Dive point", 2.0, 980.0),
       )
 
-      val option = ChartHtml.option(cutState, None, Some(cutSwoop))
+      val option = ChartOption.option(cutState, None, Some(cutSwoop))
       val actual = markersOf(option)
 
       actual shouldBe expected
@@ -335,6 +334,8 @@ class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
         "id=\"pill-exit\"",
         "id=\"pill-ground\"",
         "<input type=\"checkbox\" id=\"points-toggle\">",
+        "id=\"unit-height\"",
+        "id=\"unit-speed\"",
       )
         .foreach(container => page should include(container))
       page should not include "id=\"stats\""
@@ -375,8 +376,8 @@ class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
       val captured = "var optionGz = \"([A-Za-z0-9+/=]+)\"".r.findFirstMatchIn(page)
 
       captured.isDefined shouldBe true
-      ChartHtml.gunzipBase64(captured.get.group(1)) shouldBe ChartHtml.roundNumbers(
-        ChartHtml.option(state, Some(metrics), None),
+      ChartPayload.gunzipBase64(captured.get.group(1)) shouldBe ChartPayload.roundNumbers(
+        ChartOption.option(state, Some(metrics), None),
       ).noSpaces
     }
 
@@ -411,7 +412,7 @@ class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
       "show" -> on.asJson,
       "min" -> bound._1.asJson,
       "max" -> bound._2.asJson,
-      "axisLine" -> Json.obj("lineStyle" -> Json.obj("color" -> color.asJson)),
+      "axisLine" -> Json.obj("onZero" -> Json.False, "lineStyle" -> Json.obj("color" -> color.asJson)),
       "axisLabel" -> Json.obj("color" -> color.asJson),
       "axisTick" -> Json.obj("show" -> Json.False),
       "axisPointer" -> Json.obj("label" -> Json.obj("show" -> Json.False)),

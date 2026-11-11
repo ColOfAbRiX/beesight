@@ -1,4 +1,5 @@
 package com.colofabrix.scala.beesight.output
+import com.colofabrix.scala.beesight.model.WorkingPaths
 
 import cats.syntax.all.*
 import com.colofabrix.scala.beesight.*
@@ -7,6 +8,7 @@ import com.colofabrix.scala.beesight.config.Config
 import com.colofabrix.scala.beesight.detection.model.*
 import com.colofabrix.scala.beesight.detection.readers.*
 import com.colofabrix.scala.beesight.output.MetricsCsvWriter.given
+import com.colofabrix.scala.beesight.output.chart.ChartGenerator
 import com.colofabrix.scala.beesight.pipeline.Stage
 import fs2.data.csv.CsvRowEncoder
 import java.nio.file.{ Files, Path }
@@ -41,9 +43,9 @@ object StageOutputs {
     fs2.Stream
       .emits(retained)
       .broadcastThrough(
-        CsvResultWriter(cfg).writePipe(paths.outputFile),
+        OutputCsvWriter(cfg).writePipe(paths.outputFile),
         ChartGenerator(cfg).chartPipe[A](paths.chartHtml, metrics, swoop),
-        ResultPrinter(cfg).printStagesPipe,
+        SummaryOutput(cfg).printStagesPipe,
       )
       .compile
       .drain

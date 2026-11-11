@@ -10,7 +10,7 @@ import java.nio.file.Path
 /**
  * Writes processed flight data with detected phases to CSV files.
  */
-final private[beesight] class CsvResultWriter private (config: Config) {
+final private[beesight] class OutputCsvWriter private (config: Config) {
 
   /**
    * Returns a pipe that writes OutputFlightPoint to a CSV file (includes phase column)
@@ -29,9 +29,9 @@ final private[beesight] class CsvResultWriter private (config: Config) {
 
 }
 
-private[beesight] object CsvResultWriter {
+private[beesight] object OutputCsvWriter {
 
-  def apply(config: Config): CsvResultWriter =
-    new CsvResultWriter(config)
+  def apply(config: Config): OutputCsvWriter =
+    new OutputCsvWriter(config)
 
 }

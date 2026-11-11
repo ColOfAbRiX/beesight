@@ -10,7 +10,7 @@ import java.time.Instant
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
-class DataCutterSpec extends AnyFreeSpec with Matchers {
+class CsvFileCutterSpec extends AnyFreeSpec with Matchers {
 
   private val time = Instant.parse("2026-01-15T10:00:00Z")
 
@@ -20,14 +20,14 @@ class DataCutterSpec extends AnyFreeSpec with Matchers {
     (FlightEvents(takeoff, None, None, landing), index.toInt)
   }
 
-  private def cutter(config: DataCutterConfig): DataCutter =
-    DataCutter(Config.default.copy(dataCutterConfig = config))
+  private def cutter(config: DataCutterConfig): CsvFileCutter =
+    CsvFileCutter(Config.default.copy(dataCutterConfig = config))
 
-  "DataCutter" - {
+  "CsvFileCutter" - {
 
     "reports the retained window when the cut is applied" in {
       val config   = DataCutterConfig(KeepPoints(0), KeepPoints(0), Percent(0.1))
-      val expected = DataCutter.CutSummary(true, 10, 3, 4, 6)
+      val expected = CsvFileCutter.CutSummary(true, 10, 3, 4, 6)
 
       val actual = cutter(config).cutVector(rows)
 
@@ -37,7 +37,7 @@ class DataCutterSpec extends AnyFreeSpec with Matchers {
 
     "keeps the configured points before takeoff" in {
       val config   = DataCutterConfig(KeepPoints(2), KeepPoints(0), Percent(0.1))
-      val expected = DataCutter.CutSummary(true, 10, 5, 2, 6)
+      val expected = CsvFileCutter.CutSummary(true, 10, 5, 2, 6)
 
       val actual = cutter(config).cutVector(rows)
 
@@ -47,7 +47,7 @@ class DataCutterSpec extends AnyFreeSpec with Matchers {
 
     "keeps the file uncut when too few points would be retained" in {
       val config   = DataCutterConfig(KeepPoints(0), KeepPoints(0), Percent(0.5))
-      val expected = DataCutter.CutSummary(false, 10, 10, 0, 9)
+      val expected = CsvFileCutter.CutSummary(false, 10, 10, 0, 9)
 
       val actual = cutter(config).cutVector(rows)
 

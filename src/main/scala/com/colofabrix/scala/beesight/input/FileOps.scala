@@ -4,7 +4,7 @@ import cats.effect.*
 import com.colofabrix.scala.beesight.*
 import java.nio.file.*
 import scala.jdk.CollectionConverters.*
-import com.colofabrix.scala.beesight.output.WorkingPaths
+import com.colofabrix.scala.beesight.model.WorkingPaths
 
 /**
  * File system operations for discovering input files and creating output directories.

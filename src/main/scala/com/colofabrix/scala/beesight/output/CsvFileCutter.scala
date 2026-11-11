@@ -2,14 +2,14 @@ package com.colofabrix.scala.beesight.output
 
 import com.colofabrix.scala.beesight.config.*
 import com.colofabrix.scala.beesight.detection.model.*
-import com.colofabrix.scala.beesight.output.DataCutter.*
+import com.colofabrix.scala.beesight.output.CsvFileCutter.*
 import scala.collection.immutable.Queue
 import com.colofabrix.scala.beesight.IOConfig
 
 /**
  * Cuts flight data streams to retain only flight-relevant points from takeoff to landing.
  */
-final private[beesight] class DataCutter private (config: Config) {
+final private[beesight] class CsvFileCutter private (config: Config) {
 
   /**
    * Streaming pipe that cuts data to retain only flight-relevant points
@@ -124,7 +124,7 @@ final private[beesight] class DataCutter private (config: Config) {
 
 }
 
-private[beesight] object DataCutter {
+private[beesight] object CsvFileCutter {
 
   /** What the cut operation kept from the input, reported to the metadata file. */
   final case class CutSummary(
@@ -171,10 +171,10 @@ private[beesight] object DataCutter {
 
   }
 
-  def apply(config: Config): DataCutter =
-    new DataCutter(config)
+  def apply(config: Config): CsvFileCutter =
+    new CsvFileCutter(config)
 
-  def apply(): IOConfig[DataCutter] =
-    IOConfig.ask.map(config => new DataCutter(config))
+  def apply(): IOConfig[CsvFileCutter] =
+    IOConfig.ask.map(config => new CsvFileCutter(config))
 
 }

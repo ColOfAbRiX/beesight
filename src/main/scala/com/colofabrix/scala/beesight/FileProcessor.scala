@@ -1,4 +1,5 @@
 package com.colofabrix.scala.beesight
+import com.colofabrix.scala.beesight.model.WorkingPaths
 
 import cats.effect.IO
 import cats.syntax.all.*
@@ -48,7 +49,7 @@ private[beesight] object FileProcessor {
       cfg   <- IOConfig.ask[IO, Config]
       paths <- WorkingPaths(inputFile)
       _     <- FileOps.createOutputDirectory(paths)
-      _     <- s"Processing: ${relative(inputFile)} -> ${relative(paths.outputFile)}".stdout
+      _     <- s"Processing: ${relative(inputFile)}".stdout
       _     <- cfg.command match {
              case Command.Convert => FileConverter.convertFile[A](paths)
              case _               => StagesRunner.run[A](paths)
