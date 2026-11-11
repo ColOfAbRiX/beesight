@@ -5,6 +5,7 @@
 
 # agent tool state
 .swarm/
+.chart-e2e/
 
 # sbt specific
 target/

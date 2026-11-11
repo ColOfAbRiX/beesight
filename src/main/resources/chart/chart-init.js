@@ -36,6 +36,7 @@ function initChart(option) {
   var groundPill = document.getElementById('pill-ground');
   var tooltipToggle = document.getElementById('tooltip-toggle');
   var pointsToggle = document.getElementById('points-toggle');
+  var swoopToggle = document.getElementById('swoop-points-toggle');
   var heightSelect = document.getElementById('unit-height');
   var speedSelect = document.getElementById('unit-speed');
   var visible = {};
@@ -162,24 +163,13 @@ function initChart(option) {
   });
 
   function xAxisLayout() {
-    var rect = chart.getModel().getComponent('grid', 0).coordinateSystem.getRect();
-    var bottom = rect.y + rect.height;
-    var point = chart.convertToPixel({ xAxisIndex: 0, yAxisIndex: 0 }, [0, groundOffset]);
-    var offset = 0;
-    if (point && point[1] !== null && point[1] !== undefined) {
-      offset = Math.max(-(rect.height - 12), Math.min(0, point[1] - bottom));
-    }
     return [
-      { offset: offset },
-      { axisLabel: { formatter: timeFormatter }, offset: offset },
+      { offset: 0 },
+      { axisLabel: { formatter: timeFormatter }, offset: 0 },
     ];
   }
 
-  function applyXAxisLayout() {
-    chart.setOption({ xAxis: xAxisLayout() });
-  }
-
-  function updateExitLine() {
+  function updateGuideLines() {
     chart.setOption({
       series: [
         {
@@ -188,7 +178,7 @@ function initChart(option) {
             symbol: 'none',
             label: { show: false },
             lineStyle: { type: 'dashed', color: '#999', width: 1 },
-            data: [{ xAxis: exitZero }],
+            data: [{ xAxis: exitZero }, { yAxis: groundOffset }],
           },
         },
       ],
@@ -284,7 +274,7 @@ function initChart(option) {
 
     var signature = shown.join(',') + '|' + pristine.map(function (bound) {
       return bound[0].toFixed(6) + ':' + bound[1].toFixed(6);
-    }).join(',') + '|' + heightUnit + ':' + speedUnit;
+    }).join(',') + '|' + heightUnit + ':' + speedUnit + '|' + groundOffset.toFixed(6) + ':' + exitZero.toFixed(6);
     if (signature === appliedSignature) return;
     appliedSignature = signature;
 
@@ -303,10 +293,22 @@ function initChart(option) {
 
   window.applyAxes = applyAxes;
 
+  function markerVisible(marker) {
+    var groups = marker.groups || [];
+    return (swoopToggle.checked && groups.indexOf('swoop') >= 0) || (pointsToggle.checked && groups.indexOf('jump') >= 0);
+  }
+
   function applyPoints() {
-    chart.setOption({
-      series: [{ data: pointsToggle.checked ? altitudeData : linePairs }],
+    var markers = altitudeData.filter(function (item) {
+      return !Array.isArray(item);
     });
+    var shown = markers.filter(markerVisible);
+    var combined = shown.length === 0 ? linePairs : linePairs.concat(shown).sort(function (a, b) {
+      var ax = Array.isArray(a) ? a[0] : a.value[0];
+      var bx = Array.isArray(b) ? b[0] : b.value[0];
+      return ax - bx;
+    });
+    chart.setOption({ series: [{ data: combined }] });
   }
 
   function selectionStats(x0, x1) {
@@ -436,19 +438,19 @@ function initChart(option) {
 
   function resetExit() {
     exitZero = defaultExit;
-    applyXAxisLayout();
-    updateExitLine();
+    updateGuideLines();
   }
 
   function resetGround() {
     groundOffset = defaultGround;
     applyAxes();
+    updateGuideLines();
   }
 
   function resetAll() {
     exitZero = defaultExit;
     groundOffset = defaultGround;
-    updateExitLine();
+    updateGuideLines();
     applyAxes();
   }
 
@@ -457,11 +459,11 @@ function initChart(option) {
     if (!point || point[0] === null || point[1] === null) return false;
     if (pendingSet === 'exit') {
       exitZero = point[0];
-      applyXAxisLayout();
-      updateExitLine();
+      updateGuideLines();
     } else if (pendingSet === 'ground') {
       groundOffset = point[1];
       applyAxes();
+      updateGuideLines();
     } else {
       return false;
     }
@@ -685,6 +687,7 @@ function initChart(option) {
   });
 
   pointsToggle.addEventListener('change', applyPoints);
+  swoopToggle.addEventListener('change', applyPoints);
 
   heightSelect.addEventListener('change', function () {
     heightUnit = heightSelect.value;
@@ -723,12 +726,13 @@ function initChart(option) {
   });
 
   window.addEventListener('resize', function () {
+    if (chartEl.offsetParent === null) return;
     fitHeight();
     chart.resize();
   });
 
   applyPoints();
   applyAxes();
-  updateExitLine();
+  updateGuideLines();
   setMode('z');
 }

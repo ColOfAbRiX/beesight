@@ -254,7 +254,6 @@ class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
         ("Dive point", 2.0, 1198.5),
         ("Rollout start", 2.0, 1198.5),
         ("Bottom of turn", 2.0, 1198.5),
-        ("Stop", 2.0, 1198.5),
       )
 
       val option = ChartOption.option(state, Some(metrics), Some(swoop))
@@ -272,6 +271,32 @@ class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
       actual shouldBe expected
     }
 
+    "groups the markers into jump and swoop points" in {
+      val expected = Map(
+        "Takeoff" -> List("jump"),
+        "Exit" -> List("jump"),
+        "Canopy" -> List("jump"),
+        "Landing" -> List("jump", "swoop"),
+        "Dive point" -> List("swoop"),
+        "Turn initiation" -> List("swoop"),
+        "Rollout start" -> List("swoop"),
+        "Bottom of turn" -> List("swoop"),
+      )
+
+      val option = ChartOption.option(state, Some(metrics), Some(swoop))
+      val actual = groupsOf(option)
+
+      actual shouldBe expected
+    }
+
+    "omits the stop point because it duplicates the landing" in {
+      val option = ChartOption.option(state, Some(metrics), Some(swoop))
+      val actual = markersOf(option).map(_._1)
+
+      actual should not contain "Stop"
+      actual.count(_ == "Landing") shouldBe 1
+    }
+
     "omits the pattern entry marker from the chart" in {
       val option = ChartOption.option(state, Some(metrics), Some(swoop))
       val actual = markersOf(option).map(_._1)
@@ -284,7 +309,6 @@ class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
         ("Turn initiation", -99.0, 1300.0),
         ("Rollout start", -98.0, 1300.0),
         ("Bottom of turn", -98.0, 1300.0),
-        ("Stop", -98.0, 1300.0),
         ("Takeoff", 0.0, 1000.0),
         ("Exit", 1.0, 990.0),
         ("Canopy", 1.0, 990.0),
@@ -334,18 +358,34 @@ class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
         "id=\"pill-exit\"",
         "id=\"pill-ground\"",
         "<input type=\"checkbox\" id=\"points-toggle\">",
+        "<input type=\"checkbox\" id=\"swoop-points-toggle\">",
         "id=\"unit-height\"",
         "id=\"unit-speed\"",
         "<button class=\"tab active\" data-tab=\"flight\">Flight Data</button>",
+        "<button class=\"tab\" data-tab=\"maps\">Maps</button>",
+        "<button class=\"tab\" data-tab=\"swoop\">Swoop</button>",
+        "<button class=\"tab\" data-tab=\"wind\">Wind</button>",
+        "<button class=\"tab\" data-tab=\"tables\">Tables</button>",
         "<section id=\"tab-flight\" class=\"tab-panel active\">",
+        "<section id=\"tab-maps\" class=\"tab-panel\">",
+        "<section id=\"tab-swoop\" class=\"tab-panel\">",
+        "<section id=\"tab-wind\" class=\"tab-panel\">",
+        "<section id=\"tab-tables\" class=\"tab-panel\">",
       )
         .foreach(container => page should include(container))
       page should not include "id=\"stats\""
 
       val panel = page.slice(page.indexOf("<section id=\"tab-flight\""), page.indexOf("\n  </section>"))
-      List("id=\"toolbar\"", "id=\"chart\"", "Detected Flight Stages").foreach(page should include(_))
-      List("id=\"toolbar\"", "id=\"chart\"", "class=\"info\"").foreach(container => panel should include(container))
-      page.indexOf("<h1>") should be < page.indexOf("id=\"tabs\"")
+      List("id=\"toolbar\"", "id=\"chart\"").foreach(container => panel should include(container))
+      panel should not include "class=\"info\""
+      page should include("Detected Flight Stages")
+      List("maps", "wind").foreach { name =>
+        val other = panelOf(page, name)
+        other should include("class=\"placeholder\"")
+        other should not include "id=\"chart\""
+      }
+      List("maps", "swoop", "wind", "tables").foreach(name => panelOf(page, name) should not include "id=\"chart\"")
+      page.indexOf("<div id=\"header\">") should be < page.indexOf("<h1>")
     }
 
     "titles the page with the charted file" in {
@@ -355,27 +395,46 @@ class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
         .foreach(fragment => page should include(fragment))
     }
 
-    "renders the flight information as tables" in {
+    "renders the flight stages table in the Tables tab" in {
       val page = pageOf(state, Some(metrics), Some(swoop))
+      val tables = panelOf(page, "tables")
 
       List(
         "Detected Flight Stages",
-        "Swoop Analysis",
         "<th>Altitude (m)</th>",
+        "<tr><td>Takeoff</td>",
+        "class=\"card\"",
+      ).foreach(fragment => tables should include(fragment))
+      tables should not include "Swoop Analysis"
+      page should not include "<li>"
+    }
+
+    "renders the swoop table in the Swoop tab" in {
+      val page = pageOf(state, Some(metrics), Some(swoop))
+      val swoopPanel = panelOf(page, "swoop")
+
+      List(
+        "Swoop Analysis",
         "<tr><td>Pattern entry</td><td>1</td><td>1,200.00</td></tr>",
         "1,200.00",
         "315.00° Right",
-      ).foreach(fragment => page should include(fragment))
-      val info = page.slice(page.indexOf("Detected Flight Stages"), page.indexOf("<script>"))
-      "<table>".r.findAllIn(info).size shouldBe 2
-      page should not include "<li>"
+        "class=\"card\"",
+      ).foreach(fragment => swoopPanel should include(fragment))
+      swoopPanel should not include "Detected Flight Stages"
+    }
+
+    "keeps the Swoop tab readable when nothing was detected" in {
+      val page = panelOf(pageOf(state, Some(metrics), None), "swoop")
+
+      page should include("No swoop detected for this flight.")
+      page should not include "<table>"
     }
 
     "reports the undetected stages" in {
       val empty = state.copy(stages = FlightEvents.empty)
       val page  = pageOf(empty, None, None)
 
-      List("<td colspan=\"2\">Not detected</td>", "Takeoff", "Landing").foreach(fragment => page should include(fragment))
+      List("<td colspan=\"2\" class=\"muted\">Not detected</td>", "Takeoff", "Landing").foreach(fragment => page should include(fragment))
     }
 
     "embeds the compressed option payload" in {
@@ -404,6 +463,10 @@ class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
     swoop: Option[SwoopData],
   ): String =
     ChartHtml.build(state, metrics, swoop, "flysight_sample.csv")
+
+  private def panelOf(page: String, name: String): String =
+    val start = page.indexOf(s"<section id=\"tab-$name\"")
+    page.slice(start, page.indexOf("</section>", start))
 
   private def boundsOf(values: Vector[Double]): (Double, Double) =
     val pad = math.max((values.max - values.min) * 0.02, 0.1)
@@ -451,6 +514,18 @@ class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
         val value = marker.hcursor.downField("value").as[List[Double]].getOrElse(Nil)
         (marker.hcursor.get[String]("name").getOrElse(""), value(0), value(1))
       }
+
+  private def groupsOf(option: Json): Map[String, List[String]] =
+    seriesOf(option)
+      .find(series => series.hcursor.get[Int]("yAxisIndex").contains(0))
+      .map(_.hcursor.downField("data").as[List[Json]].getOrElse(Nil))
+      .getOrElse(Nil)
+      .collect { case marker if marker.isObject => marker }
+      .map { marker =>
+        marker.hcursor.get[String]("name").getOrElse("") ->
+          marker.hcursor.downField("groups").as[List[String]].getOrElse(Nil)
+      }
+      .toMap
 
   private def legendOf(names: List[String], enabled: List[String]): Json =
     Json.obj(

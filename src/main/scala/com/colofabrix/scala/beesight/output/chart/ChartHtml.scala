@@ -18,6 +18,10 @@ private[beesight] object ChartHtml {
   private lazy val echartsLib   = resource("/chart/echarts.min.js")
   private lazy val chartInitJs = resource("/chart/chart-init.js")
 
+  private def swoopContent(swoop: Option[SwoopData]): String =
+    if swoop.isDefined then ChartInfoTables.swoopTableJs(swoop)
+    else """    <p class="placeholder">No swoop detected for this flight.</p>"""
+
   def build[A](
     state: ChartState[A],
     metrics: Option[Vector[FlightMetric]],
@@ -30,14 +34,25 @@ private[beesight] object ChartHtml {
        |  <meta charset="utf-8">
        |  <title>Flight Analysis - ${fileName}</title>
        |  <style>
-       |    body { margin: 0; padding: 10px; font-family: sans-serif; background: #f5f5f5; }
-       |    h1 { color: #333; font-size: 26px; line-height: 32px; margin: 6px 0 16px; text-align: center; }
-       |    #tabs { display: flex; gap: 4px; margin: 0 0 10px; border-bottom: 1px solid #ddd; }
-       |    .tab { background: transparent; border: none; border-bottom: 2px solid transparent; padding: 8px 18px; font-size: 14px; font-family: inherit; color: #666; cursor: pointer; }
+       |    body { margin: 0; padding: 6px 10px; font-family: sans-serif; background: #f5f5f5; }
+       |    #header { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: end; margin: 0 0 6px; }
+       |    #tabs { display: flex; gap: 2px; justify-self: start; min-width: 0; overflow: hidden; }
+       |    h1 { grid-column: 2; color: #333; font-size: 26px; line-height: 32px; margin: 0; text-align: center; }
+       |    .tab { background: transparent; border: none; border-bottom: 2px solid transparent; padding: 4px 12px; font-size: 14px; font-family: inherit; color: #666; cursor: pointer; }
        |    .tab:hover { color: #333; }
        |    .tab.active { color: #1f77b4; border-bottom-color: #1f77b4; font-weight: 600; }
        |    .tab-panel { display: none; }
        |    .tab-panel.active { display: block; }
+       |    .placeholder { margin: 0; padding: 24px; background: white; border-radius: 8px; color: #888; font-size: 14px; }
+       |    .card { background: white; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); max-width: 760px; overflow: hidden; }
+       |    .card h3 { margin: 0; padding: 12px 18px; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: #555; background: #fafafa; border-bottom: 1px solid #eee; }
+       |    .card table { width: 100%; border-collapse: collapse; font-size: 13px; }
+       |    .card th { padding: 8px 18px; text-align: right; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: #888; background: #fff; border-bottom: 1px solid #eee; }
+       |    .card td { padding: 9px 18px; text-align: right; color: #333; border-bottom: 1px solid #f4f4f4; font-variant-numeric: tabular-nums; }
+       |    .card tr:last-child td { border-bottom: none; }
+       |    .card th:first-child, .card td:first-child { text-align: left; }
+       |    .card tbody tr:hover td { background: #f5f9fd; }
+       |    .card td.muted { color: #aaa; font-style: italic; }
        |    #toolbar { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; }
        |    #toolbar label { font-size: 13px; color: #333; display: flex; align-items: center; gap: 4px; }
        |    #toolbar select { font-size: 13px; font-family: inherit; }
@@ -49,19 +64,19 @@ private[beesight] object ChartHtml {
        |    .set { background: #7f8c8d; }
        |    .set.armed { background: #c0392b; }
        |    #chart { width: 100%; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-       |    .info table { border-collapse: collapse; margin-top: 8px; }
-       |    .info th, .info td { border: 1px solid #e3e3e3; padding: 6px 12px; font-size: 13px; text-align: right; color: #333; }
-       |    .info th { background: #f7f7f7; font-weight: 600; }
-       |    .info th:first-child, .info td:first-child { text-align: left; }
-       |    .info { margin-top: 12px; padding: 12px; background: white; border-radius: 8px; }
-       |    .info h3 { margin: 0 0 4px; font-size: 15px; color: #333; }
        |  </style>
        |</head>
        |<body>
-       |  <h1>Flight Analysis - ${fileName}</h1>
-       |  <nav id="tabs">
-       |    <button class="tab active" data-tab="flight">Flight Data</button>
-       |  </nav>
+       |  <div id="header">
+       |    <nav id="tabs">
+       |      <button class="tab active" data-tab="flight">Flight Data</button>
+       |      <button class="tab" data-tab="maps">Maps</button>
+       |      <button class="tab" data-tab="swoop">Swoop</button>
+       |      <button class="tab" data-tab="wind">Wind</button>
+       |      <button class="tab" data-tab="tables">Tables</button>
+       |    </nav>
+       |    <h1>Flight Analysis - ${fileName}</h1>
+       |  </div>
        |  <section id="tab-flight" class="tab-panel active">
        |  <div id="toolbar">
        |    <button id="pill-zoom" class="pill mode-z">Zoom (Z)</button>
@@ -69,15 +84,20 @@ private[beesight] object ChartHtml {
        |    <button id="pill-exit" class="pill set">Set Exit time (X)</button>
        |    <button id="pill-ground" class="pill set">Set Ground (N)</button>
        |    <label><input type="checkbox" id="tooltip-toggle" checked> Tooltip</label>
-       |    <label><input type="checkbox" id="points-toggle"> Points</label>
+       |    <label><input type="checkbox" id="points-toggle"> Jump Points</label>
+       |    <label><input type="checkbox" id="swoop-points-toggle"> Swoop Points</label>
        |    <label>Height <select id="unit-height"><option value="m">m</option><option value="ft">ft</option></select></label>
        |    <label>Speed <select id="unit-speed"><option value="m/s">m/s</option><option value="km/h">km/h</option><option value="mph">mph</option></select></label>
        |  </div>
        |  <div id="chart"></div>
-       |  <div class="info">
+       |  </section>
+       |  <section id="tab-maps" class="tab-panel"><p class="placeholder">No map content yet.</p></section>
+       |  <section id="tab-swoop" class="tab-panel">
+       |${swoopContent(swoop)}
+       |  </section>
+       |  <section id="tab-wind" class="tab-panel"><p class="placeholder">No wind content yet.</p></section>
+       |  <section id="tab-tables" class="tab-panel">
        |${ChartInfoTables.stagesTableJs(state.stages)}
-       |${ChartInfoTables.swoopTableJs(swoop)}
-       |  </div>
        |  </section>
        |  <script>
        |    (function () {

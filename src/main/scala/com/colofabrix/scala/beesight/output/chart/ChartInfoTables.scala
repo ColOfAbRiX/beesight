@@ -27,7 +27,7 @@ private[chart] object ChartInfoTables {
         "Stop" -> Some(data.stop),
       )
       val rotation =
-        s"""      <tr><td>Degrees of rotation</td><td colspan="2">${formatAltitude(data.degreesOfRotation.value)}° ${data.turnDirection.productPrefix}</td></tr>"""
+        s"""        <tr><td>Degrees of rotation</td><td colspan="2">${formatAltitude(data.degreesOfRotation.value)}° ${data.turnDirection.productPrefix}</td></tr>"""
 
       tableJs("Swoop Analysis", rows, rotation)
     }
@@ -35,20 +35,22 @@ private[chart] object ChartInfoTables {
   private def tableJs(caption: String, rows: List[(String, Option[EventPoint])], extraRows: String): String =
     val body = rows.map {
       case (event, Some(point)) =>
-        s"""      <tr><td>$event</td><td>${point.index}</td><td>${formatAltitude(point.altitude)}</td></tr>"""
+        s"""        <tr><td>$event</td><td>${point.index}</td><td>${formatAltitude(point.altitude)}</td></tr>"""
       case (event, None) =>
-        s"""      <tr><td>$event</td><td colspan="2">Not detected</td></tr>"""
+        s"""        <tr><td>$event</td><td colspan="2" class="muted">Not detected</td></tr>"""
     }.mkString("\n")
 
     val extras = if extraRows.isEmpty then "" else "\n" + extraRows
 
-    s"""    <h3>$caption</h3>
-       |    <table>
-       |      <thead><tr><th>Event</th><th>Point</th><th>Altitude (m)</th></tr></thead>
-       |      <tbody>
+    s"""    <div class="card">
+       |      <h3>$caption</h3>
+       |      <table>
+       |        <thead><tr><th>Event</th><th>Point</th><th>Altitude (m)</th></tr></thead>
+       |        <tbody>
        |$body$extras
-       |      </tbody>
-       |    </table>""".stripMargin
+       |        </tbody>
+       |      </table>
+       |    </div>""".stripMargin
 
   private def formatAltitude(value: Double): String =
     "%,.2f".formatLocal(java.util.Locale.UK, value)

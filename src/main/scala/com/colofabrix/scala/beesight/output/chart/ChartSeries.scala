@@ -24,6 +24,7 @@ private[chart] object ChartSeries {
     altitude: Double,
     symbol: String,
     color: String,
+    groups: Set[String],
   )
 
   private val colors = Vector(
@@ -69,26 +70,40 @@ private[chart] object ChartSeries {
 
   def markerSpecs(stages: FlightEvents, swoop: Option[SwoopData]): List[MarkerSpec] =
     val jump = List(
-      stages.takeoff.map(p => MarkerSpec("Takeoff", p.time, p.altitude, "diamond", "rgb(44, 160, 44)")),
-      stages.freefall.map(p => MarkerSpec("Exit", p.time, p.altitude, "diamond", "rgb(214, 39, 40)")),
-      stages.canopy.map(p => MarkerSpec("Canopy", p.time, p.altitude, "diamond", "rgb(148, 103, 189)")),
-      stages.landing.map(p => MarkerSpec("Landing", p.time, p.altitude, "diamond", "rgb(140, 86, 75)")),
+      stages.takeoff.map(p => MarkerSpec("Takeoff", p.time, p.altitude, "diamond", "rgb(44, 160, 44)", Set("jump"))),
+      stages.freefall.map(p => MarkerSpec("Exit", p.time, p.altitude, "diamond", "rgb(214, 39, 40)", Set("jump"))),
+      stages.canopy.map(p => MarkerSpec("Canopy", p.time, p.altitude, "diamond", "rgb(148, 103, 189)", Set("jump"))),
+      stages.landing.map(p => MarkerSpec("Landing", p.time, p.altitude, "diamond", "rgb(140, 86, 75)", Set("jump", "swoop"))),
     ).flatten
 
     val swoopMarkers = swoop.toList.flatMap { data =>
       val msl = (p: EventPoint) => p.altitude + data.ground.value
       List(
-        MarkerSpec("Dive point", data.divePoint.time, msl(data.divePoint), "pin", "rgb(255, 127, 14)"),
+        MarkerSpec("Dive point", data.divePoint.time, msl(data.divePoint), "pin", "rgb(255, 127, 14)", Set("swoop")),
         MarkerSpec(
           "Turn initiation",
           data.turnInitiation.time,
           msl(data.turnInitiation),
           "pin",
           "rgb(214, 39, 40)",
+          Set("swoop"),
         ),
-        MarkerSpec("Rollout start", data.rolloutStart.time, msl(data.rolloutStart), "pin", "rgb(44, 160, 44)"),
-        MarkerSpec("Bottom of turn", data.bottomOfTurn.time, msl(data.bottomOfTurn), "pin", "rgb(148, 103, 189)"),
-        MarkerSpec("Stop", data.stop.time, msl(data.stop), "pin", "rgb(140, 86, 75)"),
+        MarkerSpec(
+          "Rollout start",
+          data.rolloutStart.time,
+          msl(data.rolloutStart),
+          "pin",
+          "rgb(44, 160, 44)",
+          Set("swoop"),
+        ),
+        MarkerSpec(
+          "Bottom of turn",
+          data.bottomOfTurn.time,
+          msl(data.bottomOfTurn),
+          "pin",
+          "rgb(148, 103, 189)",
+          Set("swoop"),
+        ),
       )
     }
 
@@ -140,6 +155,7 @@ private[chart] object ChartSeries {
         "symbol"     -> m.symbol.asJson,
         "symbolSize" -> 12.asJson,
         "itemStyle"  -> Json.obj("color" -> m.color.asJson),
+        "groups"     -> Json.fromValues(m.groups.toList.sorted.map(_.asJson)),
         "label"      -> Json.obj("show" -> Json.True, "formatter" -> "{b}".asJson, "position" -> "bottom".asJson),
       )
     }
