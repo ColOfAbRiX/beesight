@@ -324,7 +324,7 @@ class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
       page.toLowerCase should not include "plotly"
     }
 
-    "renders the chart, toolbar and info containers" in {
+    "renders the chart, toolbar and info containers inside the flight tab" in {
       val page = pageOf(state, Some(metrics), None)
 
       List(
@@ -336,9 +336,16 @@ class ChartGeneratorSpec extends AnyFreeSpec with Matchers {
         "<input type=\"checkbox\" id=\"points-toggle\">",
         "id=\"unit-height\"",
         "id=\"unit-speed\"",
+        "<button class=\"tab active\" data-tab=\"flight\">Flight Data</button>",
+        "<section id=\"tab-flight\" class=\"tab-panel active\">",
       )
         .foreach(container => page should include(container))
       page should not include "id=\"stats\""
+
+      val panel = page.slice(page.indexOf("<section id=\"tab-flight\""), page.indexOf("\n  </section>"))
+      List("id=\"toolbar\"", "id=\"chart\"", "Detected Flight Stages").foreach(page should include(_))
+      List("id=\"toolbar\"", "id=\"chart\"", "class=\"info\"").foreach(container => panel should include(container))
+      page.indexOf("<h1>") should be < page.indexOf("id=\"tabs\"")
     }
 
     "titles the page with the charted file" in {

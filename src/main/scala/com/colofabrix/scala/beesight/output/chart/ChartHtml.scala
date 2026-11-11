@@ -31,7 +31,13 @@ private[beesight] object ChartHtml {
        |  <title>Flight Analysis - ${fileName}</title>
        |  <style>
        |    body { margin: 0; padding: 10px; font-family: sans-serif; background: #f5f5f5; }
-       |    h1 { color: #333; font-size: 20px; line-height: 24px; margin: 0 0 6px; }
+       |    h1 { color: #333; font-size: 26px; line-height: 32px; margin: 6px 0 16px; text-align: center; }
+       |    #tabs { display: flex; gap: 4px; margin: 0 0 10px; border-bottom: 1px solid #ddd; }
+       |    .tab { background: transparent; border: none; border-bottom: 2px solid transparent; padding: 8px 18px; font-size: 14px; font-family: inherit; color: #666; cursor: pointer; }
+       |    .tab:hover { color: #333; }
+       |    .tab.active { color: #1f77b4; border-bottom-color: #1f77b4; font-weight: 600; }
+       |    .tab-panel { display: none; }
+       |    .tab-panel.active { display: block; }
        |    #toolbar { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; }
        |    #toolbar label { font-size: 13px; color: #333; display: flex; align-items: center; gap: 4px; }
        |    #toolbar select { font-size: 13px; font-family: inherit; }
@@ -53,6 +59,10 @@ private[beesight] object ChartHtml {
        |</head>
        |<body>
        |  <h1>Flight Analysis - ${fileName}</h1>
+       |  <nav id="tabs">
+       |    <button class="tab active" data-tab="flight">Flight Data</button>
+       |  </nav>
+       |  <section id="tab-flight" class="tab-panel active">
        |  <div id="toolbar">
        |    <button id="pill-zoom" class="pill mode-z">Zoom (Z)</button>
        |    <button id="pill-measure" class="pill mode-m">Measure (M)</button>
@@ -60,14 +70,30 @@ private[beesight] object ChartHtml {
        |    <button id="pill-ground" class="pill set">Set Ground (N)</button>
        |    <label><input type="checkbox" id="tooltip-toggle" checked> Tooltip</label>
        |    <label><input type="checkbox" id="points-toggle"> Points</label>
-       |    <label>Height <select id="unit-height"><option value="m">m</option><option value="ft" selected>ft</option></select></label>
-       |    <label>Speed <select id="unit-speed"><option value="m/s">m/s</option><option value="km/h">km/h</option><option value="mph" selected>mph</option></select></label>
+       |    <label>Height <select id="unit-height"><option value="m">m</option><option value="ft">ft</option></select></label>
+       |    <label>Speed <select id="unit-speed"><option value="m/s">m/s</option><option value="km/h">km/h</option><option value="mph">mph</option></select></label>
        |  </div>
        |  <div id="chart"></div>
        |  <div class="info">
        |${ChartInfoTables.stagesTableJs(state.stages)}
        |${ChartInfoTables.swoopTableJs(swoop)}
        |  </div>
+       |  </section>
+       |  <script>
+       |    (function () {
+       |      var tabs = document.querySelectorAll('.tab');
+       |      tabs.forEach(function (tab) {
+       |        tab.addEventListener('click', function () {
+       |          tabs.forEach(function (other) { other.classList.toggle('active', other === tab); });
+       |          document.querySelectorAll('.tab-panel').forEach(function (panel) {
+       |            panel.classList.toggle('active', panel.id === 'tab-' + tab.dataset.tab);
+       |          });
+       |          tab.blur();
+       |          window.dispatchEvent(new Event('resize'));
+       |        });
+       |      });
+       |    })();
+       |  </script>
        |  <script>__ECHARTS__</script>
        |  <script>__CHART_INIT__</script>
        |  <script>

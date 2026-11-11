@@ -3,6 +3,9 @@
 # macOS
 .DS_Store
 
+# agent tool state
+.swarm/
+
 # sbt specific
 target/
 lib_managed/

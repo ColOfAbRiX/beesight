@@ -1,5 +1,33 @@
 var axisSignificantDigits = 4;
 
+function localeMeasurementSystem() {
+  var tag = String(navigator.language || 'en-US').split('@')[0].replace(/_/g, '-');
+  try {
+    var locale = new Intl.Locale(tag);
+    var system = locale.measurementSystem || (locale.getMeasurementSystem && locale.getMeasurementSystem());
+    if (system) return system;
+  } catch (error) {
+    // fall through to the region table
+  }
+  var parts = tag.split('-');
+  var region = parts.length > 1 && parts[1].length === 2 ? parts[1].toUpperCase() : '';
+  if (!/^[A-Z]{2}$/.test(region) || region === '') {
+    try {
+      region = new Intl.Locale(tag).maximize().region || '';
+    } catch (error) {
+      region = '';
+    }
+  }
+  if (region === 'US' || region === 'LR' || region === 'MM') return 'us';
+  if (region === 'GB') return 'uk';
+  return 'metric';
+}
+
+function localeUnits() {
+  var imperial = localeMeasurementSystem() !== 'metric';
+  return { height: imperial ? 'ft' : 'm', speed: imperial ? 'mph' : 'km/h' };
+}
+
 function initChart(option) {
   var chartEl = document.getElementById('chart');
   var zoomPill = document.getElementById('pill-zoom');
@@ -29,7 +57,7 @@ function initChart(option) {
 
   fitHeight();
 
-  var chart = echarts.init(chartEl);
+  var chart = echarts.init(chartEl, null, { useDirtyRect: true });
   chart.setOption(option);
 
   var selected = (option.legend && option.legend.selected) || {};
@@ -43,9 +71,12 @@ function initChart(option) {
     return (series.data || []).filter(Array.isArray);
   });
   var pristine = (option.yAxis || []).map(function (axis) { return [axis.min, axis.max]; });
+  var appliedSignature = null;
   var axisUnits = (option.yAxis || []).map(function (axis) { return axis.name; });
-  var heightUnit = 'ft';
-  var speedUnit = 'mph';
+  var heightUnit = localeUnits().height;
+  var speedUnit = localeUnits().speed;
+  heightSelect.value = heightUnit;
+  speedSelect.value = speedUnit;
   var heightFactors = { m: 1, ft: 3.28084 };
   var speedFactors = { 'm/s': 1, 'km/h': 3.6, mph: 2.23694 };
 
@@ -121,6 +152,7 @@ function initChart(option) {
       defaults: { exit: defaultExit, ground: defaultGround },
       heightUnit: heightUnit,
       speedUnit: speedUnit,
+      measurementSystem: localeMeasurementSystem(),
     };
   };
 
@@ -129,7 +161,7 @@ function initChart(option) {
     seriesIndexByName[series.name] = index;
   });
 
-  function applyXAxisLayout() {
+  function xAxisLayout() {
     var rect = chart.getModel().getComponent('grid', 0).coordinateSystem.getRect();
     var bottom = rect.y + rect.height;
     var point = chart.convertToPixel({ xAxisIndex: 0, yAxisIndex: 0 }, [0, groundOffset]);
@@ -137,12 +169,14 @@ function initChart(option) {
     if (point && point[1] !== null && point[1] !== undefined) {
       offset = Math.max(-(rect.height - 12), Math.min(0, point[1] - bottom));
     }
-    chart.setOption({
-      xAxis: [
-        { offset: offset },
-        { axisLabel: { formatter: timeFormatter }, offset: offset },
-      ],
-    });
+    return [
+      { offset: offset },
+      { axisLabel: { formatter: timeFormatter }, offset: offset },
+    ];
+  }
+
+  function applyXAxisLayout() {
+    chart.setOption({ xAxis: xAxisLayout() });
   }
 
   function updateExitLine() {
@@ -162,7 +196,7 @@ function initChart(option) {
   }
 
   function windowOf() {
-    var dz = chart.getOption().dataZoom[0];
+    var dz = chart.getModel().getComponent('dataZoom', 0).option;
     var min = option.xAxis[0].min;
     var max = option.xAxis[0].max;
     var start = dz.startValue !== undefined ? dz.startValue : min + (max - min) * (dz.start || 0) / 100;
@@ -170,21 +204,47 @@ function initChart(option) {
     return [start, end];
   }
 
-  function windowedBounds(series, win) {
+  function indexBefore(pairs, value) {
+    var lo = 0;
+    var hi = pairs.length - 1;
+    while (lo < hi) {
+      var mid = (lo + hi) >> 1;
+      if (pairs[mid][0] < value) lo = mid + 1;
+      else hi = mid;
+    }
+    return lo;
+  }
+
+  function indexAfter(pairs, value) {
+    var lo = 0;
+    var hi = pairs.length - 1;
+    while (lo < hi) {
+      var mid = (lo + hi + 1) >> 1;
+      if (pairs[mid][0] > value) hi = mid - 1;
+      else lo = mid;
+    }
+    return lo;
+  }
+
+  function windowedBounds(index, win) {
+    var pairs = pairsOf[index];
+    if (!pairs || pairs.length === 0) return null;
+    if (win[1] < pairs[0][0] || win[0] > pairs[pairs.length - 1][0]) return null;
+
     var lo = Infinity;
     var hi = -Infinity;
-    (series.data || []).forEach(function (item) {
-      if (!Array.isArray(item) || item[0] < win[0] || item[0] > win[1]) return;
-      if (item[1] < lo) lo = item[1];
-      if (item[1] > hi) hi = item[1];
-    });
+    for (var i = indexBefore(pairs, win[0]); i <= indexAfter(pairs, win[1]); i++) {
+      var y = pairs[i][1];
+      if (y < lo) lo = y;
+      if (y > hi) hi = y;
+    }
     if (lo > hi) return null;
     var pad = Math.max((hi - lo) * 0.02, 0.1);
     return [lo - pad, hi + pad];
   }
 
   function applyAxes() {
-    var live = chart.getOption().legend[0];
+    var live = chart.getModel().getComponent('legend', 0).option;
     var current = (live && live.selected) || visible;
     var win = windowOf();
     var shown = [];
@@ -193,10 +253,12 @@ function initChart(option) {
     });
     if (shown.length === 0) shown = [0];
 
-    pristine = (option.yAxis || []).map(function (axis, index) {
-      var series = (option.series || [])[index];
-      var windowed = series ? windowedBounds(series, win) : null;
-      return windowed || [axis.min, axis.max];
+    pristine = (option.yAxis || []).map(function (axis) {
+      return [axis.min, axis.max];
+    });
+    shown.forEach(function (index) {
+      var windowed = windowedBounds(index, win);
+      if (windowed) pristine[index] = windowed;
     });
 
     var axes = (option.yAxis || []).map(function (axis, index) {
@@ -220,8 +282,15 @@ function initChart(option) {
       };
     });
 
+    var signature = shown.join(',') + '|' + pristine.map(function (bound) {
+      return bound[0].toFixed(6) + ':' + bound[1].toFixed(6);
+    }).join(',') + '|' + heightUnit + ':' + speedUnit;
+    if (signature === appliedSignature) return;
+    appliedSignature = signature;
+
     chart.setOption({
       yAxis: axes,
+      xAxis: xAxisLayout(),
       grid: { left: shown.length * 60 },
       legend: {
         formatter: function (name) {
@@ -230,7 +299,6 @@ function initChart(option) {
         },
       },
     });
-    applyXAxisLayout();
   }
 
   window.applyAxes = applyAxes;
@@ -407,8 +475,13 @@ function initChart(option) {
     applyAxes();
   });
 
+  var zoomFrame = null;
   chart.on('dataZoom', function () {
-    applyAxes();
+    if (zoomFrame !== null) return;
+    zoomFrame = requestAnimationFrame(function () {
+      zoomFrame = null;
+      applyAxes();
+    });
   });
 
   chart.on('brushEnd', function (params) {
@@ -503,11 +576,39 @@ function initChart(option) {
 
   var cursorPoint = null;
   var cursorFrame = null;
+  var cursorDots = [];
+
+  function ensureCursorDots(count) {
+    while (cursorDots.length < count) {
+      var dot = new echarts.graphic.Circle({
+        shape: { cx: 0, cy: 0, r: 2.5 },
+        style: { fill: '#333' },
+        silent: true,
+        z: 100,
+      });
+      dot.__cursorDot = true;
+      chart.getZr().add(dot);
+      cursorDots.push(dot);
+    }
+  }
 
   function hideCursorDots() {
     cursorPoint = null;
-    chart.setOption({ graphic: [] }, { replaceMerge: ['graphic'] });
+    cursorDots.forEach(function (dot) {
+      dot.show = false;
+    });
+    if (cursorDots.length) chart.getZr().refresh();
   }
+
+  window.cursorDots = function () {
+    return cursorDots
+      .filter(function (dot) {
+        return dot.show !== false;
+      })
+      .map(function (dot) {
+        return { cx: dot.shape.cx, cy: dot.shape.cy, r: dot.shape.r, fill: dot.style.fill };
+      });
+  };
 
   function flushCursorDots() {
     cursorFrame = null;
@@ -518,7 +619,7 @@ function initChart(option) {
       return;
     }
     dataX = Math.max(option.xAxis[0].min, Math.min(option.xAxis[0].max, dataX));
-    var live = chart.getOption().legend[0];
+    var live = chart.getModel().getComponent('legend', 0).option;
     var current = (live && live.selected) || visible;
     var items = [];
     (option.series || []).forEach(function (series, index) {
@@ -528,14 +629,17 @@ function initChart(option) {
       var y = valueAt(pairs, dataX);
       var point = chart.convertToPixel({ xAxisIndex: 0, yAxisIndex: index }, [dataX, y]);
       if (!point || point[0] === null || point[1] === null) return;
-      items.push({
-        type: 'circle',
-        shape: { cx: point[0], cy: point[1], r: 2.5 },
-        style: { fill: (series.lineStyle && series.lineStyle.color) || '#333' },
-        silent: true,
-      });
+      items.push({ cx: point[0], cy: point[1], fill: (series.lineStyle && series.lineStyle.color) || '#333' });
     });
-    chart.setOption({ graphic: items }, { replaceMerge: ['graphic'] });
+
+    ensureCursorDots(items.length);
+    cursorDots.forEach(function (dot, i) {
+      var item = items[i];
+      dot.show = item !== undefined;
+      if (!item) return;
+      dot.attr({ shape: { cx: item.cx, cy: item.cy, r: 2.5 }, style: { fill: item.fill } });
+    });
+    chart.getZr().refresh();
   }
 
   chart.getZr().on('mousemove', function (event) {
